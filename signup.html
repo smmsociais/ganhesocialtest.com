@@ -299,7 +299,7 @@
             </button>
         </form>
 
-        <a href="https://ganhesocial.com/login" class="login-link">
+        <a href="https://ganhesocialtest.com/login" class="login-link">
             Já tem uma conta? <strong>Faça login</strong>
         </a>
 
@@ -367,7 +367,7 @@
 
                     const indicado_por = localStorage.getItem("codigo_afiliado_ref") || null;
 
-                    const response = await fetch("https://ganhesocial.com/api/signup", {
+                    const response = await fetch("https://ganhesocialtest.com/api/signup", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ email, senha, indicado_por, ref })
