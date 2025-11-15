@@ -721,7 +721,7 @@
             </div>
             <div class="container-body">
                 <div class="form-group">
-                    <select id="accountSelect" class="form-select">
+                    <select id="accountSelect" class="form-select" onchange="bindAccount()">
                         <option value="" disabled selected hidden>Selecione uma conta</option>
                     </select>
                 </div>
@@ -861,6 +861,21 @@
                 actionContent.style.display = "none";
             }
         }
+
+async function bindAccount() {
+    const selectedAccount = document.getElementById("accountSelect").value?.trim();
+    if (!selectedAccount) return;
+
+    // Gera um id_conta estável derivado do nome do usuário
+    const generatedId = "local_" + selectedAccount;
+
+    localStorage.setItem("id_conta", generatedId);
+    localStorage.setItem("conta_invalida", "false");
+
+    limparUI();
+    ativarSelecaoTipoAcao();
+    fetchAction();
+}
 
         // variáveis globais
         let contagemEmAndamento = false;
@@ -1045,6 +1060,30 @@
                     return false;
                 }
 
+                async function tentarBuscarLocal() {
+                    try {
+                        const response = await fetch(`/api/buscar_acao?id_conta=${id_conta}&token=${token}&tipo=${actionType}`);
+                        if (!response.ok) {
+                            return false;
+                        }
+                        const data = await response.json();
+
+                        if (data.status === "ENCONTRADA") {
+                            document.getElementById("warningMessage").style.display = "none";
+                            if (parseFloat(data.quantidade_pontos) === 3) {
+                                return "ignorarLocalERepetirSMM";
+                            }
+                            await processarAcao(data, "local");
+                            return true;
+                        } else if (data.error === "Nenhuma ação encontrada.") {
+                            return "repetirSMM";
+                        }
+                    } catch (e) {
+                        console.error("Erro ao buscar ação local:", e);
+                    }
+                    return false;
+                }
+
                 // **Aqui** chamamos as tentativas e usamos await sem erro
                 const encontrouSMM = await tentarBuscarSMM();
 
@@ -1181,7 +1220,28 @@
 
             try {
                 let confirmData;
+
+                if (currentActionData.origem !== 'smm') {
+                    const confirmResponse = await fetch("/api/confirmar_acao", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify({
+                            id_conta: localStorage.getItem("id_conta"),
+                            id_pedido: currentActionData.id_pedido,
+                        })
+                    });
+
                     confirmData = await confirmResponse.json();
+
+                    if (confirmData.status !== "success" || confirmData.message !== "CONFIRMOU_SUCESSO") {
+                        throw new Error("Erro ao confirmar ação.");
+                    }
+                } else {
+                    confirmData = { valor: "0.007" };
+                }
 
                 await registrarAcaoPendente({
                     nome_usuario: selectedAccount,
