@@ -785,7 +785,7 @@
 
             if (!token) {
                 setTimeout(() => {
-                    window.location.href = "https://ganhesocial.com/login";
+                    window.location.href = "https://ganhesocialtest.com/login";
                 },);
                 return;
             }
@@ -1354,7 +1354,7 @@
                     throw new Error("Token não encontrado. Faça login novamente.");
                 }
 
-                const response = await fetch("https://ganhesocial.com/api/contas", {
+                const response = await fetch("https://ganhesocialtest.com/api/contas", {
                     method: "GET",
                     headers: {
                         "Authorization": `Bearer ${token}`
@@ -1428,7 +1428,7 @@
 
         function logout() {
             localStorage.removeItem("token");
-            window.location.href = "https://ganhesocial.com";
+            window.location.href = "https://ganhesocialtest.com";
         }   
     </script>
 </body>
