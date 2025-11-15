@@ -1,13 +1,59 @@
 {
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "ref"
+        }
+      ],
+      "destination": "/signup",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     { "source": "/", "destination": "/index.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
     { "source": "/login", "destination": "/login.html" },
-    { "source": "/signup", "destination": "/signup.html" },   
-    { "source": "/selecionar_conta", "destination": "/selecionar_conta.html" },
+    { "source": "/signup", "destination": "/signup.html" },
+    { "source": "/realizar_acoes", "destination": "/realizar_acoes.html" },
     { "source": "/adicionar_conta", "destination": "/adicionar_conta.html" },
+    { "source": "/adicionar_conta_tiktok", "destination": "/adicionar_conta_tiktok.html" },
+    { "source": "/conta_adicionada", "destination": "/conta_adicionada.html" },
     { "source": "/gerenciar_contas", "destination": "/gerenciar_contas.html" },
     { "source": "/historico_acoes", "destination": "/historico_acoes.html" },
-    { "source": "/settings", "destination": "/settings.html" }   
+    { "source": "/refer", "destination": "/refer.html" },
+    { "source": "/detail_account", "destination": "/detail_account.html" },
+    { "source": "/profile", "destination": "/profile.html" },
+    { "source": "/solicitar_saque", "destination": "/solicitar_saque.html" },
+    { "source": "/historico_saques", "destination": "/historico_saques.html" },
+    { "source": "/recover-password", "destination": "/recover-password.html" },
+    { "source": "/reset-password", "destination": "/reset-password.html" },
+    { "source": "/ranking", "destination": "/ranking.html" },
+    { "source": "/docs/api/tiktok", "destination": "/docs/api/tiktok.html" },
+
+    { "source": "/api/vincular_conta", "destination": "/api/handler.js" },
+    { "source": "/api/buscar_acao", "destination": "/api/handler.js" },
+    { "source": "/api/confirmar_acao", "destination": "/api/handler.js" },
+    { "source": "/api/tiktok/get_user", "destination": "/api/handler.js" },
+    { "source": "/api/tiktok/get_action", "destination": "/api/handler.js" },
+    { "source": "/api/tiktok/confirm_action", "destination": "/api/handler.js" },
+    { "source": "/api/contas", "destination": "/api/handler.js" },
+    { "source": "/api/get_saldo", "destination": "/api/handler.js" },
+    { "source": "/api/profile", "destination": "/api/handler.js" },
+    { "source": "/api/withdraw", "destination": "/api/handler.js" },
+    { "source": "/api/historico_acoes", "destination": "/api/handler.js" },
+    { "source": "/api/login", "destination": "/api/handler.js" },
+    { "source": "/api/signup", "destination": "/api/handler.js" },
+    { "source": "/api/change-password", "destination": "/api/handler.js" },
+    { "source": "/api/recover-password", "destination": "/api/handler.js" },
+    { "source": "/api/validate-reset-token", "destination": "/api/handler.js" },
+    { "source": "/api/registrar_acao_pendente", "destination": "/api/handler.js" },
+    { "source": "/api/ranking_antigo", "destination": "/api/handler.js" },
+    { "source": "/api/pular_acao", "destination": "/api/handler.js" },
+    { "source": "/api/proxy_bind_tk", "destination": "/api/handler.js" },
+    { "source": "/api/afiliados", "destination": "/api/handler.js" },
+    { "source": "/api/ranking_diario", "destination": "/api/handler.js" }
   ]
 }
