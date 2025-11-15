@@ -560,7 +560,7 @@
                 addAccountButton.disabled = true;
 
                 // 1) cria a conta no backend
-                const response = await fetch("https://ganhesocial.com/api/contas", {
+                const response = await fetch("https://ganhesocialtest.com/api/contas", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -627,7 +627,7 @@
 
         function logout() {
             localStorage.removeItem("token");
-            window.location.href = "https://ganhesocial.com";
+            window.location.href = "https://ganhesocialtest.com";
         }
 
         document.addEventListener("DOMContentLoaded", function () {
@@ -635,7 +635,7 @@
 
             if (!token) {
                 setTimeout(() => {
-                    window.location.href = "https://ganhesocial.com/login";
+                    window.location.href = "https://ganhesocialtest.com/login";
                 },);
                 return;
             }
