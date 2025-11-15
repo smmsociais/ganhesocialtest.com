@@ -862,47 +862,6 @@
             }
         }
 
-        async function bindAccount() {
-            const selectedAccount = document.getElementById("accountSelect").value?.trim();
-
-            if (!selectedAccount || selectedAccount === "" || selectedAccount === "null") {
-                return;
-            }
-
-            try {
-                const response = await fetch("/api/vincular_conta", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify({ nomeUsuario: selectedAccount })
-                });
-
-                const data = await response.json();
-
-                if (data.id_conta) {
-                    localStorage.setItem("id_conta", data.id_conta);
-                    localStorage.setItem("conta_invalida", "false");
-                } else {
-                    if (data.error === "WRONG_USER") {
-                        localStorage.setItem("id_conta", "fallback_" + selectedAccount);
-                        localStorage.setItem("conta_invalida", "true");
-                    } else {
-                        return;
-                    }
-                }
-
-                limparUI();            // limpa UI e estados da conta antiga
-                ativarSelecaoTipoAcao(); // habilita seletor do tipo de ação
-
-                fetchAction();         // inicia busca para nova conta
-
-            } catch (error) {
-                console.error("Erro no bindAccount:", error);
-            }
-        }
-
         // variáveis globais
         let contagemEmAndamento = false;
         let fetchTimeout;
@@ -1086,30 +1045,6 @@
                     return false;
                 }
 
-                async function tentarBuscarLocal() {
-                    try {
-                        const response = await fetch(`/api/buscar_acao?id_conta=${id_conta}&token=${token}&tipo=${actionType}`);
-                        if (!response.ok) {
-                            return false;
-                        }
-                        const data = await response.json();
-
-                        if (data.status === "ENCONTRADA") {
-                            document.getElementById("warningMessage").style.display = "none";
-                            if (parseFloat(data.quantidade_pontos) === 3) {
-                                return "ignorarLocalERepetirSMM";
-                            }
-                            await processarAcao(data, "local");
-                            return true;
-                        } else if (data.error === "Nenhuma ação encontrada.") {
-                            return "repetirSMM";
-                        }
-                    } catch (e) {
-                        console.error("Erro ao buscar ação local:", e);
-                    }
-                    return false;
-                }
-
                 // **Aqui** chamamos as tentativas e usamos await sem erro
                 const encontrouSMM = await tentarBuscarSMM();
 
@@ -1246,28 +1181,7 @@
 
             try {
                 let confirmData;
-
-                if (currentActionData.origem !== 'smm') {
-                    const confirmResponse = await fetch("/api/confirmar_acao", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${localStorage.getItem('token')}`
-                        },
-                        body: JSON.stringify({
-                            id_conta: localStorage.getItem("id_conta"),
-                            id_pedido: currentActionData.id_pedido,
-                        })
-                    });
-
                     confirmData = await confirmResponse.json();
-
-                    if (confirmData.status !== "success" || confirmData.message !== "CONFIRMOU_SUCESSO") {
-                        throw new Error("Erro ao confirmar ação.");
-                    }
-                } else {
-                    confirmData = { valor: "0.007" };
-                }
 
                 await registrarAcaoPendente({
                     nome_usuario: selectedAccount,
