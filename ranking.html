@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ranking - GanheSocial</title>
+    <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-light: #f8f9fa;
+            --text-light: #212529;
+            --container-light: #ffffff;
+            --button-light: #007bff;
+            --success-color: #28a745;
+            --pending-color: #ffc107;
+            --failed-color: #dc3545;
+            --border-light: #dee2e6;
+            --hover-light: #f1f1f1;
+            --shadow-light: rgba(0, 0, 0, 0.1);
+
+            --bg-dark: #121212;
+            --text-dark: #e0e0e0;
+            --container-dark: #1e1e1e;
+            --button-dark: #1a73e8;
+            --success-dark: #34a853;
+            --pending-dark: #f9ab00;
+            --failed-dark: #ea4335;
+            --border-dark: #333333;
+            --hover-dark: #2d2d2d;
+            --shadow-dark: rgba(0, 0, 0, 0.3);
+
+            --card-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-light);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            transition: var(--transition);
+            line-height: 1.6;
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 2px 10px var(--shadow-light);
+            position: relative;
+            z-index: 10;
+        }
+
+        .left-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .right-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            height: 32px;
+            margin-right: 10px;
+        }
+
+        .balance-chip {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+            transition: var(--transition);
+        }
+
+        .balance-chip:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .balance-amount {
+            font-weight: 700;
+        }
+
+        /* Main Container */
+        .main-container {
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background: var(--container-light);
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 20px var(--shadow-light);
+            overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 30px;
+            border: 1px solid var(--border-light);
+        }
+
+        .container-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-light);
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .container-header h2 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #dbdbdb;
+        }
+
+        .container-body {
+            padding: 20px;
+        }
+
+        .ranking-title {
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            color: #dbdbdb;
+        }
+
+        .ranking-title i {
+            font-size: 1rem;
+            margin-right: 8px;
+            color: #dbdbdb;
+        }
+
+        /* Ranking Table */
+        .ranking-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: var(--card-radius);
+        }
+
+        .ranking-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .ranking-table thead th {
+            background-color: rgba(0, 0, 0, 0.02);
+            color: var(--text-light);
+            font-weight: 600;
+            padding: 15px;
+            text-align: left;
+            border-bottom: 2px solid var(--border-light);
+            position: sticky;
+            top: 0;
+            backdrop-filter: blur(5px);
+        }
+
+        .ranking-table tbody tr {
+            transition: var(--transition);
+        }
+
+        .ranking-table tbody tr:hover {
+            background-color: var(--hover-light);
+        }
+
+        .ranking-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-light);
+            vertical-align: middle;
+        }
+
+        .ranking-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .ranking-position {
+            font-weight: bold;
+            width: 50px;
+            text-align: left;
+        }
+
+        .ranking-user {
+            width: 60%;
+        }
+
+        .ranking-value {
+            text-align: left;
+            font-weight: bold;
+            color: var(--success-color);
+            padding-left: 0;
+            white-space: nowrap;
+        }
+
+        .highlight-row {
+            background-color: rgba(40, 167, 69, 0.1) !important;
+            font-weight: bold;
+        }
+
+        /* Menu Styles */
+        .menu-toggle {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .menu-toggle span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: white;
+            border-radius: 3px;
+            transition: var(--transition);
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(3px);
+        }
+
+        .menu-content {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: var(--container-light);
+            box-shadow: 2px 0 15px var(--shadow-light);
+            transition: var(--transition);
+            padding: 20px 0;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .menu-content.active {
+            left: 0;
+        }
+
+        .menu-overlay.active {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: var(--text-light);
+            font-size: 16px;
+            text-decoration: none;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-item i {
+            width: 24px;
+            text-align: center;
+        }
+
+        .menu-item:hover {
+            background-color: var(--hover-light);
+        }
+
+        .menu-footer {
+            margin-top: auto;
+            padding: 25px 0;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .menu-logout {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: #dc3545;
+            font-size: 16px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .menu-logout:hover {
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        /* Dark Mode Styles */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: var(--bg-dark);
+                color: var(--text-dark);
+            }
+
+            .header {
+                background: var(--primary-gradient-dark);
+            }
+
+            .container {
+                background: var(--container-dark);
+                box-shadow: 0 4px 20px var(--shadow-dark);
+                border-color: var(--border-dark);
+            }
+
+            .container-header {
+                background: var(--primary-gradient-dark);
+                border-color: var(--border-dark);
+            }
+
+            .ranking-table thead th {
+                background-color: rgba(255, 255, 255, 0.05);
+                color: var(--text-dark);
+                border-color: var(--border-dark);
+            }
+
+            .ranking-table td {
+                border-color: var(--border-dark);
+            }
+
+            .ranking-table tbody tr:hover {
+                background-color: var(--hover-dark);
+            }
+
+            .ranking-value {
+                color: var(--success-dark);
+            }
+
+            .highlight-row {
+                background-color: rgba(52, 168, 83, 0.1) !important;
+            }
+
+            .menu-content {
+                background: var(--container-dark);
+                box-shadow: 2px 0 15px var(--shadow-dark);
+            }
+
+            .menu-item {
+                color: var(--text-dark);
+            }
+
+            .menu-item:hover {
+                background-color: var(--hover-dark);
+            }
+
+            .menu-footer {
+                border-color: var(--border-dark);
+            }
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .main-container {
+                padding: 20px;
+            }
+
+            .container-header h2 {
+                font-size: 1.3rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 15px;
+            }
+
+            .container-header h2 {
+                font-size: 1rem;
+                color: #dbdbdb;
+            }
+
+            .container-header h2 i {
+                font-size: 1rem;
+                margin-right: 8px;
+                color: #dbdbdb;
+            }
+
+            .container-body {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .header {
+                padding: 12px 15px;
+            }
+
+            .balance-chip {
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Desktop Menu */
+        @media (min-width: 992px) {
+            body {
+                padding-left: 280px;
+            }
+
+            .desktop-header {
+                display: none;
+            }
+
+            .menu-toggle {
+                display: none;
+            }
+
+            .menu-content {
+                left: 0;
+                box-shadow: none;
+            }
+
+            .menu-overlay {
+                display: none !important;
+            }
+
+            .logo-mobile {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .logo-mobile {
+                display: block;
+            }
+
+            body.menu-open .header {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: block;
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: none;
+                border: none;
+                color: #afaeae;
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 1002;
+            }
+
+            .menu-close-btn:hover {
+                color: #dc3545;
+            }
+        }
+
+        /* Initial Load */
+        body {
+            visibility: hidden;
+        }
+
+        body.loaded {
+            visibility: visible;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Menu Lateral para Desktop -->
+    <div class="menu-content" id="menuContent">
+        <!-- Botão de fechar (visível apenas no mobile) -->
+        <button class="menu-close-btn" id="menuCloseBtn">&times;</button>
+
+        <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
+            <a href="dashboard">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+            </a>
+        </div>
+        <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
+        <a class="menu-item" href="realizar_acoes"><i class="fas fa-tasks"></i> Realizar Ações</a>
+        <a class="menu-item" href="adicionar_conta"><i class="fas fa-plus-circle"></i> Adicionar Conta</a>
+        <a class="menu-item" href="gerenciar_contas"><i class="fas fa-cog"></i> Gerenciar Contas</a>
+        <a class="menu-item" href="historico_acoes"><i class="fas fa-history"></i> Histórico de Ações</a>
+        <a class="menu-item" href="solicitar_saque"><i class="fas fa-hand-holding-usd"></i> Solicitar Saque</a>
+        <a class="menu-item" href="historico_saques"><i class="fas fa-wallet"></i> Histórico de Saques</a>
+        <a class="menu-item" href="refer"><i class="fas fa-user-friends"></i> Indicados</a>
+        <a class="menu-item" href="profile"><i class="fas fa-user-cog"></i> Minha Conta</a>
+
+        <div class="menu-footer">
+            <a class="menu-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a>
+        </div>
+    </div>
+
+    <!-- Overlay do Menu -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <!-- Header para Mobile -->
+    <div class="header desktop-header">
+        <div class="left-header">
+            <div class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <!-- Logo para mobile (no header) -->
+            <a href="dashboard" class="logo-mobile">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+            </a>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        <!-- Ranking de Usuários -->
+        <div class="container fade-in">
+            <div class="container-header">
+                <h2 class="ranking-title"><i class="fas fa-trophy"></i> Ranking Diário</h2>
+            </div>
+            <div class="container-body">
+                <div class="ranking-container">
+                    <table class="ranking-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Usuário</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rankingTable">
+                            <!-- Dados serão preenchidos via JavaScript -->
+                            <tr>
+                                <td class="ranking-position">1º</td>
+                                <td class="ranking-user"></td>
+                                <td class="ranking-value">R$ 0,00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            // Controle do menu (mantive sua lógica original)
+            const menuToggle = document.getElementById('menuToggle');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuContent = document.getElementById('menuContent');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+            function toggleMenu() {
+                menuContent.classList.toggle('active');
+                menuOverlay.classList.toggle('active');
+                const spans = menuToggle.querySelectorAll('span');
+                if (menuContent.classList.contains('active')) {
+                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                    spans[1].style.opacity = '0';
+                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+                } else {
+                    spans[0].style.transform = 'none';
+                    spans[1].style.opacity = '1';
+                    spans[2].style.transform = 'none';
+                }
+            }
+
+            function closeMenu() {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
+                spans[0].style.transform = 'none';
+                spans[1].style.opacity = '1';
+                spans[2].style.transform = 'none';
+            }
+
+            menuToggle.addEventListener('click', toggleMenu);
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+
+            // Carrega ranking (não pré-gerar placeholders)
+            await loadRanking();
+
+            document.body.classList.add('loaded');
+        });
+
+        function parseBRNumber(value) {
+            // Normaliza string como "1.234,56" ou "1234.56" para número JS
+            if (value === null || value === undefined) return NaN;
+            if (typeof value === 'number') return value;
+            let s = String(value).trim();
+            // Se já for algo como "1234.56" com ponto decimal, tenta direto
+            if (/^\d+(\.\d+)?$/.test(s)) return Number(s);
+            // Troca pontos de milhares por vazio e vírgula decimal por ponto
+            s = s.replace(/\./g, '').replace(',', '.');
+            // Remove quaisquer caracteres que não sejam dígitos, ponto ou sinal
+            s = s.replace(/[^0-9\.\-]/g, '');
+            return Number(s);
+        }
+
+        async function loadRanking() {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                console.error("Token não encontrado.");
+                return;
+            }
+
+            try {
+                const response = await fetch("https://ganhesocial.com/api/ranking", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Erro ao buscar ranking.");
+                }
+
+                if (!Array.isArray(data.ranking)) {
+                    throw new Error("Resposta da API não contém o array 'ranking'");
+                }
+
+                const rankingTable = document.getElementById("rankingTable");
+                const rankingRows = rankingTable.querySelectorAll('tr');
+
+                data.ranking.slice(0, 10).forEach((user, index) => {
+                    if (index < rankingRows.length) {
+                        const row = rankingRows[index];
+
+                        // Destaca o usuário atual
+                        if (user.is_current_user) {
+                            row.classList.add('highlight-row');
+                        }
+
+                        // Define o nome a ser exibido
+                        let nomeExibido = user.username && user.username.trim() !== "" ? user.username : "-";
+
+                        // Se for o próprio usuário, adiciona [VOCÊ]
+                        if (user.is_current_user) {
+                            if (user.username && user.username.trim() !== "") {
+                                nomeExibido += " [VOCÊ]";
+                            } else {
+                                nomeExibido = "[VOCÊ]";
+                            }
+                        }
+
+                        // Atualiza na tabela
+                        row.querySelector(".ranking-user").textContent = nomeExibido;
+                        row.querySelector(".ranking-value").textContent = `R$ ${user.total_balance}`;
+                    }
+                });
+
+            } catch (error) {
+                console.error("Erro ao carregar ranking:", error);
+                const rankingTable = document.getElementById('rankingTable');
+                rankingTable.innerHTML = '<tr><td colspan="3" style="text-align: center;">Erro ao carregar ranking</td></tr>';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocial.com";
+        }
+
+    </script>
+
+</body>
+
+</html>

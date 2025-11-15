@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página Inicial - GanheSocial</title>
+    <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --text-dark: #e0e0e0;
+            --container-dark: #1e1e1e;
+            --button-dark: #1a73e8;
+            --success-dark: #34a853;
+            --pending-dark: #f9ab00;
+            --failed-dark: #ea4335;
+            --border-dark: #333333;
+            --hover-dark: #2d2d2d;
+            --shadow-dark: rgba(0, 0, 0, 0.3);
+            --card-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-dark);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            transition: var(--transition);
+            line-height: 1.6;
+        }
+
+        .menu-item[href="dashboard"] {
+            color: white;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 3px solid white;
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: var(--primary-gradient-dark);
+            color: white;
+            box-shadow: 0 2px 10px var(--shadow-dark);
+            position: relative;
+            z-index: 10;
+        }
+
+        .left-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .right-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            height: 32px;
+            margin-right: 10px;
+        }
+
+        .balance-chip {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+            transition: var(--transition);
+        }
+
+        .balance-chip:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .balance-amount {
+            font-weight: 700;
+        }
+
+        /* Main Container */
+        .main-container {
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background: var(--container-dark);
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 20px var(--shadow-dark);
+            overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 30px;
+            border: 1px solid var(--border-dark);
+        }
+
+        .container-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-dark);
+            background: var(--primary-gradient-dark);
+            color: white;
+        }
+
+        .container-header h2 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #dbdbdb;
+        }
+
+        .container-body {
+            padding: 20px;
+        }
+
+        /* Balance Cards */
+        .balance-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .balance-card {
+            background: var(--container-dark);
+            border-radius: var(--card-radius);
+            padding: 20px;
+            box-shadow: 0 2px 10px var(--shadow-dark);
+            transition: var(--transition);
+        }
+
+        .balance-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px var(--shadow-dark);
+        }
+
+        .balance-title {
+            font-size: 1rem;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+
+        .balance-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .balance-available {
+            color: var(--success-dark);
+        }
+
+        .balance-pending {
+            color: var(--pending-dark);
+        }
+
+        .balance-footer {
+            font-size: 0.85rem;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .ranking-title {
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            color: #dbdbdb;
+        }
+
+        .ranking-title i {
+            font-size: 1rem;
+            margin-right: 8px;
+            color: #dbdbdb;
+        }
+
+        /* Ranking Table */
+        .ranking-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: var(--card-radius);
+        }
+
+        .ranking-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .ranking-table thead th {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-dark);
+            font-weight: 600;
+            padding: 15px;
+            text-align: left;
+            border-bottom: 2px solid var(--border-dark);
+            position: sticky;
+            top: 0;
+            backdrop-filter: blur(5px);
+        }
+
+        .ranking-table tbody tr {
+            transition: var(--transition);
+        }
+
+        .ranking-table tbody tr:hover {
+            background-color: var(--hover-dark);
+        }
+
+        .ranking-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-dark);
+            vertical-align: middle;
+        }
+
+        .ranking-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .ranking-position {
+            font-weight: bold;
+            width: 50px;
+            text-align: left;
+        }
+
+        .ranking-user {
+            width: 60%;
+        }
+
+        .ranking-value {
+            text-align: left;
+            font-weight: bold;
+            color: var(--success-dark);
+            padding-left: 0;
+            white-space: nowrap;
+        }
+
+        .highlight-row {
+            background-color: rgba(52, 168, 83, 0.1) !important;
+            font-weight: bold;
+        }
+
+        /* Telegram Section */
+        .telegram-container {
+            text-align: center;
+            padding: 30px;
+            background: var(--container-dark);
+            border-radius: var(--card-radius);
+            box-shadow: 0 2px 10px var(--shadow-dark);
+            margin-top: 30px;
+        }
+
+        .telegram-image {
+            max-width: 70px;
+            margin-bottom: -15px;
+        }
+
+        .telegram-link {
+            color: var(--button-dark);
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .telegram-link:hover {
+            color: #8ab4f8;
+            text-decoration: underline;
+        }
+
+        /* Botão Entrar */
+        .telegram-button {
+            display: inline-block;
+            background-color: #1a73e8;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            margin-top: 15px;
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .telegram-button:hover {
+            background-color: #1669d6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+        }
+
+        /* Menu Styles */
+        .menu-toggle {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .menu-toggle span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: white;
+            border-radius: 3px;
+            transition: var(--transition);
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(3px);
+        }
+
+        .menu-content {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: var(--container-dark);
+            box-shadow: 2px 0 15px var(--shadow-dark);
+            transition: var(--transition);
+            padding: 20px 0;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .menu-content.active {
+            left: 0;
+        }
+
+        .menu-overlay.active {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: var(--text-dark);
+            font-size: 16px;
+            text-decoration: none;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-item i {
+            width: 24px;
+            text-align: center;
+        }
+
+        .menu-item:hover {
+            background-color: var(--hover-dark);
+        }
+
+        .menu-footer {
+            margin-top: auto;
+            padding: 25px 0;
+            border-top: 1px solid var(--border-dark);
+        }
+
+        .menu-logout {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: #ea4335;
+            font-size: 16px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .menu-logout:hover {
+            background-color: rgba(234, 67, 53, 0.1);
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .main-container {
+                padding: 20px;
+            }
+
+            .container-header h2 {
+                font-size: 1.3rem;
+            }
+
+            .balance-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 15px;
+            }
+
+            .container-header h2 {
+                font-size: 1rem;
+                color: #dbdbdb;
+            }
+
+            .container-header h2 i {
+                font-size: 1rem;
+                margin-right: 8px;
+                color: #dbdbdb;
+            }
+
+            .container-body {
+                padding: 15px;
+            }
+
+            .balance-value {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .header {
+                padding: 12px 15px;
+            }
+
+            .balance-chip {
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Desktop Menu */
+        @media (min-width: 992px) {
+            body {
+                padding-left: 280px;
+            }
+
+            .desktop-header {
+                display: none;
+            }
+
+            .menu-toggle {
+                display: none;
+            }
+
+            .menu-content {
+                left: 0;
+                box-shadow: none;
+            }
+
+            .menu-overlay {
+                display: none !important;
+            }
+
+            .logo-mobile {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .logo-mobile {
+                display: block;
+            }
+
+            body.menu-open .header {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: block;
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: none;
+                border: none;
+                color: #afaeae;
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 1002;
+            }
+
+            .menu-close-btn:hover {
+                color: #ea4335;
+            }
+        }
+
+        /* Initial Load */
+        body {
+            visibility: hidden;
+        }
+
+        body.loaded {
+            visibility: visible;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Menu Lateral para Desktop -->
+    <div class="menu-content" id="menuContent">
+        <!-- Botão de fechar (visível apenas no mobile) -->
+        <button class="menu-close-btn" id="menuCloseBtn">&times;</button>
+
+        <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
+            <a href="dashboard">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+            </a>
+        </div>
+        <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
+        <a class="menu-item" href="realizar_acoes"><i class="fas fa-tasks"></i> Realizar Ações</a>
+        <a class="menu-item" href="adicionar_conta"><i class="fas fa-plus-circle"></i> Adicionar Conta</a>
+        <a class="menu-item" href="gerenciar_contas"><i class="fas fa-cog"></i> Gerenciar Contas</a>
+        <a class="menu-item" href="historico_acoes"><i class="fas fa-history"></i> Histórico de Ações</a>
+        <a class="menu-item" href="solicitar_saque"><i class="fas fa-hand-holding-usd"></i> Solicitar Saque</a>
+        <a class="menu-item" href="historico_saques"><i class="fas fa-wallet"></i> Histórico de Saques</a>
+        <a class="menu-item" href="refer"><i class="fas fa-user-friends"></i> Indicados</a>
+        <a class="menu-item" href="profile"><i class="fas fa-user-cog"></i> Minha Conta</a>
+
+        <div class="menu-footer">
+            <a class="menu-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a>
+        </div>
+    </div>
+
+    <!-- Overlay do Menu -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <!-- Header para Mobile -->
+    <div class="header desktop-header">
+        <div class="left-header">
+            <div class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <!-- Logo para mobile (no header) -->
+            <a href="dashboard" class="logo-mobile">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+            </a>
+        </div>
+    </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        <!-- Cartões de Saldo -->
+        <div class="balance-cards">
+            <div class="balance-card fade-in">
+                <div class="balance-title">
+                    <i class="fas fa-wallet"></i> Saldo Disponível
+                </div>
+                <div class="balance-value balance-available" id="saldoDisponivel">R$ 0,00</div>
+                <div class="balance-footer">
+                    <i class="fas fa-info-circle"></i> Valor disponível para saque
+                </div>
+            </div>
+
+            <div class="balance-card fade-in">
+                <div class="balance-title">
+                    <i class="fas fa-clock"></i> Saldo Pendente
+                </div>
+                <div class="balance-value balance-pending" id="saldoPendente">R$ 0,00</div>
+                <div class="balance-footer">
+                    <i class="fas fa-info-circle"></i> Valor em processamento
+                </div>
+            </div>
+        </div>
+
+        <!-- Ranking de Usuários -->
+        <div class="container fade-in">
+            <div class="container-header">
+                <h2 class="ranking-title"><i class="fas fa-trophy"></i> Ranking Diário</h2>
+            </div>
+            <div class="container-body">
+                <div class="ranking-container">
+                    <table class="ranking-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Usuário</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rankingTable">
+                            <!-- Dados serão preenchidos via JavaScript -->
+                            <tr>
+                                <td class="ranking-position">1º</td>
+                                <td class="ranking-user"></td>
+                                <td class="ranking-value">R$ X,XX</td>
+                            </tr>
+                            <tr>
+                                <td class="ranking-position">2º</td>
+                                <td class="ranking-user"></td>
+                                <td class="ranking-value">R$ X,XX</td>
+                            </tr>
+                            <tr>
+                                <td class="ranking-position">3º</td>
+                                <td class="ranking-user"></td>
+                                <td class="ranking-value">R$ X,XX</td>
+                            </tr>
+                            <tr>
+                                <td class="ranking-position">4º</td>
+                                <td class="ranking-user"></td>
+                                <td class="ranking-value">R$ X,XX</td>
+                            </tr>
+                            <tr>
+                                <td class="ranking-position">5º</td>
+                                <td class="ranking-user"></td>
+                                <td class="ranking-value">R$ X,XX</td>
+                            </tr>
+                            <tr>
+                                <td class="ranking-position">6º</td>
+                                <td class="ranking-user"></td>
+                                <td class="ranking-value">R$ X,XX</td>
+                            </tr>
+                            <tr>
+                                <td class="ranking-position">7º</td>
+                                <td class="ranking-user"></td>
+                                <td class="ranking-value">R$ X,XX</td>
+                            </tr>
+                            <tr>
+                                <td class="ranking-position">8º</td>
+                                <td class="ranking-user"></td>
+                                <td class="ranking-value">R$ X,XX</td>
+                            </tr>
+                            <tr>
+                                <td class="ranking-position">9º</td>
+                                <td class="ranking-user"></td>
+                                <td class="ranking-value">R$ X,XX</td>
+                            </tr>
+                            <tr>
+                                <td class="ranking-position">10º</td>
+                                <td class="ranking-user"></td>
+                                <td class="ranking-value">R$ X,XX</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telegram Section -->
+        <div class="telegram-container fade-in">
+            <img src="https://i.imgur.com/BLph8L4.png" alt="Telegram" class="telegram-image">
+            <p>
+                </a>
+            </p>
+            <!-- Botão Entrar adicionado abaixo da imagem do Telegram -->
+            <a href="https://t.me/ganhesocialofc" class="telegram-button" target="_blank">
+                Participar do grupo no Telegram
+            </a>
+        </div>
+    </div>
+
+    <script>
+
+        /* === INICIALIZAÇÃO UNIFICADA === */
+        document.addEventListener("DOMContentLoaded", async function () {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                window.location.href = "https://ganhesocial.com/login";
+                return;
+            }
+
+            // Carrega saldo
+            await carregarSaldos();
+
+            // Atualiza o ranking ao carregar
+            await carregarRanking();
+
+            // Marca página como carregada
+            document.body.classList.add('loaded');
+        });
+        // === Controle do menu hamburguer (mantém igual) ===
+        const menuToggle = document.getElementById('menuToggle');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const menuContent = document.getElementById('menuContent');
+        const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+        function toggleMenu() {
+            menuContent.classList.toggle('active');
+            menuOverlay.classList.toggle('active');
+            const spans = menuToggle.querySelectorAll('span');
+            if (menuContent.classList.contains('active')) {
+                spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                spans[1].style.opacity = '0';
+                spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+            } else {
+                spans[0].style.transform = 'none';
+                spans[1].style.opacity = '1';
+                spans[2].style.transform = 'none';
+            }
+        }
+
+        function closeMenu() {
+            menuContent.classList.remove('active');
+            menuOverlay.classList.remove('active');
+            const spans = menuToggle.querySelectorAll('span');
+            spans[0].style.transform = 'none';
+            spans[1].style.opacity = '1';
+            spans[2].style.transform = 'none';
+        }
+
+        menuToggle.addEventListener('click', toggleMenu);
+        menuCloseBtn.addEventListener('click', closeMenu);
+        menuOverlay.addEventListener('click', closeMenu);
+
+        async function carregarSaldos() {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                console.error("Token não encontrado.");
+                return;
+            }
+            try {
+                const response = await fetch(`https://ganhesocial.com/api/get_saldo?token=${token}`);
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || "Erro ao buscar saldo.");
+                }
+
+                const saldoDisponivel = parseFloat(data.saldo_disponivel || 0);
+                const saldoPendente = parseFloat(data.saldo_pendente || 0);
+
+                localStorage.setItem("saldoDisponivel", saldoDisponivel);
+                localStorage.setItem("saldoPendente", saldoPendente);
+
+                document.getElementById("saldoDisponivel").textContent =
+                    `R$ ${saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                document.getElementById("saldoPendente").textContent =
+                    `R$ ${saldoPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                document.getElementById("saldoDisponivel").style.display = "block";
+                document.getElementById("saldoPendente").style.display = "block";
+            } catch (error) {
+                console.error("Erro ao carregar saldo:", error);
+            }
+        }
+
+        /* === SALDO === */
+        async function carregarSaldos() {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
+            try {
+                const response = await fetch(`https://ganhesocial.com/api/get_saldo?token=${token}`);
+                const data = await response.json();
+
+                if (!response.ok) throw new Error(data.error || "Erro ao buscar saldo.");
+
+                const saldoDisponivel = parseFloat(data.saldo_disponivel || 0);
+                const saldoPendente = parseFloat(data.saldo_pendente || 0);
+
+                localStorage.setItem("saldoDisponivel", saldoDisponivel);
+                localStorage.setItem("saldoPendente", saldoPendente);
+
+                document.getElementById("saldoDisponivel").textContent = `R$ ${saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                document.getElementById("saldoPendente").textContent = `R$ ${saldoPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                // Mostra os saldos e a página depois de carregar
+                document.getElementById("saldoDisponivel").style.display = "block";
+                document.getElementById("saldoPendente").style.display = "block";
+
+            } catch (error) {
+                console.error("Erro ao carregar saldo:", error);
+            }
+        }
+
+        /* === RANKING === */
+        async function carregarRanking(parcial = false) {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
+            try {
+                const response = await fetch("https://ganhesocial.com/api/ranking_diari", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ token })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "Erro ao buscar ranking.");
+
+                if (data.ranking && Array.isArray(data.ranking)) {
+                    let ranking = [...data.ranking];
+
+                    populateRankingTable(ranking);
+                } else {
+                    console.warn("⚠️ Nenhum ranking recebido da API.");
+                }
+            } catch (error) {
+                console.error("❌ Erro ao carregar ranking:", error);
+            }
+        }
+
+        // === Função de formatação do valor no ranking ===
+        function formatarValorRanking(valor) {
+            valor = Number(valor) || 0;
+            if (valor <= 1) return "R$ 1+";
+            if (valor > 1 && valor < 5) return "R$ 1+";
+            if (valor < 10) return "R$ 5+";
+            if (valor < 50) return "R$ 10+";
+            if (valor < 100) return "R$ 50+";
+            if (valor < 500) return "R$ 100+";
+            if (valor < 1000) return "R$ 500+";
+            const base = Math.floor(valor / 1000) * 1000;
+            return `R$ ${base}+`;
+        }
+        /* === POPULAR TABELA (corrigida) === */
+        function populateRankingTable(rankingData) {
+            const rankingTable = document.getElementById("rankingTable");
+            if (!rankingTable) return;
+
+            // pega todas as linhas (th/td)
+            const rows = Array.from(rankingTable.querySelectorAll("tr"));
+
+            // detecta se a primeira linha é cabeçalho (contém <th>) — assim podemos pular corretamente
+            let dataStartIndex = 0;
+            if (rows.length > 0 && rows[0].querySelector("th")) {
+                dataStartIndex = 1; // dados começam na segunda linha
+            }
+
+            // garante que rankingData é array
+            const list = Array.isArray(rankingData) ? rankingData : [];
+
+            list.forEach((user, idx) => {
+                const rowIndex = dataStartIndex + idx;
+                if (rowIndex >= rows.length) return; // tabela menor que o ranking retornado
+
+                const row = rows[rowIndex];
+
+                // highlight do usuário atual
+                row.classList.toggle("highlight-row", !!user.is_current_user);
+
+                // username (marca o usuário logado)
+                const userCell = row.querySelector(".ranking-user");
+                if (userCell) {
+                    const nome = user.username || "-";
+                    userCell.textContent = user.is_current_user ? `${nome} [VOCÊ]` : nome;
+                }
+                // valor — preferir real_total (número) se disponível, senão usar total_balance (string)
+                let formattedValue = "R$ 0,00";
+                if (typeof user.real_total === "number" && !Number.isNaN(user.real_total)) {
+                    formattedValue = formatarValorRanking(user.real_total);
+                } else if (user.total_balance) {
+                    // Tenta converter texto em número para aplicar a formatação
+                    const raw = parseFloat(String(user.total_balance).replace(/[^\d,.-]/g, "").replace(",", "."));
+                    formattedValue = !isNaN(raw) ? formatarValorRanking(raw) : "0+";
+                }
+                const valueCell = row.querySelector(".ranking-value");
+                if (valueCell) valueCell.textContent = formattedValue;
+
+                // (opcional) badge de faixa (se existir uma célula .ranking-badge)
+                const badgeCell = row.querySelector(".ranking-badge");
+                if (badgeCell) {
+                    badgeCell.textContent = user.display_range || "";
+                    badgeCell.style.display = user.display_range ? "" : "none";
+                }
+            });
+        }
+        /* === LOGOUT === */
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocial.com";
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Saques - GanheSocial</title>
+    <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --container-color: #1e1e1e;
+            --button-color: #1a73e8;
+            --success-color: #34a853;
+            --pending-color: #f9ab00;
+            --failed-color: #ea4335;
+            --border-color: #333333;
+            --hover-color: #2d2d2d;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --card-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            transition: var(--transition);
+            line-height: 1.6;
+        }
+
+        .menu-item[href="historico_saques"] {
+            color: white;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 3px solid white;
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            position: relative;
+            z-index: 10;
+        }
+
+        .left-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .right-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            height: 32px;
+            margin-right: 10px;
+        }
+
+        /* Main Container */
+        .main-container {
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background: var(--container-color);
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 20px var(--shadow-color);
+            overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+        }
+
+        .container-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .container-header h2 {
+            margin: 0;
+            font-size: 1.0rem;
+            font-weight: 600;
+        }
+
+        .container-body {
+            padding: 20px;
+        }
+
+        /* Table Styles */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: var(--card-radius);
+            margin-bottom: 20px;
+        }
+
+        .withdrawal-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 600px;
+        }
+
+        .withdrawal-table thead th {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            font-weight: 600;
+            padding: 15px;
+            text-align: left;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+        }
+
+        .withdrawal-table tbody tr {
+            transition: var(--transition);
+        }
+
+        .withdrawal-table tbody tr:hover {
+            background-color: var(--hover-color);
+        }
+
+        .withdrawal-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        .withdrawal-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .status-completed {
+            background-color: rgba(52, 168, 83, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-pending {
+            background-color: rgba(249, 171, 0, 0.1);
+            color: var(--pending-color);
+        }
+
+        .status-failed {
+            background-color: rgba(234, 67, 53, 0.1);
+            color: var(--failed-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            background: var(--container-color);
+            border-radius: var(--card-radius);
+            margin: 20px 0;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        .empty-state p {
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            padding: 20px 0;
+            margin-top: 20px;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pagination button {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+        }
+
+        .pagination button:hover {
+            background-color: var(--hover-color);
+        }
+
+        .pagination button.active {
+            background: var(--primary-gradient);
+            color: white;
+            border-color: transparent;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            margin: 0 15px;
+            font-weight: 600;
+        }
+
+        /* Menu Styles */
+        .menu-toggle {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .menu-toggle span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: white;
+            border-radius: 3px;
+            transition: var(--transition);
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+        }
+
+        .menu-content {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: var(--container-color);
+            box-shadow: 2px 0 15px var(--shadow-color);
+            transition: var(--transition);
+            padding: 20px 0;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .menu-content.active {
+            left: 0;
+        }
+
+        .menu-overlay.active {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: var(--text-color);
+            font-size: 16px;
+            text-decoration: none;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-item i {
+            width: 24px;
+            text-align: center;
+        }
+
+        .menu-item:hover {
+            background-color: var(--hover-color);
+        }
+
+        .menu-footer {
+            margin-top: auto;
+            padding: 25px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .menu-logout {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: #ea4335;
+            font-size: 16px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .menu-logout:hover {
+            background-color: rgba(234, 67, 53, 0.1);
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .main-container {
+                padding: 20px;
+            }
+
+            .container-header h2 {
+                font-size: 1.3rem;
+            }
+
+            .withdrawal-table td {
+                padding: 12px 10px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 15px;
+            }
+
+            .container-header {
+                padding: 15px;
+            }
+
+            .container-body {
+                padding: 15px;
+            }
+
+            .withdrawal-table td {
+                padding: 10px 8px;
+                font-size: 0.9rem;
+            }
+        }
+
+        .container-header h2 {
+            margin: 0;
+            font-size: 1.0rem;
+            font-weight: 600;
+        }
+
+        @media (max-width: 576px) {
+            .header {
+                padding: 12px 15px;
+            }
+
+            .balance-chip {
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+
+            .withdrawal-table td {
+                padding: 8px 6px;
+                font-size: 0.85rem;
+            }
+
+            .status-badge {
+                padding: 4px 8px;
+                font-size: 0.8rem;
+            }
+
+            .empty-state-icon {
+                font-size: 2.5rem;
+            }
+
+            .empty-state-title {
+                font-size: 1.1rem;
+            }
+
+            .pagination {
+                flex-wrap: wrap;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Loading State */
+        .skeleton {
+            background-color: #2d2d2d;
+            border-radius: 4px;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .skeleton-text {
+            height: 12px;
+            margin-bottom: 8px;
+        }
+
+        .skeleton-text:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 120px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Desktop Menu */
+        @media (min-width: 992px) {
+            body {
+                padding-left: 280px;
+            }
+
+            .desktop-header {
+                display: none;
+            }
+
+            .menu-toggle {
+                display: none;
+            }
+
+            .menu-content {
+                left: 0;
+                box-shadow: none;
+            }
+
+            .menu-overlay {
+                display: none !important;
+            }
+
+            .logo-mobile {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .logo-mobile {
+                display: block;
+            }
+
+            /* Esconde o header quando o menu está aberto */
+            body.menu-open .header {
+                display: none;
+            }
+
+            /* Estilos para o botão de fechar no mobile */
+            .menu-close-btn {
+                display: block;
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: none;
+                border: none;
+                color: #afaeae;
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 1002;
+            }
+
+            .menu-close-btn:hover {
+                color: #ea4335;
+            }
+        }
+
+        /* Initial Load */
+        body {
+            visibility: hidden;
+        }
+
+        body.loaded {
+            visibility: visible;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Menu Lateral para Desktop -->
+    <div class="menu-content" id="menuContent">
+        <!-- Botão de fechar (visível apenas no mobile) -->
+        <button class="menu-close-btn" id="menuCloseBtn">&times;</button>
+
+        <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
+            <a href="dashboard">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+            </a>
+        </div>
+        <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
+        <a class="menu-item" href="realizar_acoes"><i class="fas fa-tasks"></i> Realizar Ações</a>
+        <a class="menu-item" href="adicionar_conta"><i class="fas fa-plus-circle"></i> Adicionar Conta</a>
+        <a class="menu-item" href="gerenciar_contas"><i class="fas fa-cog"></i> Gerenciar Contas</a>
+        <a class="menu-item" href="historico_acoes"><i class="fas fa-history"></i> Histórico de Ações</a>
+        <a class="menu-item" href="solicitar_saque"><i class="fas fa-hand-holding-usd"></i> Solicitar Saque</a>
+        <a class="menu-item" href="historico_saques"><i class="fas fa-wallet"></i> Histórico de Saques</a>
+        <a class="menu-item" href="refer"><i class="fas fa-user-friends"></i> Indicados</a>
+        <a class="menu-item" href="profile"><i class="fas fa-user-cog"></i> Minha Conta</a>
+
+        <div class="menu-footer">
+            <a class="menu-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a>
+        </div>
+    </div>
+
+    <!-- Overlay do Menu -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <!-- Header para Mobile -->
+    <div class="header desktop-header">
+        <div class="left-header">
+            <div class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <!-- Logo para mobile (no header) -->
+            <a href="dashboard" class="logo-mobile">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+            </a>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        <div class="container fade-in">
+            <div class="container-header">
+                <h2></i> Histórico de Saques</h2>
+            </div>
+            <div class="container-body">
+                <!-- Tabela de Saques -->
+                <div id="withdrawals-container">
+                    <div class="table-responsive">
+                        <table class="withdrawal-table">
+                            <thead>
+                                <tr>
+                                    <th>Chave PIX</th>
+                                    <th>Data</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="withdrawals-list">
+                                <!-- Loading State -->
+                                <tr id="loading-row">
+                                    <td colspan="4">
+                                        <div class="skeleton skeleton-text" style="width: 80%"></div>
+                                        <div class="skeleton skeleton-text" style="width: 60%"></div>
+                                        <div class="skeleton skeleton-text" style="width: 70%"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="no-withdrawals" class="empty-state" style="display: none;">
+                        <p class="empty-state">Nenhum saque realizado ainda.</p>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Paginação -->
+                <div class="pagination" id="pagination" style="display: none;">
+                    <button id="prev-page" disabled><i class="fas fa-chevron-left"></i> Anterior</button>
+                    <span class="page-info" id="page-info">Página 1 de 1</span>
+                    <button id="next-page">Próxima <i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes -->
+    <div id="details-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>Detalhes do Saque</h3>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais para controle da paginação
+        let currentPage = 1;
+        const itemsPerPage = 100; // Máximo de 100 saques por página
+        let allWithdrawals = [];
+
+        document.addEventListener("DOMContentLoaded", async function () {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                setTimeout(() => {
+                    window.location.href = "https://ganhesocial.com/login";
+                },);
+                return;
+            }
+
+            // Controle do menu hamburguer
+            const menuToggle = document.getElementById('menuToggle');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuContent = document.getElementById('menuContent');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+            function toggleMenu() {
+                menuContent.classList.toggle('active');
+                menuOverlay.classList.toggle('active');
+
+                const spans = menuToggle.querySelectorAll('span');
+                if (menuContent.classList.contains('active')) {
+                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                    spans[1].style.opacity = '0';
+                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+                } else {
+                    spans[0].style.transform = 'none';
+                    spans[1].style.opacity = '1';
+                    spans[2].style.transform = 'none';
+                }
+            }
+
+            function closeMenu() {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
+                spans[0].style.transform = 'none';
+                spans[1].style.opacity = '1';
+                spans[2].style.transform = 'none';
+            }
+
+            menuToggle.addEventListener('click', toggleMenu);
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+
+            // Configura eventos da paginação
+            document.getElementById('prev-page').addEventListener('click', () => changePage(currentPage - 1));
+            document.getElementById('next-page').addEventListener('click', () => changePage(currentPage + 1));
+
+            // Carrega histórico de saques
+            await loadWithdrawals();
+
+            document.body.classList.add('loaded');
+        });
+
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocial.com";
+        }
+
+        async function loadWithdrawals() {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                return;
+            }
+
+            try {
+                // Mostra estado de carregamento
+                showLoadingState();
+
+                const response = await fetch("https://ganhesocial.com/api/withdraw", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Erro ao carregar histórico de saques");
+                }
+
+                allWithdrawals = data;
+                displayWithdrawalsPage(1);
+            } catch (error) {
+                showAlert(error.message);
+                showEmptyState();
+            }
+        }
+
+        function showLoadingState() {
+            const loadingRow = document.getElementById('loading-row');
+            const noWithdrawalsMsg = document.getElementById('no-withdrawals');
+            const pagination = document.getElementById('pagination');
+
+            if (loadingRow) loadingRow.style.display = '';
+            if (noWithdrawalsMsg) noWithdrawalsMsg.style.display = 'none';
+            if (pagination) pagination.style.display = 'none';
+        }
+
+        function showEmptyState() {
+            const loadingRow = document.getElementById('loading-row');
+            const noWithdrawalsMsg = document.getElementById('no-withdrawals');
+            const pagination = document.getElementById('pagination');
+
+            if (loadingRow) loadingRow.style.display = 'none';
+            if (noWithdrawalsMsg) noWithdrawalsMsg.style.display = 'flex';
+            if (pagination) pagination.style.display = 'none';
+        }
+
+        function formatCurrency(value) {
+            // Converte para número e formata com separadores de milhar
+            const numberValue = Number(value);
+
+            // Formata a parte inteira com separadores de milhar
+            const parts = numberValue.toFixed(2).split('.');
+            const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            const decimalPart = parts[1];
+
+            return `R$ ${integerPart},${decimalPart}`;
+        }
+
+        function displayWithdrawalsPage(page) {
+            currentPage = page;
+
+            // Ordena por data (mais recente primeiro)
+            allWithdrawals.sort((a, b) => {
+                const aTime = typeof a.date === 'object' && a.date.$date
+                    ? Number(a.date.$date.$numberLong || a.date.$date)
+                    : Date.parse(a.date);
+
+                const bTime = typeof b.date === 'object' && b.date.$date
+                    ? Number(b.date.$date.$numberLong || b.date.$date)
+                    : Date.parse(b.date);
+
+                return bTime - aTime;
+            });
+
+            // Calcula índices para a página atual
+            const startIndex = (page - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageWithdrawals = allWithdrawals.slice(startIndex, endIndex);
+
+            const withdrawalsList = document.getElementById("withdrawals-list");
+            const loadingRow = document.getElementById("loading-row");
+
+            // Limpa a tabela e esconde o loading
+            if (withdrawalsList) {
+                withdrawalsList.innerHTML = "";
+            }
+
+            if (loadingRow) {
+                loadingRow.style.display = 'none';
+            }
+
+            if (allWithdrawals.length === 0) {
+                showEmptyState();
+                return;
+            }
+
+            // Exibe os saques da página atual
+            pageWithdrawals.forEach(withdrawal => {
+                const row = document.createElement("tr");
+                row.className = 'fade-in';
+
+                const date = new Date(withdrawal.date);
+                const formattedDate = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                // Usa a nova função de formatação
+                const formattedValue = formatCurrency(withdrawal.amount);
+
+                let statusClass = '';
+                let statusText = '';
+
+                if (withdrawal.status === 'completed') {
+                    statusClass = 'status-completed';
+                    statusText = 'Efetuado';
+                } else if (withdrawal.status === 'pending') {
+                    statusClass = 'status-pending';
+                    statusText = 'Pendente';
+                } else if (withdrawal.status === 'failed') {
+                    statusClass = 'status-failed';
+                    statusText = 'Falhou';
+                } else {
+                    statusClass = 'status-completed';
+                    statusText = 'Efetuado';
+                }
+
+                // Formata a chave PIX/CPF
+                let formattedKey = withdrawal.pixKey || withdrawal.method || '-';
+
+                // Formatação específica para CPF
+                if (withdrawal.keyType === 'cpf' && /^\d{11}$/.test(withdrawal.pixKey)) {
+                    formattedKey = withdrawal.pixKey.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                }
+
+                // Formatação genérica para CPF (caso não tenha keyType mas seja um CPF)
+                else if (/^\d{11}$/.test(withdrawal.pixKey)) {
+                    formattedKey = withdrawal.pixKey.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                }
+
+                row.innerHTML = `
+    <td>${formattedKey}</td>
+    <td>
+        <div class="tooltip">
+            ${formattedDate}
+            <span class="tooltip-text">${date.toLocaleString('pt-BR')}</span>
+        </div>
+    </td>
+    <td><strong>${formattedValue}</strong></td>
+    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+`;
+
+                if (withdrawalsList) {
+                    withdrawalsList.appendChild(row);
+                }
+            });
+
+            // Atualiza a paginação
+            updatePagination();
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(allWithdrawals.length / itemsPerPage);
+
+            if (page < 1 || page > totalPages) return;
+
+            displayWithdrawalsPage(page);
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(allWithdrawals.length / itemsPerPage);
+            const prevButton = document.getElementById('prev-page');
+            const nextButton = document.getElementById('next-page');
+            const pageInfo = document.getElementById('page-info');
+            const pagination = document.getElementById('pagination');
+            const noWithdrawalsMsg = document.getElementById('no-withdrawals');
+
+            // Esconde mensagem de vazio se houver dados
+            if (noWithdrawalsMsg && allWithdrawals.length > 0) {
+                noWithdrawalsMsg.style.display = 'none';
+            }
+
+            // Mostra/oculta paginação baseado no número de páginas
+            if (pagination) {
+                if (totalPages > 1) {
+                    pagination.style.display = 'flex';
+                } else {
+                    pagination.style.display = 'none';
+                }
+            }
+
+            // Atualiza estado dos botões
+            if (prevButton) prevButton.disabled = currentPage === 1;
+            if (nextButton) nextButton.disabled = currentPage === totalPages;
+
+            // Atualiza informação da página
+            if (pageInfo) pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+        }
+
+        function showAlert(message) {
+            alert(message);
+        }
+    </script>
+</body>
+
+</html>

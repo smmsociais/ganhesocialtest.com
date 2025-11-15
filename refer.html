@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indicados - GanheSocial</title>
+    <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --container-color: #1e1e1e;
+            --button-color: #1a73e8;
+            --success-color: #34a853;
+            --pending-color: #f9ab00;
+            --failed-color: #ea4335;
+            --border-color: #333333;
+            --hover-color: #2d2d2d;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --affiliate-color: #8b6cc9;
+            --card-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            transition: var(--transition);
+            line-height: 1.6;
+        }
+
+        .menu-item[href="refer"] {
+            color: white;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 3px solid white;
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            position: relative;
+            z-index: 10;
+        }
+
+        .left-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .right-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            height: 32px;
+            margin-right: 10px;
+        }
+
+        .balance-chip {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+            transition: var(--transition);
+        }
+
+        .balance-chip:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .balance-amount {
+            font-weight: 700;
+        }
+
+        /* Main Container */
+        .main-container {
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background: var(--container-color);
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 20px var(--shadow-color);
+            overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+        }
+
+        .container-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .container-header h2 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #dbdbdb;
+        }
+
+        .container-body {
+            padding: 20px;
+        }
+
+        /* Balance Cards */
+        .balance-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .balance-card {
+            background: var(--container-color);
+            border-radius: var(--card-radius);
+            padding: 20px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            transition: var(--transition);
+        }
+
+        .balance-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px var(--shadow-color);
+        }
+
+        .balance-title {
+            font-size: 1rem;
+            color: #8b949e;
+            margin-bottom: 10px;
+        }
+
+        .balance-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .balance-available {
+            color: var(--success-color);
+        }
+
+        .balance-pending {
+            color: var(--pending-color);
+        }
+
+        .balance-affiliate {
+            color: var(--affiliate-color);
+        }
+
+        .balance-footer {
+            font-size: 0.85rem;
+            color: #8b949e;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .affiliate-title {
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            color: #dbdbdb;
+        }
+
+        .affiliate-title i {
+            font-size: 1rem;
+            margin-right: 8px;
+            color: #dbdbdb;
+        }
+
+        /* Referral Link Section */
+        .referral-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .referral-link-box {
+            display: flex;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .referral-link {
+            flex: 1;
+            padding: 12px 15px;
+            background: var(--bg-color);
+            border: none;
+            font-size: 1rem;
+            color: var(--text-color);
+        }
+
+        .copy-btn {
+            background: var(--button-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .copy-btn:hover {
+            background: #1669d6;
+        }
+
+        .referral-info {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .referral-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            background: var(--bg-color);
+            border-radius: var(--card-radius);
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .referral-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--affiliate-color);
+        }
+
+        .referral-stat-label {
+            font-size: 0.85rem;
+            color: #8b949e;
+            text-align: center;
+        }
+
+        /* How It Works Section */
+        .how-it-works {
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--bg-color);
+            border-radius: var(--card-radius);
+        }
+
+        .how-it-works p {
+            margin: 0;
+            line-height: 1.8;
+            font-size: 1rem;
+        }
+
+        /* Menu Styles */
+        .menu-toggle {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .menu-toggle span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: white;
+            border-radius: 3px;
+            transition: var(--transition);
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(3px);
+        }
+
+        .menu-content {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: var(--container-color);
+            box-shadow: 2px 0 15px var(--shadow-color);
+            transition: var(--transition);
+            padding: 20px 0;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .menu-content.active {
+            left: 0;
+        }
+
+        .menu-overlay.active {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: var(--text-color);
+            font-size: 16px;
+            text-decoration: none;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-item i {
+            width: 24px;
+            text-align: center;
+        }
+
+        .menu-item:hover {
+            background-color: var(--hover-color);
+        }
+
+        .menu-footer {
+            margin-top: auto;
+            padding: 25px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .menu-logout {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: #ea4335;
+            font-size: 16px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .menu-logout:hover {
+            background-color: rgba(234, 67, 53, 0.1);
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .main-container {
+                padding: 20px;
+            }
+
+            .container-header h2 {
+                font-size: 1.3rem;
+            }
+
+            .balance-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 15px;
+            }
+
+            .container-header h2 {
+                font-size: 1rem;
+                color: #dbdbdb;
+            }
+
+            .container-header h2 i {
+                font-size: 1rem;
+                margin-right: 8px;
+                color: #dbdbdb;
+            }
+
+            .container-body {
+                padding: 15px;
+            }
+
+            .balance-value {
+                font-size: 1.5rem;
+            }
+
+            .referral-info {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .header {
+                padding: 12px 15px;
+            }
+
+            .balance-chip {
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+
+            .referral-link-box {
+                flex-direction: column;
+            }
+
+            .referral-link {
+                width: 100%;
+            }
+
+            .copy-btn {
+                width: 100%;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Desktop Menu */
+        @media (min-width: 992px) {
+            body {
+                padding-left: 280px;
+            }
+
+            .desktop-header {
+                display: none;
+            }
+
+            .menu-toggle {
+                display: none;
+            }
+
+            .menu-content {
+                left: 0;
+                box-shadow: none;
+            }
+
+            .menu-overlay {
+                display: none !important;
+            }
+
+            .logo-mobile {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .logo-mobile {
+                display: block;
+            }
+
+            body.menu-open .header {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: block;
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: none;
+                border: none;
+                color: #afaeae;
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 1002;
+            }
+
+            .menu-close-btn:hover {
+                color: #ea4335;
+            }
+        }
+
+        /* Initial Load */
+        body {
+            visibility: hidden;
+        }
+
+        body.loaded {
+            visibility: visible;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Menu Lateral para Desktop -->
+    <div class="menu-content" id="menuContent">
+        <!-- Botão de fechar (visível apenas no mobile) -->
+        <button class="menu-close-btn" id="menuCloseBtn">&times;</button>
+
+        <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
+            <a href="dashboard">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+            </a>
+        </div>
+        <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
+        <a class="menu-item" href="realizar_acoes"><i class="fas fa-tasks"></i> Realizar Ações</a>
+        <a class="menu-item" href="adicionar_conta"><i class="fas fa-plus-circle"></i> Adicionar Conta</a>
+        <a class="menu-item" href="gerenciar_contas"><i class="fas fa-cog"></i> Gerenciar Contas</a>
+        <a class="menu-item" href="historico_acoes"><i class="fas fa-history"></i> Histórico de Ações</a>
+        <a class="menu-item" href="solicitar_saque"><i class="fas fa-hand-holding-usd"></i> Solicitar Saque</a>
+        <a class="menu-item" href="historico_saques"><i class="fas fa-wallet"></i> Histórico de Saques</a>
+        <a class="menu-item" href="refer"><i class="fas fa-user-friends"></i> Indicados</a>
+        <a class="menu-item" href="profile"><i class="fas fa-user-cog"></i> Minha Conta</a>
+
+        <div class="menu-footer">
+            <a class="menu-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a>
+        </div>
+    </div>
+
+    <!-- Overlay do Menu -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <!-- Header para Mobile -->
+    <div class="header desktop-header">
+        <div class="left-header">
+            <div class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <!-- Logo para mobile (no header) -->
+            <a href="dashboard" class="logo-mobile">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+            </a>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        <!-- Link de Indicação -->
+        <div class="container fade-in">
+            <div class="container-header">
+                <h2 class="affiliate-title">Afiliados</h2>
+            </div>
+            <div class="container-body">
+                <div class="referral-container">
+                    <!-- Saldo de Ganhos com Afiliados -->
+                    <div class="balance-card" style="margin-bottom: 20px;">
+                        <div class="balance-title">
+                            <i class="fas fa-user-friends"></i> Ganhos com Afiliados
+                        </div>
+                        <div class="balance-value balance-affiliate" id="saldoAfiliados">R$ 0,00</div>
+                        <div class="balance-footer">
+                            <i class="fas fa-info-circle"></i> Total ganho com indicações
+                        </div>
+                    </div>
+
+                    <div class="referral-link-box">
+                        <input type="text" class="referral-link" id="referralLink"
+                            value="https://ganhesocial.com/cadastro?ref=123456" readonly>
+                        <button class="copy-btn" id="copyBtn">
+                            <i class="fas fa-copy"></i> Copiar
+                        </button>
+                    </div>
+                    <div class="referral-info">
+                        <div class="referral-stat">
+                            <div class="referral-stat-value" id="totalIndicados">0</div>
+                            <div class="referral-stat-label">Total de Indicados</div>
+                        </div>
+                        <div class="referral-stat">
+                            <div class="referral-stat-value" id="indicadosAtivos">0</div>
+                            <div class="referral-stat-label">Indicados Ativos</div>
+                        </div>
+                        <div class="referral-stat">
+                            <div class="referral-stat-value">5%</div>
+                            <div class="referral-stat-label">Comissão por Saque</div>
+                        </div>
+                        <div class="referral-stat">
+                            <div class="referral-stat-value">30 dias</div>
+                            <div class="referral-stat-label">Período de Comissão</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Como Funciona -->
+        <div class="container fade-in">
+            <div class="container-header">
+                <h2 class="affiliate-title"><i class="fas fa-question-circle"></i> Como Funciona</h2>
+            </div>
+            <div class="container-body">
+                <div class="how-it-works">
+                    <p>
+                        Compartilhe seu link de afiliado com amigos e em suas redes sociais. Seus amigos se
+                        cadastram usando seu link e começam a usar a plataforma. Após seus
+                        indicados realizarem saques, você ganha 5% de comissão. Você recebe comissão por todos os saques
+                        realizados nos primeiros 30 dias de cadastro de seus indicados.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                setTimeout(() => {
+                    window.location.href = "https://ganhesocial.com/login";
+                },);
+                return;
+            }
+
+            // Controle do menu hamburguer
+            const menuToggle = document.getElementById('menuToggle');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuContent = document.getElementById('menuContent');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+            function toggleMenu() {
+                menuContent.classList.toggle('active');
+                menuOverlay.classList.toggle('active');
+
+                const spans = menuToggle.querySelectorAll('span');
+                if (menuContent.classList.contains('active')) {
+                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                    spans[1].style.opacity = '0';
+                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+                } else {
+                    spans[0].style.transform = 'none';
+                    spans[1].style.opacity = '1';
+                    spans[2].style.transform = 'none';
+                }
+            }
+
+            function closeMenu() {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
+                spans[0].style.transform = 'none';
+                spans[1].style.opacity = '1';
+                spans[2].style.transform = 'none';
+            }
+
+            menuToggle.addEventListener('click', toggleMenu);
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+
+            // Carrega dados do usuário
+            await carregarDadosAfiliados();
+
+            // Configura botão de copiar link
+            document.getElementById('copyBtn').addEventListener('click', copiarLink);
+
+            document.body.classList.add('loaded');
+        });
+
+        async function carregarDadosAfiliados() {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                console.error("Token não encontrado.");
+                return;
+            }
+
+            try {
+                const response = await fetch("https://ganhesocial.com/api/afiliados", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Erro ao buscar dados de afiliados.");
+                }
+
+                // Atualiza os valores na interface
+                document.getElementById("saldoAfiliados").textContent = `R$ ${parseFloat(data.total_comissoes || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                document.getElementById("totalIndicados").textContent = data.total_indicados || 0;
+                document.getElementById("indicadosAtivos").textContent = data.indicados_ativos || 0;
+
+                // Atualiza o link de indicação com o código do usuário
+                if (data.codigo_afiliado) {
+                    document.getElementById("referralLink").value = `https://ganhesocial.com/?ref=${data.codigo_afiliado}`;
+                }
+
+            } catch (error) {
+                console.error("Erro ao carregar dados de afiliados:", error);
+            }
+        }
+
+        function copiarLink() {
+            const referralLink = document.getElementById('referralLink');
+            referralLink.select();
+            referralLink.setSelectionRange(0, 99999); // Para mobile
+
+            try {
+                const successful = document.execCommand('copy');
+                const copyBtn = document.getElementById('copyBtn');
+
+                if (successful) {
+                    copyBtn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+                    copyBtn.style.background = '#34a853';
+
+                    setTimeout(() => {
+                        copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copiar';
+                        copyBtn.style.background = '';
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Falha ao copiar texto: ', err);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocial.com";
+        }
+    </script>
+</body>
+
+</html>

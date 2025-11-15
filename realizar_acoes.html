@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realizar Ações - GanheSocial</title>
+    <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-light: #f8f9fa;
+            --text-light: #212529;
+            --container-light: #ffffff;
+            --button-light: #007bff;
+            --success-color: #28a745;
+            --pending-color: #000000;
+            --failed-color: #dc3545;
+            --border-light: #dee2e6;
+            --hover-light: #f1f1f1;
+            --shadow-light: rgba(0, 0, 0, 0.1);
+
+            --bg-dark: #121212;
+            --text-dark: #e0e0e0;
+            --container-dark: #1e1e1e;
+            --button-dark: #1a73e8;
+            --success-dark: #34a853;
+            --pending-dark: #000000;
+            --failed-dark: #ea4335;
+            --border-dark: #333333;
+            --hover-dark: #2d2d2d;
+            --shadow-dark: rgba(0, 0, 0, 0.3);
+
+            --card-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-light);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            transition: var(--transition);
+            line-height: 1.6;
+        }
+
+        .menu-item[href="realizar_acoes"] {
+            color: white;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 3px solid white;
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 2px 10px var(--shadow-light);
+            position: relative;
+            z-index: 10;
+        }
+
+        .left-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .right-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            height: 32px;
+            margin-right: 10px;
+        }
+
+        /* Main Container */
+        .main-container {
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background: var(--container-light);
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 20px var(--shadow-light);
+            overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 30px;
+            border: 1px solid var(--border-light);
+        }
+
+        .container-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-light);
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .container-header h2 {
+            margin: 0;
+            font-size: 1.0rem;
+            font-weight: 600;
+        }
+
+        .container-body {
+            padding: 20px;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .form-select {
+            width: 40%;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-light);
+            background-color: var(--container-light);
+            color: var(--text-light);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .form-select:hover {
+            border-color: #adb5bd;
+        }
+
+        .form-select:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(54, 54, 54, 0.25);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .form-select {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .warning-box {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: var(--card-radius);
+            border: 1px solid #000000;
+            background-color: #fff8e6;
+            text-align: left;
+            font-size: 1.0rem;
+        }
+
+        .warning-box h3 {
+            color: #d9534f;
+            margin-top: 0;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .warning-box ul {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+
+        .warning-box ul li {
+            margin-bottom: 8px;
+        }
+
+        .warning-box p {
+            margin-top: 12px;
+            margin-bottom: 0;
+        }
+
+        .action-content {
+            display: none;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
+            /* Centraliza o texto */
+        }
+
+        .action-details {
+            margin-bottom: 20px;
+        }
+
+        .action-details p {
+            margin: 8px 0;
+            font-size: 1rem;
+        }
+
+        .action-details strong {
+            font-weight: 600;
+        }
+
+        .profile-image-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .profile-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--border-light);
+            box-shadow: 0 4px 8px var(--shadow-light);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            text-decoration: none;
+        }
+
+        /* Estilos padronizados para todos os botões */
+        .confirm-button,
+        .open-action-button,
+        .skip-button {
+            padding: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            height: 40px;
+            box-sizing: border-box;
+        }
+
+        /* Botão Abrir Ação (agora à direita) */
+        .open-action-button {
+            flex: 1;
+            background-color: #007BFF;
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .open-action-button:hover {
+            background-color: #0069d9;
+        }
+
+        .open-action-button {
+            gap: 8px;
+            /* Adiciona espaço entre ícone e texto */
+            padding: 10px 15px;
+            /* Aumenta um pouco o padding para melhor aparência */
+        }
+
+        .confirm-button {
+            width: 100%;
+            margin-top: 10px;
+            background-color: #5cb85c;
+            color: white;
+        }
+
+        .confirm-button:hover {
+            background-color: #4cae4c;
+        }
+
+        .skip-button {
+            flex: 1;
+            background-color: #d9534f;
+            color: white;
+        }
+
+        .skip-button:hover {
+            background-color: #c9302c;
+        }
+
+
+        .btn-danger {
+            background-color: var(--failed-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+            justify-content: center;
+        }
+
+        /* Status Message */
+        .status-message {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 10;
+        }
+
+        .status-success {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-error {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: var(--failed-color);
+        }
+
+        /* Menu Styles */
+        .menu-toggle {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .menu-toggle span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: white;
+            border-radius: 3px;
+            transition: var(--transition);
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(3px);
+        }
+
+        .menu-content {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: var(--container-light);
+            box-shadow: 2px 0 15px var(--shadow-light);
+            transition: var(--transition);
+            padding: 20px 0;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .menu-content.active {
+            left: 0;
+        }
+
+        .menu-overlay.active {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: var(--text-light);
+            font-size: 16px;
+            text-decoration: none;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-item i {
+            width: 24px;
+            text-align: center;
+        }
+
+        .menu-item:hover {
+            background-color: var(--hover-light);
+        }
+
+        .menu-footer {
+            margin-top: auto;
+            padding: 25px 0;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .menu-logout {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: #dc3545;
+            font-size: 16px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .menu-logout:hover {
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        .loading-message {
+            margin-bottom: 15px;
+            /* Espaço entre a mensagem e o círculo */
+            text-align: center;
+        }
+
+        .loading-circle-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 4px solid transparent;
+            /* deixa a base transparente */
+            border-top-color: #ffffff;
+            /* azul estilo Google */
+            border-left-color: #ffffff;
+            /* um lado extra visível para criar um arco maior */
+            animation: spin 1s linear infinite;
+            box-sizing: border-box;
+            /* Deixa as pontas do arco arredondadas */
+            border-top-left-radius: 50%;
+            border-top-right-radius: 50%;
+        }
+
+        /* Animação */
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Dark Mode Styles */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: var(--bg-dark);
+                color: var(--text-dark);
+            }
+
+            .header {
+                background: var(--primary-gradient-dark);
+            }
+
+            .container {
+                background: var(--container-dark);
+                box-shadow: 0 4px 20px var(--shadow-dark);
+                border-color: var(--border-dark);
+            }
+
+            .container-header {
+                background: var(--primary-gradient-dark);
+                border-color: var(--border-dark);
+            }
+
+            .form-select {
+                background-color: var(--container-dark);
+                color: var(--text-dark);
+                border-color: var(--border-dark);
+            }
+
+            .form-select:hover {
+                border-color: #555;
+            }
+
+            .warning-box {
+                background-color: #1e1e1e;
+                border-color: #383838;
+            }
+
+            .profile-image {
+                border-color: var(--border-dark);
+            }
+
+            .menu-content {
+                background: var(--container-dark);
+                box-shadow: 2px 0 15px var(--shadow-dark);
+            }
+
+            .menu-item {
+                color: var(--text-dark);
+            }
+
+            .menu-item:hover {
+                background-color: var(--hover-dark);
+            }
+
+            .menu-footer {
+                border-color: var(--border-dark);
+            }
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .main-container {
+                padding: 20px;
+            }
+
+            .container-header h2 {
+                font-size: 1.0rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 15px;
+            }
+
+            .container-header {
+                padding: 15px;
+            }
+
+            .container-body {
+                padding: 15px;
+            }
+
+            /* Modificação para o grupo de botões */
+            .btn-group {
+                flex-direction: row;
+                /* Mantém os botões em linha */
+                flex-wrap: wrap;
+                /* Permite quebrar linha se necessário */
+                justify-content: space-between;
+                /* Distribui os botões igualmente */
+            }
+
+            .btn-group .btn {
+                flex: 0 0 calc(50% - 5px);
+                /* Define largura de 50% com pequeno gap */
+                min-width: auto;
+                /* Remove a largura mínima */
+            }
+        }
+
+        @media (max-width: 576px) {
+            .header {
+                padding: 12px 15px;
+            }
+
+            .balance-chip {
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Desktop Menu */
+        @media (min-width: 992px) {
+            body {
+                padding-left: 280px;
+            }
+
+            .desktop-header {
+                display: none;
+            }
+
+            .menu-toggle {
+                display: none;
+            }
+
+            .menu-content {
+                left: 0;
+                box-shadow: none;
+            }
+
+            .menu-overlay {
+                display: none !important;
+            }
+
+            .logo-mobile {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .logo-mobile {
+                display: block;
+            }
+
+            /* Esconde o header quando o menu está aberto */
+            body.menu-open .header {
+                display: none;
+            }
+
+            /* Estilos para o botão de fechar no mobile */
+            .menu-close-btn {
+                display: block;
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: none;
+                border: none;
+                color: #afaeae;
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 1002;
+            }
+
+            .menu-close-btn:hover {
+                color: #dc3545;
+            }
+        }
+
+        /* Initial Load */
+        body {
+            visibility: hidden;
+        }
+
+        body.loaded {
+            visibility: visible;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Menu Lateral para Desktop -->
+    <div class="menu-content" id="menuContent">
+        <!-- Botão de fechar (visível apenas no mobile) -->
+        <button class="menu-close-btn" id="menuCloseBtn">&times;</button>
+
+        <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
+            <a href="dashboard">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+            </a>
+        </div>
+        <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
+        <a class="menu-item" href="realizar_acoes"><i class="fas fa-tasks"></i> Realizar Ações</a>
+        <a class="menu-item" href="adicionar_conta"><i class="fas fa-plus-circle"></i> Adicionar Conta</a>
+        <a class="menu-item" href="gerenciar_contas"><i class="fas fa-cog"></i> Gerenciar Contas</a>
+        <a class="menu-item" href="historico_acoes"><i class="fas fa-history"></i> Histórico de Ações</a>
+        <a class="menu-item" href="solicitar_saque"><i class="fas fa-hand-holding-usd"></i> Solicitar Saque</a>
+        <a class="menu-item" href="historico_saques"><i class="fas fa-wallet"></i> Histórico de Saques</a>
+        <a class="menu-item" href="refer"><i class="fas fa-user-friends"></i> Indicados</a>
+        <a class="menu-item" href="profile"><i class="fas fa-user-cog"></i> Minha Conta</a>
+
+        <div class="menu-footer">
+            <a class="menu-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a>
+        </div>
+    </div>
+
+    <!-- Overlay do Menu -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <!-- Header para Mobile -->
+    <div class="header desktop-header">
+        <div class="left-header">
+            <div class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <!-- Logo para mobile (no header) -->
+            <a href="dashboard" class="logo-mobile">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+            </a>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        <div class="container fade-in">
+            <div class="container-header">
+                <h2></i> Realizar Ações TikTok</h2>
+            </div>
+            <div class="container-body">
+                <div class="form-group">
+                    <select id="accountSelect" class="form-select" onchange="bindAccount()">
+                        <option value="" disabled selected hidden>Selecione uma conta</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <select id="actionType" class="form-select">
+                        <option value="" disabled selected hidden>Tipo de ação</option>
+                        <option value="seguir">Seguir</option>
+                        <option value="curtir">Curtir</option>
+                        <option value="seguir_curtir">Seguir e Curtir</option>
+                    </select>
+                </div>
+
+                <div id="statusMessage" class="status-message"></div>
+
+                <div id="warningMessage" class="warning-box">
+                    <h3>Atenção</h3>
+                    <ul>
+                        <li>Não deixe de seguir ou curtir após as ações serem realizadas.</li>
+                        <li>Não envie mensagens privadas para os perfis das ações.</li>
+                    </ul>
+                    <p>Se fizer isso, sua conta será permanentemente suspensa da plataforma.</p>
+                </div>
+
+                <div id="actionContent" class="action-content">
+                    <div class="action-details">
+                        <p><strong>Ação:</strong> <span id="actionText">Seguir</span></p>
+                        <p><strong>Usuário:</strong> <span id="username"></span></p>
+                        <p><strong>Valor:</strong> <span id="points"></span></p>
+                    </div>
+
+                    <div class="profile-image-container">
+                        <img id="profileImage" src="" alt="Avatar do TikTok" class="profile-image">
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="skip-button" id="skipButton" onclick="skipAction()">
+                            <i class="fas fa-times"></i> Pular Ação
+                        </button>
+                        <a id="actionUrl" href="#" target="_blank" class="open-action-button"
+                            onclick="showConfirmButton()">
+                            <i class="fas fa-external-link-alt"></i> Abrir Ação
+                        </a>
+                    </div>
+
+                    <button id="confirmButton" class="confirm-button" onclick="confirmAction()" style="display: none;">
+                        <i class="fas fa-check"></i> Confirmar Ação
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu Overlay para Mobile -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+
+    <script>
+        // O restante do JavaScript permanece exatamente igual
+        document.addEventListener("DOMContentLoaded", async function () {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                setTimeout(() => {
+                    window.location.href = "https://ganhesocial.com/login";
+                },);
+                return;
+            }
+
+            // Controle do menu hamburguer
+            const menuToggle = document.getElementById('menuToggle');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuContent = document.getElementById('menuContent');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+            function toggleMenu() {
+                menuContent.classList.toggle('active');
+                menuOverlay.classList.toggle('active');
+
+                const spans = menuToggle.querySelectorAll('span');
+                if (menuContent.classList.contains('active')) {
+                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                    spans[1].style.opacity = '0';
+                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+                } else {
+                    spans[0].style.transform = 'none';
+                    spans[1].style.opacity = '1';
+                    spans[2].style.transform = 'none';
+                }
+            }
+
+            function closeMenu() {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
+                spans[0].style.transform = 'none';
+                spans[1].style.opacity = '1';
+                spans[2].style.transform = 'none';
+            }
+
+            menuToggle.addEventListener('click', toggleMenu);
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+
+            try {
+                await loadAccounts();
+            } catch (error) {
+                console.error('Erro ao carregar contas:', error);
+            }
+
+            document.body.classList.add('loaded');
+        });
+        let currentActionData = null;
+
+        function limparUI() {
+            currentActionData = null;
+            tentativasSemAcoes = 0;
+
+            const username = document.getElementById("username");
+            const points = document.getElementById("points");
+            const actionText = document.getElementById("actionText");
+            const profileImage = document.getElementById("profileImage");
+            const actionUrl = document.getElementById("actionUrl");
+            const statusMessage = document.getElementById("statusMessage");
+            const actionContent = document.getElementById("actionContent");
+
+            if (username) username.textContent = "";
+            if (points) points.textContent = "";
+            if (actionText) actionText.textContent = "";
+            if (profileImage) {
+                profileImage.src = "";
+                profileImage.style.display = "none";
+            }
+            if (actionUrl) actionUrl.href = "#";
+            if (statusMessage) statusMessage.textContent = "";
+            if (actionContent) {
+                actionContent.style.opacity = "0";
+                actionContent.style.display = "none";
+            }
+        }
+
+        async function bindAccount() {
+            const selectedAccount = document.getElementById("accountSelect").value?.trim();
+
+            if (!selectedAccount || selectedAccount === "" || selectedAccount === "null") {
+                return;
+            }
+
+            try {
+                const response = await fetch("/api/vincular_conta", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ nomeUsuario: selectedAccount })
+                });
+
+                const data = await response.json();
+
+                if (data.id_conta) {
+                    localStorage.setItem("id_conta", data.id_conta);
+                    localStorage.setItem("conta_invalida", "false");
+                } else {
+                    if (data.error === "WRONG_USER") {
+                        localStorage.setItem("id_conta", "fallback_" + selectedAccount);
+                        localStorage.setItem("conta_invalida", "true");
+                    } else {
+                        return;
+                    }
+                }
+
+                limparUI();            // limpa UI e estados da conta antiga
+                ativarSelecaoTipoAcao(); // habilita seletor do tipo de ação
+
+                fetchAction();         // inicia busca para nova conta
+
+            } catch (error) {
+                console.error("Erro no bindAccount:", error);
+            }
+        }
+
+        // variáveis globais
+        let contagemEmAndamento = false;
+        let fetchTimeout;
+        let contagemTimeout;
+        let pausaTimeout;
+        let buscando = false;
+
+        function fetchActionDebounced() {
+            clearTimeout(fetchTimeout);
+            fetchTimeout = setTimeout(() => {
+                fetchAction();
+            }, 200);
+        }
+
+        let inicializou = false;
+
+        function ativarSelecaoTipoAcao() {
+            const id_conta = localStorage.getItem("id_conta");
+            const token = localStorage.getItem("token");
+
+            if (id_conta && token && id_conta !== "null") {
+                const select = document.getElementById("actionType");
+                select.disabled = false;
+
+                if (!select.dataset.listenerAdded) {
+                    select.addEventListener("change", () => {
+                        const actionType = select.value;
+                        const id_conta = localStorage.getItem("id_conta");
+
+                        if (id_conta && id_conta !== "null" && actionType !== "") {
+                            document.getElementById("actionText").textContent =
+                                actionType === "curtir" ? "Curtir" :
+                                    actionType === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
+
+                            fetchActionDebounced();
+                        }
+                    });
+
+                    select.dataset.listenerAdded = "true";
+                }
+
+                if (!inicializou) {
+                    inicializou = true;
+                    const preSelectedAction = select.value;
+
+                    if (preSelectedAction && preSelectedAction !== "") {
+                        document.getElementById("actionText").textContent =
+                            preSelectedAction === "curtir" ? "Curtir" :
+                                preSelectedAction === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
+
+                        fetchActionDebounced();
+                    }
+                }
+            }
+        }
+
+        let tentativasSemAcoes = 0;
+        const maxTentativas = 1;
+        const pausaLongaMs = 0;
+
+        function fetchActionDebounced() {
+            // evita agendar se já estamos em pausa longa
+            if (tentativasSemAcoes >= maxTentativas) {
+                return;
+            }
+
+            clearTimeout(fetchTimeout);
+            fetchTimeout = setTimeout(() => {
+                fetchAction();
+            }, 200);
+        }
+
+        function exibirContagemRegressiva(segundos = 3) {
+            if (contagemEmAndamento) return; // evita chamadas concorrentes
+            contagemEmAndamento = true;
+
+            let contador = segundos;
+            const statusElement = document.getElementById("statusMessage");
+            if (!statusElement) {
+                contagemEmAndamento = false;
+                return;
+            }
+
+            statusElement.dataset.contagem = "true";
+            statusElement.innerHTML = `
+    <div class="loading-message">Nenhuma ação disponível no momento. Tentando novamente em ${contador}...</div>
+    <div class="loading-circle-container">
+      <div class="loading-circle"></div>
+    </div>
+  `;
+
+            const loadingMessage = statusElement.querySelector(".loading-message");
+            if (!loadingMessage) {
+                contagemEmAndamento = false;
+                return;
+            }
+
+            function atualizarMensagem() {
+                if (contador > 0) {
+                    loadingMessage.textContent = `Nenhuma ação disponível no momento. Tentando novamente em ${contador}...`;
+                    contador--;
+                    contagemTimeout = setTimeout(atualizarMensagem, 1000);
+                } else {
+                    contagemEmAndamento = false;
+                    statusElement.removeAttribute("data-contagem");
+
+                    // Se atingimos o máximo de tentativas, fazemos pausa longa
+                    if (tentativasSemAcoes >= maxTentativas) {
+                        setTimeout(() => {
+                            tentativasSemAcoes = 0;
+                            // só dispara se não houver busca em andamento
+                            if (!buscando) fetchActionDebounced();
+                        }, pausaLongaMs);
+                    } else {
+                        // chamada única após a contagem
+                        if (!buscando) fetchActionDebounced();
+                    }
+                }
+            }
+
+            atualizarMensagem();
+        }
+
+        // Versão atualizada do fetchAction com flags e backoff
+        async function fetchAction() {
+            if (buscando) {
+                return;
+            }
+
+            buscando = true;
+            try {
+                const id_conta = localStorage.getItem("id_conta");
+                const token = localStorage.getItem("token");
+                const actionType = document.getElementById("actionType").value;
+                const statusElement = document.getElementById("statusMessage");
+                const contaInvalida = localStorage.getItem("conta_invalida") === "true";
+
+                // Bloqueios iniciais
+                if (!id_conta || !token || id_conta === "null" || !actionType || actionType === "") {
+                    document.getElementById("warningMessage").style.display = "block";
+                    document.getElementById("actionContent").style.opacity = "1";
+                    return;
+                }
+
+                if (!["seguir", "curtir", "seguir_curtir"].includes(actionType)) {
+                    if (statusElement) statusElement.textContent = "Tipo de ação inválido.";
+                    return;
+                }
+
+                if (document.getElementById("actionType").disabled) return;
+                document.getElementById("warningMessage").style.display = "none";
+
+                if (statusElement && !statusElement.dataset.contagem) {
+                    statusElement.innerHTML = `
+        <div class="loading-message">Buscando ações, aguarde...</div>
+        <div class="loading-circle-container">
+          <div class="loading-circle"></div>
+        </div>
+      `;
+                }
+
+                document.getElementById("actionContent").style.opacity = "0";
+
+                // Função de tentativa de busca (SMM)
+                async function tentarBuscarSMM() {
+                    try {
+                        const response = await fetch(`/api/buscar_acao_smm?id_conta=${id_conta}&token=${token}&tipo=${actionType}`);
+                        if (!response.ok) throw new Error("Resposta não OK: " + response.status);
+                        const data = await response.json();
+
+                        if (data.status === "ENCONTRADA") {
+                            // reset das tentativas ao encontrar ação
+                            tentativasSemAcoes = 0;
+                            if (statusElement) statusElement.removeAttribute("data-contagem");
+                            await processarAcao(data, "smm");
+                            return true;
+                        }
+                    } catch (e) {
+                        console.error("Erro ao buscar ação SMM:", e);
+                    }
+                    return false;
+                }
+
+                async function tentarBuscarLocal() {
+                    try {
+                        const response = await fetch(`/api/buscar_acao?id_conta=${id_conta}&token=${token}&tipo=${actionType}`);
+                        if (!response.ok) {
+                            return false;
+                        }
+                        const data = await response.json();
+
+                        if (data.status === "ENCONTRADA") {
+                            document.getElementById("warningMessage").style.display = "none";
+                            if (parseFloat(data.quantidade_pontos) === 3) {
+                                return "ignorarLocalERepetirSMM";
+                            }
+                            await processarAcao(data, "local");
+                            return true;
+                        } else if (data.error === "Nenhuma ação encontrada.") {
+                            return "repetirSMM";
+                        }
+                    } catch (e) {
+                        console.error("Erro ao buscar ação local:", e);
+                    }
+                    return false;
+                }
+
+                // **Aqui** chamamos as tentativas e usamos await sem erro
+                const encontrouSMM = await tentarBuscarSMM();
+
+                if (!encontrouSMM) {
+                    tentativasSemAcoes++;
+
+                    let resultadoLocal = false;
+
+                    if (!contaInvalida && actionType !== "curtir") {
+                        resultadoLocal = await tentarBuscarLocal();
+                    }
+
+                    if (resultadoLocal === "ignorarLocalERepetirSMM" || resultadoLocal === "repetirSMM") {
+                        const novaTentativa = await tentarBuscarSMM();
+                        if (!novaTentativa) {
+                            exibirContagemRegressiva();
+                        }
+                    } else if (!resultadoLocal) {
+                        exibirContagemRegressiva();
+                    }
+                } else {
+                }
+
+            } finally {
+                buscando = false;
+            }
+        }
+
+        // Recomenda: resetar tentativas se o usuário trocar tipo de ação ou conta
+        document.getElementById("actionType")?.addEventListener("change", () => {
+            tentativasSemAcoes = 0;
+        });
+        window.addEventListener("storage", (e) => {
+            if (e.key === "id_conta") tentativasSemAcoes = 0;
+        });
+
+        async function processarAcao(data, origem) {
+            document.getElementById("skipButton").style.display = "inline-block";
+            document.getElementById("statusMessage").textContent = "";
+            document.getElementById("username").textContent = data.nome_usuario;
+
+            // Atualiza o texto da ação com base no tipo selecionado
+            const actionType = document.getElementById("actionType").value;
+            let actionText = "Seguir";
+
+            if (data.url_dir && data.url_dir.includes("/video/")) {
+                actionText = "Curtir";
+            } else if (actionType === "seguir_curtir") {
+                actionText = origem === "local" ? "Seguir" : "Seguir";
+            } else if (actionType === "curtir") {
+                actionText = "Curtir";
+            }
+
+            document.getElementById("actionText").textContent = actionText;
+
+            const tiktokUsername = data.nome_usuario.replace(/^@/, '');
+            const url = data.url_dir || `https://www.tiktok.com/@${tiktokUsername}`;
+            const profileImg = document.getElementById("profileImage");
+            document.getElementById("actionUrl").href = url;
+
+            if (data.url_dir && data.url_dir.includes("/video/")) {
+                // Não carrega imagem de perfil para ações de Curtir
+                profileImg.style.display = "none";
+                profileImg.src = "";
+            } else {
+                try {
+                    const resUserInfo = await fetch(`/api/user-info?unique_id=${tiktokUsername}`);
+                    const userInfo = await resUserInfo.json();
+
+                    if (userInfo.code === 0 && userInfo.data?.user?.avatarLarger) {
+                        profileImg.src = userInfo.data.user.avatarLarger;
+                        profileImg.style.display = "block";
+                        localStorage.setItem("unique_id", userInfo.data.user.uniqueId);
+
+                    } else {
+                        profileImg.style.display = "none";
+                        profileImg.src = "";
+                    }
+                } catch (e) {
+                    profileImg.style.display = "none";
+                    profileImg.src = "";
+                }
+            }
+            let valorFinal;
+
+            const isCurtir = (data.url_dir && data.url_dir.includes("/video/")) || actionType === "curtir";
+
+            if (isCurtir) {
+                valorFinal = "0.001";
+            } else if (origem === "smm") {
+                valorFinal = "0.006";
+            } else {
+                const pontos = parseFloat(data.quantidade_pontos || 0);
+                const valorBruto = pontos / 1000;
+                let valorDescontado = (valorBruto > 0.004) ? valorBruto - 0.001 : valorBruto;
+                valorFinal = Math.min(Math.max(valorDescontado, 0.004), 0.006).toFixed(3);
+            }
+            document.getElementById("points").textContent = `R$ ${valorFinal}`;
+            document.getElementById("confirmButton").style.display = "none";
+
+            currentActionData = {
+                ...data,
+                origem
+            };
+            document.getElementById("actionContent").style.display = "block";
+            document.getElementById("actionContent").style.opacity = "1";
+        }
+
+        function showConfirmButton() {
+            document.getElementById("confirmButton").style.display = "block";
+        }
+
+        async function confirmAction() {
+            const selectedAccount = document.getElementById("accountSelect").value;
+            if (!selectedAccount || !currentActionData) return;
+
+            const statusElement = document.getElementById("statusMessage");
+            const actionContent = document.getElementById("actionContent");
+            const confirmButton = document.getElementById("confirmButton");
+            const profileImage = document.getElementById("profileImage");
+
+            // Mostra carregamento
+            statusElement.innerHTML = `
+    <div class="loading-message">Buscando ações, aguarde...</div>
+    <div class="loading-circle-container">
+      <div class="loading-circle"></div>
+    </div>
+  `;
+
+            // Oculta elementos da ação atual
+            actionContent.style.opacity = "0";
+            confirmButton.style.display = "none";
+            profileImage.style.display = "none";
+
+            try {
+                let confirmData;
+
+                if (currentActionData.origem !== 'smm') {
+                    const confirmResponse = await fetch("/api/confirmar_acao", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify({
+                            id_conta: localStorage.getItem("id_conta"),
+                            id_pedido: currentActionData.id_pedido,
+                        })
+                    });
+
+                    confirmData = await confirmResponse.json();
+
+                    if (confirmData.status !== "success" || confirmData.message !== "CONFIRMOU_SUCESSO") {
+                        throw new Error("Erro ao confirmar ação.");
+                    }
+                } else {
+                    confirmData = { valor: "0.007" };
+                }
+
+                await registrarAcaoPendente({
+                    nome_usuario: selectedAccount,
+                    id_pedido: currentActionData.id_pedido,
+                    id_conta: localStorage.getItem("id_conta"),
+                    url_dir: currentActionData.url_dir,
+                    tipo_acao: currentActionData.tipo_acao,
+                    quantidade_pontos: Number(currentActionData.quantidade_pontos),
+                    valor_confirmacao: parseFloat(confirmData.valor),
+                });
+
+                tentativasSemAcoes = 0;
+
+                await fetchAction();
+
+            } catch (error) {
+                console.error("Erro ao confirmar ação:", error);
+                statusElement.textContent = "Erro ao confirmar ação. Tente novamente.";
+                actionContent.style.opacity = "1";
+                confirmButton.style.display = "inline-block";
+                profileImage.style.display = "block";
+            }
+        }
+        async function skipAction() {
+            const statusElement = document.getElementById("statusMessage");
+            const actionContent = document.getElementById("actionContent");
+            const confirmButton = document.getElementById("confirmButton");
+            const profileImage = document.getElementById("profileImage");
+
+            // Mostra o carregamento
+            statusElement.innerHTML = `
+        <div class="loading-message">Buscando ações, aguarde...</div>
+        <div class="loading-circle-container">
+            <div class="loading-circle"></div>
+        </div>
+    `;
+            actionContent.style.opacity = "0";
+            confirmButton.style.display = "none";
+            profileImage.style.display = "none";
+
+            try {
+                const tipo = document.getElementById("actionType").value;
+                const nome_usuario = document.getElementById("username").textContent;
+                const url_dir = document.getElementById("actionUrl").href;
+                const quantidade_pontos_text = document.getElementById("points").textContent;
+                const quantidade_pontos = parseFloat(quantidade_pontos_text.replace('R$ ', ''));
+                const tipo_acao = tipo;
+                const id_conta = localStorage.getItem("id_conta");
+                const token = localStorage.getItem("token");
+
+                const response = await fetch("/api/pular_acao", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        token,
+                        id_pedido: currentActionData?.id_pedido,
+                        id_conta,
+                        nome_usuario,
+                        url_dir,
+                        quantidade_pontos,
+                        tipo_acao,
+                        tipo
+                    })
+                });
+
+                tentativasSemAcoes = 0;
+                clearTimeout(contagemTimeout);
+                clearTimeout(pausaTimeout);
+                const statusElement = document.getElementById("statusMessage");
+                statusElement?.removeAttribute("data-contagem");
+
+                // Buscar próxima ação (agende imediatamente)
+                fetchActionDebounced();
+            } catch (error) {
+            }
+        }
+        async function loadAccounts() {
+            try {
+                const token = localStorage.getItem("token");
+                if (!token) {
+                    throw new Error("Token não encontrado. Faça login novamente.");
+                }
+
+                const response = await fetch("https://ganhesocial.com/api/contas", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error("Erro ao carregar contas");
+                }
+
+                const accounts = await response.json();
+
+                if (!Array.isArray(accounts)) {
+                    throw new Error("Formato de dados inválido");
+                }
+
+                const accountSelect = document.getElementById("accountSelect");
+                accountSelect.innerHTML = '<option value="" disabled selected hidden>Selecione uma conta</option>';
+
+                accounts.forEach((account) => {
+                    const option = document.createElement("option");
+                    option.value = account.nomeConta;
+                    option.textContent = account.nomeConta;
+                    accountSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Erro ao carregar contas:", error);
+            }
+        }
+
+        async function salvarAcaoNoBanco({
+            nome_usuario,
+            id_pedido,
+            id_conta,
+            url_dir,
+            acao_validada,
+            valor_confirmacao,
+            quantidade_pontos,
+            tipo_acao
+        }) {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                console.error("Token de autenticação não encontrado.");
+                return;
+            }
+        }
+
+        async function registrarAcaoPendente(acao) {
+            try {
+                // Validação básica
+                if (!acao.nome_usuario || !acao.id_pedido || !acao.id_conta || !acao.url_dir || !acao.tipo_acao) {
+                    return;
+                }
+
+                const response = await fetch("/api/registrar_acao_pendente", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(acao)
+                });
+
+                if (data.status !== "success") {
+                    throw new Error("Falha ao registrar ação pendente.");
+                }
+
+            } catch (error) {
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocial.com";
+        }   
+    </script>
+</body>
+
+</html>

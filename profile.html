@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Conta - GanheSocial</title>
+    <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --container-color: #1e1e1e;
+            --button-color: #1a73e8;
+            --success-color: #34a853;
+            --pending-color: #f9ab00;
+            --failed-color: #ea4335;
+            --border-color: #333333;
+            --hover-color: #2d2d2d;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --label-color: #8b949e;
+            --positive-color: #27ae60;
+            --negative-color: #c0392b;
+            --neutral-color: #2980b9;
+            --error-color: #f85149;
+            --card-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            transition: var(--transition);
+            line-height: 1.6;
+        }
+
+        .menu-item[href="profile"] {
+            color: white;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 3px solid white;
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            position: relative;
+            z-index: 10;
+        }
+
+        .left-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .right-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            height: 32px;
+            margin-right: 10px;
+        }
+
+        .container {
+            background: var(--container-color);
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 20px var(--shadow-color);
+            overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+            width: 100%;
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 25px;
+        }
+
+        .container-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .container-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .container-body {
+            padding: 20px;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .input-box {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--container-color);
+            color: var(--text-color);
+            transition: var(--transition);
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        .input-box:focus {
+            border-color: var(--button-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+        }
+
+        .input-box[readonly] {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            cursor: not-allowed;
+        }
+
+        .token-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .copy-icon {
+            margin-left: 10px;
+            cursor: pointer;
+            color: var(--label-color);
+            font-size: 18px;
+            transition: var(--transition);
+        }
+
+        .copy-icon:hover {
+            color: var(--button-color);
+        }
+
+        .copy-notification {
+            position: absolute;
+            right: 0;
+            top: -30px;
+            background: var(--text-color);
+            color: var(--container-color);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .save-button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: white;
+            font-size: 16px;
+            background: var(--success-color);
+            transition: var(--transition);
+            font-weight: 600;
+        }
+
+        .save-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-color);
+            background: #2a8a42;
+        }
+
+        .message {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 6px;
+            display: none;
+            font-size: 15px;
+            transition: var(--transition);
+        }
+
+        .error-message {
+            background-color: rgba(234, 67, 53, 0.1);
+            color: var(--failed-color);
+            border: 1px solid rgba(234, 67, 53, 0.2);
+        }
+
+        .success-message {
+            background-color: rgba(52, 168, 83, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(52, 168, 83, 0.2);
+        }
+
+        .page-title {
+            text-align: left;
+            margin-bottom: 25px;
+            color: var(--text-color);
+            font-size: 1.0rem;
+            font-weight: 600;
+        }
+
+        /* Menu Styles */
+        .menu-toggle {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .menu-toggle span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: white;
+            border-radius: 3px;
+            transition: var(--transition);
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(3px);
+        }
+
+        .menu-content {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: var(--container-color);
+            box-shadow: 2px 0 15px var(--shadow-color);
+            transition: var(--transition);
+            padding: 20px 0;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .menu-content.active {
+            left: 0;
+        }
+
+        .menu-overlay.active {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: var(--text-color);
+            font-size: 16px;
+            text-decoration: none;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-item i {
+            width: 24px;
+            text-align: center;
+        }
+
+        .menu-item:hover {
+            background-color: var(--hover-color);
+        }
+
+        .menu-footer {
+            margin-top: auto;
+            padding: 25px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .menu-logout {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: #ea4335;
+            font-size: 16px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .menu-logout:hover {
+            background-color: rgba(234, 67, 53, 0.1);
+        }
+
+        /* Desktop Menu */
+        @media (min-width: 992px) {
+            body {
+                padding-left: 280px;
+            }
+
+            .desktop-header {
+                display: none;
+            }
+
+            .menu-toggle {
+                display: none;
+            }
+
+            .menu-content {
+                left: 0;
+                box-shadow: none;
+            }
+
+            .menu-overlay {
+                display: none !important;
+            }
+
+            .logo-mobile {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .logo-mobile {
+                display: block;
+            }
+
+            /* Esconde o header quando o menu está aberto */
+            body.menu-open .header {
+                display: none;
+            }
+
+            /* Estilos para o botão de fechar no mobile */
+            .menu-close-btn {
+                display: block;
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: none;
+                border: none;
+                color: #afaeae;
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 1002;
+            }
+
+            .menu-close-btn:hover {
+                color: #ea4335;
+            }
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 20px;
+            }
+
+            .container {
+                padding: 20px;
+                width: calc(100% - 40px);
+            }
+
+            .page-title {
+                font-size: 1.0rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .main-container {
+                padding: 15px;
+            }
+
+            .container {
+                padding: 15px;
+                width: calc(100% - 30px);
+            }
+
+            .page-title {
+                font-size: 1.0rem;
+            }
+
+            .input-box {
+                padding: 10px 12px;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        body {
+            visibility: hidden;
+        }
+
+        body.loaded {
+            visibility: visible;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Menu Lateral para Desktop -->
+    <div class="menu-content" id="menuContent">
+        <!-- Botão de fechar (visível apenas no mobile) -->
+        <button class="menu-close-btn" id="menuCloseBtn">&times;</button>
+
+        <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
+            <a href="dashboard">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+            </a>
+        </div>
+        <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
+        <a class="menu-item" href="realizar_acoes"><i class="fas fa-tasks"></i> Realizar Ações</a>
+        <a class="menu-item" href="adicionar_conta"><i class="fas fa-plus-circle"></i> Adicionar Conta</a>
+        <a class="menu-item" href="gerenciar_contas"><i class="fas fa-cog"></i> Gerenciar Contas</a>
+        <a class="menu-item" href="historico_acoes"><i class="fas fa-history"></i> Histórico de Ações</a>
+        <a class="menu-item" href="solicitar_saque"><i class="fas fa-hand-holding-usd"></i> Solicitar Saque</a>
+        <a class="menu-item" href="historico_saques"><i class="fas fa-wallet"></i> Histórico de Saques</a>
+        <a class="menu-item" href="refer"><i class="fas fa-user-friends"></i> Indicados</a>
+        <a class="menu-item" href="profile"><i class="fas fa-user-cog"></i> Minha Conta</a>
+
+        <div class="menu-footer">
+            <a class="menu-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a>
+        </div>
+    </div>
+
+    <!-- Overlay do Menu -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <!-- Header para Mobile -->
+    <div class="header desktop-header">
+        <div class="left-header">
+            <div class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <!-- Logo para mobile (no header) -->
+            <a href="dashboard" class="logo-mobile">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+            </a>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        <div class="container fade-in">
+            <h2 class="page-title"></i> Seu Perfil</h2>
+
+            <div id="errorMessage" class="message error-message"></div>
+            <div id="successMessage" class="message success-message"></div>
+
+            <div class="form-group">
+                <label for="name" class="form-label">Nome</label>
+                <input type="text" id="name" class="input-box" maxlength="20">
+            </div>
+
+            <div class="form-group">
+                <label for="email" class="form-label">E-mail</label>
+                <input type="email" id="email" class="input-box" readonly>
+            </div>
+
+            <div class="form-group">
+                <label for="authToken" class="form-label">Token</label>
+                <div class="token-container">
+                    <input type="text" id="authToken" class="input-box" readonly>
+                    <span id="copyIcon" class="copy-icon" title="Copiar token"><i class="far fa-copy"></i></span>
+                    <span id="copyNotification" class="copy-notification">Copiado!</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="newPassword" class="form-label">Nova Senha</label>
+                <input type="password" id="newPassword" class="input-box"
+                    placeholder="Deixe em branco para não alterar">
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword" class="form-label">Confirmar Nova Senha</label>
+                <input type="password" id="confirmPassword" class="input-box">
+            </div>
+
+            <button class="save-button" onclick="saveProfile()"><i class=""></i> Salvar Alterações</button>
+        </div>
+    </div>
+
+    <script>
+        async function loadProfile() {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                setTimeout(() => {
+                    window.location.href = "https://ganhesocial.com/login";
+                }, 2000);
+                return;
+            }
+
+            try {
+                const response = await fetch("https://ganhesocial.com/api/profile", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Erro ao carregar perfil");
+                }
+
+                document.getElementById("name").value = data.nome_usuario || "";
+                document.getElementById("email").value = data.email || "";
+                document.getElementById("authToken").value = data.token;
+
+            } catch (error) {
+                showMessage(error.message, true);
+            }
+        }
+
+        function showMessage(message, isError = false) {
+            const errorElement = document.getElementById("errorMessage");
+            const successElement = document.getElementById("successMessage");
+
+            if (isError) {
+                errorElement.textContent = message;
+                errorElement.style.display = "block";
+                successElement.style.display = "none";
+            } else {
+                successElement.textContent = message;
+                successElement.style.display = "block";
+                errorElement.style.display = "none";
+            }
+
+            setTimeout(() => {
+                errorElement.style.display = "none";
+                successElement.style.display = "none";
+            }, 5000);
+        }
+
+        function copyTokenToClipboard() {
+            const tokenInput = document.getElementById('authToken');
+            const copyNotification = document.getElementById('copyNotification');
+
+            tokenInput.select();
+            document.execCommand('copy');
+
+            // Show notification
+            copyNotification.style.opacity = '1';
+            setTimeout(() => {
+                copyNotification.style.opacity = '0';
+            }, 2000);
+        }
+
+        async function saveProfile() {
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const newPassword = document.getElementById('newPassword').value.trim();
+            const confirmPassword = document.getElementById('confirmPassword').value.trim();
+            const token = document.getElementById('authToken').value.trim();
+
+            if (name.length > 20) {
+                showMessage("O nome não pode ter mais de 20 caracteres.", true);
+                return;
+            }
+
+            if (newPassword) {
+                if (newPassword !== confirmPassword) {
+                    showMessage("As senhas não coincidem.", true);
+                    return;
+                }
+                if (newPassword.length < 6) {
+                    showMessage("A senha deve ter pelo menos 6 caracteres.", true);
+                    return;
+                }
+            }
+
+            const body = { nome_usuario: name, email };
+            if (newPassword) {
+                body.senha = newPassword;
+            }
+
+            try {
+                const response = await fetch("https://ganhesocial.com/api/profile", {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Erro ao salvar perfil");
+                }
+
+                // Removida a mensagem de sucesso e adicionado refresh da página
+                document.getElementById('newPassword').value = "";
+                document.getElementById('confirmPassword').value = "";
+                window.location.reload();
+
+            } catch (error) {
+                showMessage(error.message, true);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocial.com";
+        }
+
+        document.addEventListener("DOMContentLoaded", async function () {
+            const token = localStorage.getItem("token");
+
+            // Controle do menu hamburguer
+            const menuToggle = document.getElementById('menuToggle');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuContent = document.getElementById('menuContent');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+            function toggleMenu() {
+                menuContent.classList.toggle('active');
+                menuOverlay.classList.toggle('active');
+
+                const spans = menuToggle.querySelectorAll('span');
+                if (menuContent.classList.contains('active')) {
+                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                    spans[1].style.opacity = '0';
+                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+                } else {
+                    spans[0].style.transform = 'none';
+                    spans[1].style.opacity = '1';
+                    spans[2].style.transform = 'none';
+                }
+            }
+
+            function closeMenu() {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
+                spans[0].style.transform = 'none';
+                spans[1].style.opacity = '1';
+                spans[2].style.transform = 'none';
+            }
+
+            menuToggle.addEventListener('click', toggleMenu);
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+
+            // Configura cópia do token
+            const tokenInput = document.getElementById('authToken');
+            const copyIcon = document.getElementById('copyIcon');
+
+            tokenInput.addEventListener('click', copyTokenToClipboard);
+            copyIcon.addEventListener('click', copyTokenToClipboard);
+
+            // Carrega perfil do usuário
+            await loadProfile();
+
+            document.body.classList.add('loaded');
+        });
+    </script>
+</body>
+
+</html>

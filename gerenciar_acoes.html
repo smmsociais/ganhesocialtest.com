@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Ações - GanheSocial</title>
+    <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --container-color: #1e1e1e;
+            --button-color: #1a73e8;
+            --success-color: #34a853;
+            --pending-color: #f9ab00;
+            --failed-color: #ea4335;
+            --border-color: #333333;
+            --hover-color: #2d2d2d;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --affiliate-color: #8b6cc9;
+            --card-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            transition: var(--transition);
+            line-height: 1.6;
+        }
+
+        .menu-item[href="gerenciar_acoes"] {
+            color: white;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 3px solid white;
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            position: relative;
+            z-index: 10;
+        }
+
+        .left-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .right-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            height: 32px;
+            margin-right: 10px;
+        }
+
+        .balance-chip {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+            transition: var(--transition);
+        }
+
+        .balance-chip:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .balance-amount {
+            font-weight: 700;
+        }
+
+        /* Main Container */
+        .main-container {
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background: var(--container-color);
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 20px var(--shadow-color);
+            overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+        }
+
+        .container-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .container-header h2 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #dbdbdb;
+        }
+
+        .container-body {
+            padding: 20px;
+        }
+
+        /* Balance Cards */
+        .balance-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .balance-card {
+            background: var(--container-color);
+            border-radius: var(--card-radius);
+            padding: 20px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            transition: var(--transition);
+        }
+
+        .balance-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px var(--shadow-color);
+        }
+
+        .balance-title {
+            font-size: 1rem;
+            color: #8b949e;
+            margin-bottom: 10px;
+        }
+
+        .balance-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .balance-available {
+            color: var(--success-color);
+        }
+
+        .balance-pending {
+            color: var(--pending-color);
+        }
+
+        .balance-failed {
+            color: var(--failed-color);
+        }
+
+        .balance-footer {
+            font-size: 0.85rem;
+            color: #8b949e;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .affiliate-title {
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            color: #dbdbdb;
+        }
+
+        .affiliate-title i {
+            font-size: 1rem;
+            margin-right: 8px;
+            color: #dbdbdb;
+        }
+
+        /* Filter Section */
+        .filter-container {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .filter-select {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 15px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+
+        .filter-btn {
+            background: var(--button-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .filter-btn:hover {
+            background: #1669d6;
+        }
+
+        /* Actions Table */
+        .actions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .actions-table th {
+            background: var(--bg-color);
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .actions-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .actions-table tr:hover {
+            background: var(--hover-color);
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: rgba(249, 171, 0, 0.2);
+            color: var(--pending-color);
+        }
+
+        .status-valid {
+            background: rgba(52, 168, 83, 0.2);
+            color: var(--success-color);
+        }
+
+        .status-invalid {
+            background: rgba(234, 67, 53, 0.2);
+            color: var(--failed-color);
+        }
+
+        .action-value {
+            font-weight: 600;
+        }
+
+        .action-value.positive {
+            color: var(--success-color);
+        }
+
+        .action-value.negative {
+            color: var(--failed-color);
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .pagination-btn {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .pagination-btn:hover {
+            background: var(--hover-color);
+        }
+
+        .pagination-btn.active {
+            background: var(--button-color);
+            color: white;
+            border-color: var(--button-color);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #8b949e;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* Menu Styles */
+        .menu-toggle {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .menu-toggle span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: white;
+            border-radius: 3px;
+            transition: var(--transition);
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(3px);
+        }
+
+        .menu-content {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: var(--container-color);
+            box-shadow: 2px 0 15px var(--shadow-color);
+            transition: var(--transition);
+            padding: 20px 0;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .menu-content.active {
+            left: 0;
+        }
+
+        .menu-overlay.active {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: var(--text-color);
+            font-size: 16px;
+            text-decoration: none;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-item i {
+            width: 24px;
+            text-align: center;
+        }
+
+        .menu-item:hover {
+            background-color: var(--hover-color);
+        }
+
+        .menu-footer {
+            margin-top: auto;
+            padding: 25px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .menu-logout {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: #ea4335;
+            font-size: 16px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .menu-logout:hover {
+            background-color: rgba(234, 67, 53, 0.1);
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .main-container {
+                padding: 20px;
+            }
+
+            .container-header h2 {
+                font-size: 1.3rem;
+            }
+
+            .balance-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 15px;
+            }
+
+            .container-header h2 {
+                font-size: 1rem;
+                color: #dbdbdb;
+            }
+
+            .container-header h2 i {
+                font-size: 1rem;
+                margin-right: 8px;
+                color: #dbdbdb;
+            }
+
+            .container-body {
+                padding: 15px;
+            }
+
+            .balance-value {
+                font-size: 1.5rem;
+            }
+
+            .filter-container {
+                flex-direction: column;
+            }
+
+            .actions-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .header {
+                padding: 12px 15px;
+            }
+
+            .balance-chip {
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+
+            .actions-table th,
+            .actions-table td {
+                padding: 10px 5px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Desktop Menu */
+        @media (min-width: 992px) {
+            body {
+                padding-left: 280px;
+            }
+
+            .desktop-header {
+                display: none;
+            }
+
+            .menu-toggle {
+                display: none;
+            }
+
+            .menu-content {
+                left: 0;
+                box-shadow: none;
+            }
+
+            .menu-overlay {
+                display: none !important;
+            }
+
+            .logo-mobile {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .logo-mobile {
+                display: block;
+            }
+
+            body.menu-open .header {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: block;
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: none;
+                border: none;
+                color: #afaeae;
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 1002;
+            }
+
+            .menu-close-btn:hover {
+                color: #ea4335;
+            }
+        }
+
+        /* Initial Load */
+        body {
+            visibility: hidden;
+        }
+
+        body.loaded {
+            visibility: visible;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Menu Lateral para Desktop -->
+    <div class="menu-content" id="menuContent">
+        <!-- Botão de fechar (visível apenas no mobile) -->
+        <button class="menu-close-btn" id="menuCloseBtn">&times;</button>
+
+        <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
+            <a href="dashboard">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+            </a>
+        </div>
+        <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
+        <a class="menu-item" href="realizar_acoes"><i class="fas fa-tasks"></i> Realizar Ações</a>
+        <a class="menu-item" href="adicionar_conta"><i class="fas fa-plus-circle"></i> Adicionar Conta</a>
+        <a class="menu-item" href="gerenciar_contas"><i class="fas fa-cog"></i> Gerenciar Contas</a>
+        <a class="menu-item" href="historico_acoes"><i class="fas fa-history"></i> Histórico de Ações</a>
+        <a class="menu-item" href="solicitar_saque"><i class="fas fa-hand-holding-usd"></i> Solicitar Saque</a>
+        <a class="menu-item" href="historico_saques"><i class="fas fa-wallet"></i> Histórico de Saques</a>
+        <a class="menu-item" href="refer"><i class="fas fa-user-friends"></i> Indicados</a>
+        <a class="menu-item" href="gerenciar_acoes"><i class="fas fa-chart-bar"></i> Gerenciar Ações</a>
+        <a class="menu-item" href="profile"><i class="fas fa-user-cog"></i> Minha Conta</a>
+
+        <div class="menu-footer">
+            <a class="menu-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a>
+        </div>
+    </div>
+
+    <!-- Overlay do Menu -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <!-- Header para Mobile -->
+    <div class="header desktop-header">
+        <div class="left-header">
+            <div class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <!-- Logo para mobile (no header) -->
+            <a href="dashboard" class="logo-mobile">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+            </a>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        <!-- Resumo de Ações -->
+        <div class="container fade-in">
+            <div class="container-header">
+                <h2 class="affiliate-title"><i class="fas fa-chart-pie"></i> Resumo de Ações</h2>
+            </div>
+            <div class="container-body">
+                <div class="balance-cards">
+                    <div class="balance-card">
+                        <div class="balance-title">
+                            <i class="fas fa-clock"></i> Ações Pendentes
+                        </div>
+                        <div class="balance-value balance-pending" id="acoesPendentes">0</div>
+                        <div class="balance-footer">
+                            <i class="fas fa-info-circle"></i> Aguardando validação
+                        </div>
+                    </div>
+                    <div class="balance-card">
+                        <div class="balance-title">
+                            <i class="fas fa-check-circle"></i> Ações Válidas
+                        </div>
+                        <div class="balance-value balance-available" id="acoesValidas">0</div>
+                        <div class="balance-footer">
+                            <i class="fas fa-info-circle"></i> Aprovadas e creditadas
+                        </div>
+                    </div>
+                    <div class="balance-card">
+                        <div class="balance-title">
+                            <i class="fas fa-times-circle"></i> Ações Inválidas
+                        </div>
+                        <div class="balance-value balance-failed" id="acoesInvalidas">0</div>
+                        <div class="balance-footer">
+                            <i class="fas fa-info-circle"></i> Rejeitadas ou canceladas
+                        </div>
+                    </div>
+                    <div class="balance-card">
+                        <div class="balance-title">
+                            <i class="fas fa-coins"></i> Total Ganho
+                        </div>
+                        <div class="balance-value balance-available" id="totalGanho">R$ 0,00</div>
+                        <div class="balance-footer">
+                            <i class="fas fa-info-circle"></i> Soma de todas as ações válidas
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="container fade-in">
+            <div class="container-header">
+                <h2 class="affiliate-title"><i class="fas fa-filter"></i> Filtros</h2>
+            </div>
+            <div class="container-body">
+                <div class="filter-container">
+                    <select class="filter-select" id="periodoSelect">
+                        <option value="24h">Últimas 24 horas</option>
+                        <option value="7d">Últimos 7 dias</option>
+                        <option value="30d">Últimos 30 dias</option>
+                        <option value="90d">Últimos 3 meses</option>
+                        <option value="365d">Último ano</option>
+                        <option value="all">Todo o período</option>
+                    </select>
+                    <select class="filter-select" id="statusSelect">
+                        <option value="all">Todos os status</option>
+                        <option value="pending">Pendentes</option>
+                        <option value="valid">Válidas</option>
+                        <option value="invalid">Inválidas</option>
+                    </select>
+                    <select class="filter-select" id="tipoSelect">
+                        <option value="all">Todos os tipos</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="twitter">Twitter</option>
+                    </select>
+                    <button class="filter-btn" id="aplicarFiltro">
+                        <i class="fas fa-search"></i> Aplicar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Ações -->
+        <div class="container fade-in">
+            <div class="container-header">
+                <h2 class="affiliate-title"><i class="fas fa-list"></i> Lista de Ações</h2>
+            </div>
+            <div class="container-body">
+                <div id="listaAcoes">
+                    <!-- As ações serão carregadas aqui via JavaScript -->
+                    <table class="actions-table">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Tipo</th>
+                                <th>Descrição</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="acoesTableBody">
+                            <!-- Dados serão preenchidos via JavaScript -->
+                        </tbody>
+                    </table>
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-inbox"></i>
+                        <h3>Nenhuma ação encontrada</h3>
+                        <p>Não há ações correspondentes aos filtros selecionados.</p>
+                    </div>
+                </div>
+
+                <!-- Paginação -->
+                <div class="pagination" id="pagination">
+                    <!-- Paginação será gerada via JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                setTimeout(() => {
+                    window.location.href = "https://ganhesocial.com/login";
+                },);
+                return;
+            }
+
+            // Controle do menu hamburguer
+            const menuToggle = document.getElementById('menuToggle');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuContent = document.getElementById('menuContent');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+            function toggleMenu() {
+                menuContent.classList.toggle('active');
+                menuOverlay.classList.toggle('active');
+
+                const spans = menuToggle.querySelectorAll('span');
+                if (menuContent.classList.contains('active')) {
+                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                    spans[1].style.opacity = '0';
+                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+                } else {
+                    spans[0].style.transform = 'none';
+                    spans[1].style.opacity = '1';
+                    spans[2].style.transform = 'none';
+                }
+            }
+
+            function closeMenu() {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
+                spans[0].style.transform = 'none';
+                spans[1].style.opacity = '1';
+                spans[2].style.transform = 'none';
+            }
+
+            menuToggle.addEventListener('click', toggleMenu);
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+
+            // Carrega dados das ações
+            await carregarDadosAcoes();
+
+            // Configura botão de aplicar filtros
+            document.getElementById('aplicarFiltro').addEventListener('click', aplicarFiltros);
+
+            document.body.classList.add('loaded');
+        });
+
+        async function carregarDadosAcoes() {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                console.error("Token não encontrado.");
+                return;
+            }
+
+            try {
+                // Carregar resumo
+                const resumoResponse = await fetch("https://ganhesocial.com/api/acoes/resumo", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                });
+                const resumoData = await resumoResponse.json();
+
+                if (!resumoResponse.ok) {
+                    throw new Error(resumoData.error || "Erro ao buscar resumo de ações.");
+                }
+
+                // Atualiza os valores no resumo
+                document.getElementById("acoesPendentes").textContent = resumoData.pendentes || 0;
+                document.getElementById("acoesValidas").textContent = resumoData.validas || 0;
+                document.getElementById("acoesInvalidas").textContent = resumoData.invalidas || 0;
+                document.getElementById("totalGanho").textContent = `R$ ${parseFloat(resumoData.total_ganho || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                // Carregar lista de ações
+                await carregarListaAcoes();
+
+            } catch (error) {
+                console.error("Erro ao carregar dados de ações:", error);
+            }
+        }
+
+        async function carregarListaAcoes(pagina = 1) {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
+            const periodo = document.getElementById('periodoSelect').value;
+            const status = document.getElementById('statusSelect').value;
+            const tipo = document.getElementById('tipoSelect').value;
+
+            try {
+                const response = await fetch("https://ganhesocial.com/api/acoes/lista", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        periodo: periodo,
+                        status: status,
+                        tipo: tipo,
+                        pagina: pagina
+                    })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Erro ao buscar lista de ações.");
+                }
+
+                atualizarTabelaAcoes(data.acoes);
+                atualizarPaginacao(data.pagina_atual, data.total_paginas);
+
+            } catch (error) {
+                console.error("Erro ao carregar lista de ações:", error);
+            }
+        }
+
+        function atualizarTabelaAcoes(acoes) {
+            const tbody = document.getElementById('acoesTableBody');
+            const emptyState = document.getElementById('emptyState');
+
+            tbody.innerHTML = '';
+
+            if (acoes.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            acoes.forEach(acao => {
+                const tr = document.createElement('tr');
+
+                // Formatar data
+                const data = new Date(acao.data);
+                const dataFormatada = data.toLocaleString('pt-BR');
+
+                // Determinar classe de status
+                let statusClass = '';
+                let statusText = '';
+
+                switch (acao.status) {
+                    case 'pending':
+                        statusClass = 'status-pending';
+                        statusText = 'Pendente';
+                        break;
+                    case 'valid':
+                        statusClass = 'status-valid';
+                        statusText = 'Válida';
+                        break;
+                    case 'invalid':
+                        statusClass = 'status-invalid';
+                        statusText = 'Inválida';
+                        break;
+                }
+
+                // Determinar classe de valor
+                const valorClass = acao.valor >= 0 ? 'positive' : 'negative';
+                const valorFormatado = acao.valor >= 0 ?
+                    `R$ ${acao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` :
+                    `-R$ ${Math.abs(acao.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                tr.innerHTML = `
+                    <td>${dataFormatada}</td>
+                    <td>${acao.tipo}</td>
+                    <td>${acao.descricao}</td>
+                    <td class="action-value ${valorClass}">${valorFormatado}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function atualizarPaginacao(paginaAtual, totalPaginas) {
+            const pagination = document.getElementById('pagination');
+
+            if (totalPaginas <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let paginacaoHTML = '';
+
+            // Botão anterior
+            if (paginaAtual > 1) {
+                paginacaoHTML += `<button class="pagination-btn" onclick="carregarListaAcoes(${paginaAtual - 1})">
+                    <i class="fas fa-chevron-left"></i>
+                </button>`;
+            }
+
+            // Páginas
+            for (let i = 1; i <= totalPaginas; i++) {
+                if (i === paginaAtual) {
+                    paginacaoHTML += `<button class="pagination-btn active">${i}</button>`;
+                } else {
+                    paginacaoHTML += `<button class="pagination-btn" onclick="carregarListaAcoes(${i})">${i}</button>`;
+                }
+            }
+
+            // Botão próximo
+            if (paginaAtual < totalPaginas) {
+                paginacaoHTML += `<button class="pagination-btn" onclick="carregarListaAcoes(${paginaAtual + 1})">
+                    <i class="fas fa-chevron-right"></i>
+                </button>`;
+            }
+
+            pagination.innerHTML = paginacaoHTML;
+        }
+
+        function aplicarFiltros() {
+            carregarListaAcoes(1);
+        }
+
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocial.com";
+        }
+    </script>
+</body>
+
+</html>

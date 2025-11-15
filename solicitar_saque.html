@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitar Saque - GanheSocial</title>
+    <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --container-color: #1e1e1e;
+            --button-color: #ffffff;
+            --success-color: #34a853;
+            --pending-color: #f9ab00;
+            --failed-color: #ea4335;
+            --border-color: #333333;
+            --hover-color: #2d2d2d;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --card-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            transition: var(--transition);
+            line-height: 1.6;
+        }
+
+        .menu-item[href="solicitar_saque"] {
+            color: white;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 3px solid white;
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            position: relative;
+            z-index: 10;
+        }
+
+        .left-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .right-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            height: 32px;
+            margin-right: 10px;
+        }
+
+        .main-container {
+            padding: 30px 0px 0px;
+            max-width: 1100px;
+            margin: 10px auto 0;
+        }
+
+        .container {
+            background: var(--container-color);
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 20px var(--shadow-color);
+            overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+        }
+
+        .container-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .container-header h2 {
+            margin: 0;
+            font-size: 1.0rem;
+            font-weight: 600;
+        }
+
+        .container-body {
+            padding: 20px;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .input-box,
+        .select-box {
+            width: 100%;
+            padding: 12px 15px;
+            margin-top: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--container-color);
+            color: var(--text-color);
+            font-size: 1rem;
+            transition: var(--transition);
+            box-sizing: border-box;
+        }
+
+        .input-box:focus {
+            outline: none;
+            border-color: var(--button-color);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+
+        .withdraw-button,
+        .back-button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .withdraw-button {
+            background-color: var(--success-color);
+        }
+
+        .withdraw-button:hover {
+            background-color: #2a8a42;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+
+        .info-text {
+            font-size: 0.95rem;
+            margin: 15px 0;
+            color: #8b949e;
+        }
+
+        .info-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--card-radius);
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        .info-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-title i {
+            color: var(--button-color);
+        }
+
+        .info-content {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .error-message {
+            color: var(--failed-color);
+            font-size: 0.85rem;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .alert-message {
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            display: none;
+            font-size: 0.95rem;
+        }
+
+        .alert-error {
+            background-color: rgba(234, 67, 53, 0.1);
+            color: var(--failed-color);
+            border: 1px solid rgba(234, 67, 53, 0.2);
+        }
+
+        .alert-success {
+            background-color: rgba(52, 168, 83, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(52, 168, 83, 0.2);
+        }
+
+        /* Menu Styles */
+        .menu-toggle {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .menu-toggle span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: white;
+            border-radius: 3px;
+            transition: var(--transition);
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(3px);
+        }
+
+        .menu-content {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: var(--container-color);
+            box-shadow: 2px 0 15px var(--shadow-color);
+            transition: var(--transition);
+            padding: 20px 0;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .menu-content.active {
+            left: 0;
+        }
+
+        .menu-overlay.active {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: var(--text-color);
+            font-size: 16px;
+            text-decoration: none;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-item i {
+            width: 24px;
+            text-align: center;
+        }
+
+        .menu-item:hover {
+            background-color: var(--hover-color);
+        }
+
+        .menu-footer {
+            margin-top: auto;
+            padding: 25px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .menu-logout {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: #ea4335;
+            font-size: 16px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .menu-logout:hover {
+            background-color: rgba(234, 67, 53, 0.1);
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .main-container {
+                padding: 20px;
+            }
+
+            .container-header h2 {
+                font-size: 1.0rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+
+            .input-box,
+            .select-box {
+                width: 1100px;
+                max-width: 100%;
+            }
+
+            .container-header {
+                padding: 15px;
+            }
+
+            .container-header h2 {
+                margin: 0;
+                font-size: 1.0rem;
+                font-weight: 600;
+            }
+
+            .container-body {
+                padding: 15px;
+            }
+
+            .info-box {
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .header {
+                padding: 12px 15px;
+            }
+
+            .info-title {
+                font-size: 0.95rem;
+            }
+
+            .info-content {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Desktop Menu */
+        @media (min-width: 992px) {
+            body {
+                padding-left: 280px;
+            }
+
+            .desktop-header {
+                display: none;
+            }
+
+            .menu-toggle {
+                display: none;
+            }
+
+            .menu-content {
+                left: 0;
+                box-shadow: none;
+            }
+
+            .menu-overlay {
+                display: none !important;
+            }
+
+            .logo-mobile {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .logo-mobile {
+                display: block;
+            }
+
+            /* Esconde o header quando o menu está aberto */
+            body.menu-open .header {
+                display: none;
+            }
+
+            /* Estilos para o botão de fechar no mobile */
+            .menu-close-btn {
+                display: block;
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: none;
+                border: none;
+                color: #afaeae;
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 1002;
+            }
+
+            .menu-close-btn:hover {
+                color: #ea4335;
+            }
+        }
+
+        /* Initial Load */
+        body {
+            visibility: hidden;
+        }
+
+        body.loaded {
+            visibility: visible;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Menu Lateral para Desktop -->
+    <div class="menu-content" id="menuContent">
+        <!-- Botão de fechar (visível apenas no mobile) -->
+        <button class="menu-close-btn" id="menuCloseBtn">&times;</button>
+
+        <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
+            <a href="dashboard">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+            </a>
+        </div>
+        <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
+        <a class="menu-item" href="realizar_acoes"><i class="fas fa-tasks"></i> Realizar Ações</a>
+        <a class="menu-item" href="adicionar_conta"><i class="fas fa-plus-circle"></i> Adicionar Conta</a>
+        <a class="menu-item" href="gerenciar_contas"><i class="fas fa-cog"></i> Gerenciar Contas</a>
+        <a class="menu-item" href="historico_acoes"><i class="fas fa-history"></i> Histórico de Ações</a>
+        <a class="menu-item" href="solicitar_saque"><i class="fas fa-hand-holding-usd"></i> Solicitar Saque</a>
+        <a class="menu-item" href="historico_saques"><i class="fas fa-wallet"></i> Histórico de Saques</a>
+        <a class="menu-item" href="refer"><i class="fas fa-user-friends"></i> Indicados</a>
+        <a class="menu-item" href="profile"><i class="fas fa-user-cog"></i> Minha Conta</a>
+
+        <div class="menu-footer">
+            <a class="menu-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a>
+        </div>
+    </div>
+
+    <!-- Overlay do Menu -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <!-- Header para Mobile -->
+    <div class="header desktop-header">
+        <div class="left-header">
+            <div class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <!-- Logo para mobile (no header) -->
+            <a href="dashboard" class="logo-mobile">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+            </a>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        <div class="container fade-in">
+            <div class="container-header">
+                <h2></i> Solicitar Saque</h2>
+            </div>
+            <div class="container-body">
+                <div id="alertBox" class="alert-message"></div>
+
+                <div class="info-box">
+                    <div class="info-title"></i> Valor Mínimo</div>
+                    <div class="info-content">O valor mínimo para saque é de R$ 5,00.</div>
+                </div>
+
+                <div class="info-box">
+                    <div class="info-title"></i> Prazos</div>
+                    <div class="info-content">O prazo máximo para os pagamentos são de até 24 horas. Geralmente os
+                        saques são pagos instantaneamente.</div>
+                </div>
+
+                <div class="info-box">
+                    <div class="info-title"></i> Método de Saque</div>
+                    <div class="info-content">Aceitamos apenas chaves PIX do tipo CPF.</div>
+                </div>
+
+                <div class="form-group">
+                    <input type="text" id="amount" class="input-box" placeholder="Valor" oninput="formatCurrency(this)">
+                </div>
+
+                <div class="form-group" id="pixFields">
+                    <input type="text" id="pixKey" class="input-box" placeholder="Chave PIX CPF" maxlength="14"
+                        oninput="maskCPF(this)">
+                    <div id="cpfError" class="error-message">Informe um CPF válido com 11 dígitos</div>
+                </div>
+
+                <p class="info-text">Saldo disponível: <strong><span id="availableBalance">R$ 0,00</span></strong></p>
+
+                <button class="withdraw-button" onclick="requestWithdraw()">
+                    <i class=""></i> Solicitar Saque
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                setTimeout(() => {
+                    window.location.href = "https://ganhesocial.com/login";
+                },);
+                return;
+            }
+
+            // Verifica se há uma mensagem de sucesso para exibir
+            const successMessage = localStorage.getItem("withdrawSuccess");
+            if (successMessage) {
+                showAlert(successMessage, "success");
+                localStorage.removeItem("withdrawSuccess");
+            }
+
+            // Controle do menu hamburguer
+            const menuToggle = document.getElementById('menuToggle');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuContent = document.getElementById('menuContent');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+            function toggleMenu() {
+                menuContent.classList.toggle('active');
+                menuOverlay.classList.toggle('active');
+
+                const spans = menuToggle.querySelectorAll('span');
+                if (menuContent.classList.contains('active')) {
+                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                    spans[1].style.opacity = '0';
+                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+                } else {
+                    spans[0].style.transform = 'none';
+                    spans[1].style.opacity = '1';
+                    spans[2].style.transform = 'none';
+                }
+            }
+
+            function closeMenu() {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
+                spans[0].style.transform = 'none';
+                spans[1].style.opacity = '1';
+                spans[2].style.transform = 'none';
+            }
+
+            menuToggle.addEventListener('click', toggleMenu);
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+
+            // Carrega saldo do usuário
+            await loadWithdrawData();
+
+            document.body.classList.add('loaded');
+        });
+
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocial.com";
+        }
+
+        function showAlert(message, type = "error") {
+            const alertBox = document.getElementById("alertBox");
+            alertBox.textContent = message;
+            alertBox.className = "alert-message";
+
+            if (type === "success") {
+                alertBox.classList.add("alert-success");
+            } else {
+                alertBox.classList.add("alert-error");
+            }
+
+            alertBox.style.display = "block";
+        }
+
+        async function loadWithdrawData() {
+            const token = localStorage.getItem("token");
+
+            try {
+                const response = await fetch(`https://ganhesocial.com/api/get_saldo?token=${token}`);
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || "Erro ao buscar saldo.");
+                }
+
+                const saldoDisponivel = parseFloat(data.saldo_disponivel || 0);
+                localStorage.setItem("saldoDisponivel", saldoDisponivel);
+                document.getElementById("availableBalance").textContent = saldoDisponivel.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+                // Carrega chave PIX salva se existir e for CPF
+                if (data.pix_key && /^\d{11}$/.test(data.pix_key)) {
+                    const input = document.getElementById('pixKey');
+                    input.value = maskCPFString(data.pix_key);
+                    input.disabled = true;
+                }
+
+            } catch (error) {
+                console.error("Erro ao carregar saldo:", error);
+                showAlert("Erro ao carregar informações da conta. Por favor, tente novamente.");
+            }
+        }
+
+        function maskCPFString(str) {
+            return str.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+        }
+
+        function maskCPF(input) {
+            let value = input.value.replace(/\D/g, ''); // Remove tudo que não é número
+            value = value.slice(0, 11); // Limita a 11 dígitos
+
+            // Aplica a máscara CPF: XXX.XXX.XXX-XX
+            if (value.length > 9) {
+                value = value.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+            } else if (value.length > 6) {
+                value = value.replace(/^(\d{3})(\d{3})(\d{1,3})$/, "$1.$2.$3");
+            } else if (value.length > 3) {
+                value = value.replace(/^(\d{3})(\d{1,3})$/, "$1.$2");
+            }
+
+            input.value = value;
+
+            // Validação simples para mostrar/ocultar erro
+            const isValid = value.length === 14;
+            document.getElementById('cpfError').style.display = isValid ? 'none' : 'block';
+        }
+
+        function formatCurrency(input) {
+            // Remove tudo que não é número
+            let value = input.value.replace(/\D/g, '');
+
+            // Adiciona os centavos
+            value = (value / 100).toFixed(2);
+
+            // Formata como moeda
+            input.value = 'R$ ' + value.replace('.', ',').replace(/(\d)(?=(\d{3})+\,)/g, "$1.");
+        }
+
+        async function requestWithdraw() {
+            const rawAmount = document.getElementById('amount').value.replace(/\D/g, '');
+            const amount = parseFloat(rawAmount) / 100; // valor em reais
+            const pixKey = document.getElementById('pixKey').value.trim();
+            const token = localStorage.getItem("token");
+            const saldoDisponivel = parseFloat(localStorage.getItem("saldoDisponivel") || 0);
+
+            // Limpa alertas anteriores
+            document.getElementById("alertBox").style.display = "none";
+
+            if (!amount || amount < 5) {
+                showAlert("O valor mínimo para saque é de R$ 5,00.");
+                return;
+            }
+
+            if (amount > saldoDisponivel) {
+                showAlert("Saldo insuficiente para realizar o saque.");
+                return;
+            }
+
+            // Validação do CPF
+            const cpfSemPontuacao = pixKey.replace(/\D/g, '');
+            if (!/^\d{11}$/.test(cpfSemPontuacao)) {
+                document.getElementById('cpfError').style.display = 'block';
+                showAlert("Por favor, informe um CPF válido.");
+                return;
+            }
+
+            try {
+                const response = await fetch("https://ganhesocial.com/api/withdraw", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        amount: parseFloat(amount),
+                        payment_method: "pix",
+                        payment_data: {
+                            pix_key: cpfSemPontuacao,
+                            pix_key_type: "cpf" // Especifica que é um CPF
+                        }
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Erro ao solicitar saque");
+                }
+
+                // Exibe mensagem de sucesso
+                showAlert("Saque solicitado com sucesso! O pagamento está em processamento.", "success");
+
+                // Limpa os campos do formulário
+                document.getElementById('amount').value = '';
+                document.getElementById('pixKey').value = '';
+
+                // Atualiza o saldo disponível
+                await loadWithdrawData();
+
+            } catch (error) {
+                console.error("Erro ao solicitar saque:", error);
+                showAlert(error.message || "Erro ao solicitar saque. Tente novamente.");
+            }
+        }
+    </script>
+</body>
+
+</html>

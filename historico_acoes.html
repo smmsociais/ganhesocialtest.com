@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Ações - GanheSocial</title>
+    <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-light: #f8f9fa;
+            --text-light: #212529;
+            --container-light: #ffffff;
+            --button-light: #007bff;
+            --success-color: #28a745;
+            --valid-color: #28a745;
+            --pending-color: #ffc107;
+            --invalid-color: #dc3545;
+            --border-light: #dee2e6;
+            --hover-light: #f1f1f1;
+            --shadow-light: rgba(0, 0, 0, 0.1);
+
+            --bg-dark: #121212;
+            --text-dark: #e0e0e0;
+            --container-dark: #1e1e1e;
+            --button-dark: #1a73e8;
+            --success-dark: #34a853;
+            --pending-dark: #f9ab00;
+            --failed-dark: #ea4335;
+            --border-dark: #333333;
+            --hover-dark: #2d2d2d;
+            --shadow-dark: rgba(0, 0, 0, 0.3);
+
+            --card-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-light);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            transition: var(--transition);
+            line-height: 1.6;
+        }
+
+        .menu-item[href="historico_acoes"] {
+            color: white;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 3px solid white;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: var(--container-light);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .left-header {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .right-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            height: 32px;
+            margin-right: 29px;
+        }
+
+        .container {
+            background: var(--container-light);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 1700px;
+            margin: 30px auto;
+            transition: background 0.3s;
+        }
+
+        h2 {
+            text-align: left;
+            margin-bottom: 10px;
+            color: rgb(233, 233, 233);
+            font-size: 1.0em;
+        }
+
+        /* Container da tabela com cabeçalho fixo */
+        .table-container {
+            max-height: 70vh;
+            overflow-y: auto;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0;
+            font-size: 0.9em;
+        }
+
+        .history-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .history-table th {
+            background-color: #f8f9fa;
+            color: #212529;
+            text-align: left;
+            padding: 12px 15px;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+            position: sticky;
+            top: 0;
+        }
+
+        .history-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .history-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .history-table tr:hover {
+            background-color: #e9ecef;
+        }
+
+        .status-valid {
+            color: var(--valid-color);
+            font-weight: bold;
+        }
+
+        .status-invalid {
+            color: var(--invalid-color);
+            font-weight: bold;
+        }
+
+        .status-pendente {
+            color: var(--pending-color);
+            font-weight: bold;
+        }
+
+        .action-link {
+            color: var(--button-light);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .action-link:hover {
+            text-decoration: underline;
+        }
+
+        .no-actions {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            background-color: white;
+            color: var(--text-light);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .pagination button:hover {
+            background-color: var(--pagination-hover);
+        }
+
+        .pagination button.active {
+            background-color: var(--pagination-active);
+            color: white;
+            border-color: var(--pagination-active);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        /* Estilos do menu hamburguer */
+        .menu-toggle {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .menu-toggle span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: var(--text-light);
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+        }
+
+        .menu-content {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 250px;
+            height: 100%;
+            background: var(--container-light);
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+            transition: left 0.3s ease;
+            padding: 20px 0;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .menu-content.active {
+            left: 0;
+        }
+
+        .menu-overlay.active {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: var(--text-light);
+            font-size: 16px;
+            text-decoration: none;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-item i {
+            width: 24px;
+            text-align: center;
+        }
+
+        .menu-item:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .menu-footer {
+            margin-top: auto;
+            padding: 25px 0;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .menu-logout {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: #dc3545;
+            font-size: 16px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: var(--bg-dark);
+                color: var(--text-dark);
+            }
+
+            .header,
+            .container {
+                background: var(--container-dark);
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+                border: 1px solid var(--border-dark);
+            }
+
+            .status-pendente {
+                color: var(--pending-color);
+            }
+
+            .history-table th {
+                background-color: #1e1e1e;
+                color: var(--text-dark);
+                border-bottom: 2px solid var(--border-dark);
+            }
+
+            .history-table tr:nth-child(even) {
+                background-color: var(--container-dark);
+            }
+
+            .history-table tr:hover {
+                background-color: #343a40;
+            }
+
+            .history-table td {
+                border-bottom: 1px solid var(--border-dark);
+            }
+
+            .action-link {
+                color: var(--button-dark);
+            }
+
+            .no-actions {
+                color: #aaa;
+            }
+
+            .table-container {
+                border: 1px solid var(--border-dark);
+            }
+
+            .pagination button {
+                background-color: var(--container-dark);
+                color: var(--text-dark);
+                border-color: var(--border-dark);
+            }
+
+            .pagination button:hover {
+                background-color: #343a40;
+            }
+
+            .pagination button.active {
+                background-color: var(--button-dark);
+                color: white;
+            }
+
+            .pagination-info {
+                color: #aaa;
+            }
+
+            .menu-toggle span {
+                background-color: var(--text-dark);
+            }
+
+            .menu-content {
+                background: var(--container-dark);
+            }
+
+            .menu-item {
+                color: var(--text-dark);
+            }
+
+            .menu-item:hover {
+                background-color: rgba(255, 255, 255, 0.05);
+            }
+
+            .menu-footer {
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        /* Desktop Menu */
+        @media (min-width: 992px) {
+            body {
+                padding-left: 280px;
+            }
+
+            .desktop-header {
+                display: none;
+            }
+
+            .menu-toggle {
+                display: none;
+            }
+
+            .menu-content {
+                left: 0;
+                box-shadow: none;
+            }
+
+            .menu-overlay {
+                display: none !important;
+            }
+
+            .logo-mobile {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: none !important;
+            }
+        }
+
+        /* Estilos para desktop */
+        @media (min-width: 992px) {
+            .desktop-header {
+                display: none;
+            }
+
+            body {
+                padding-left: 250px;
+            }
+
+            .menu-toggle {
+                display: none;
+            }
+
+            .menu-content {
+                left: 0;
+                box-shadow: none;
+            }
+
+            .menu-overlay {
+                display: none !important;
+            }
+
+            .logo-mobile {
+                display: none;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .logo-mobile {
+                display: block;
+            }
+
+            /* Esconde o header quando o menu está aberto */
+            body.menu-open .header {
+                display: none;
+            }
+
+            /* Ajusta o z-index do cabeçalho da tabela quando o menu está aberto */
+            body.menu-open .history-table th {
+                z-index: 5;
+            }
+
+            /* Estilos para o botão de fechar no mobile */
+            .menu-close-btn {
+                display: block;
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: none;
+                border: none;
+                color: #afaeae;
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 1002;
+            }
+
+            .menu-close-btn:hover {
+                color: #dc3545;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 90%;
+                padding: 15px;
+            }
+
+            .history-table {
+                font-size: 0.8em;
+            }
+
+            .history-table th,
+            .history-table td {
+                padding: 8px 10px;
+            }
+
+            .pagination {
+                gap: 3px;
+            }
+
+            .pagination button {
+                padding: 6px 8px;
+                font-size: 0.8em;
+            }
+        }
+
+        body {
+            visibility: hidden;
+        }
+
+        body.loaded {
+            visibility: visible;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Menu Lateral para Desktop -->
+    <div class="menu-content" id="menuContent">
+        <button class="menu-close-btn" id="menuCloseBtn">&times;</button>
+        <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
+            <a href="dashboard">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+            </a>
+        </div>
+        <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
+        <a class="menu-item" href="realizar_acoes"><i class="fas fa-tasks"></i> Realizar Ações</a>
+        <a class="menu-item" href="adicionar_conta"><i class="fas fa-plus-circle"></i> Adicionar Conta</a>
+        <a class="menu-item" href="gerenciar_contas"><i class="fas fa-cog"></i> Gerenciar Contas</a>
+        <a class="menu-item" href="historico_acoes"><i class="fas fa-history"></i> Histórico de Ações</a>
+        <a class="menu-item" href="solicitar_saque"><i class="fas fa-hand-holding-usd"></i> Solicitar Saque</a>
+        <a class="menu-item" href="historico_saques"><i class="fas fa-wallet"></i> Histórico de Saques</a>
+        <a class="menu-item" href="refer"><i class="fas fa-user-friends"></i> Indicados</a>
+        <a class="menu-item" href="profile"><i class="fas fa-user-cog"></i> Minha Conta</a>
+
+        <div class="menu-footer">
+            <a class="menu-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a>
+        </div>
+    </div>
+
+    <!-- Header para Mobile -->
+    <div class="header desktop-header">
+        <div class="left-header">
+            <div class="menu-toggle" id="menuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <!-- Logo para mobile (no header) -->
+            <a href="dashboard" class="logo-mobile">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+            </a>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="container">
+        <h2 id="pageTitle"></i> Histórico de Ações</h2>
+        <div class="table-container">
+            <table class="history-table" id="historyTable">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Rede Social</th>
+                        <th>Usuário</th>
+                        <th>Tipo</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="historyList">
+                    <!-- Os itens serão adicionados dinamicamente aqui -->
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination-info" id="paginationInfo">
+            <i class="fas fa-spinner fa-spin"></i> Carregando...
+        </div>
+        <div class="pagination" id="pagination">
+            <!-- Os botões de paginação serão adicionados dinamicamente aqui -->
+        </div>
+    </div>
+
+    <!-- Menu Overlay para Mobile -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <script>
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocial.com";
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                setTimeout(() => {
+                    window.location.href = "https://ganhesocial.com/login";
+                },);
+                return;
+            }
+            const urlParams = new URLSearchParams(window.location.search);
+            const nomeUsuario = urlParams.get('usuario');
+
+            // Controle do menu hamburguer
+            const menuToggle = document.getElementById('menuToggle');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuContent = document.getElementById('menuContent');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+            menuToggle.addEventListener('click', function () {
+                menuContent.classList.toggle('active');
+                menuOverlay.classList.toggle('active');
+
+                const spans = menuToggle.querySelectorAll('span');
+                if (menuContent.classList.contains('active')) {
+                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                    spans[1].style.opacity = '0';
+                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+                } else {
+                    spans[0].style.transform = 'none';
+                    spans[1].style.opacity = '1';
+                    spans[2].style.transform = 'none';
+                }
+            });
+
+            menuOverlay.addEventListener('click', function () {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
+                spans[0].style.transform = 'none';
+                spans[1].style.opacity = '1';
+                spans[2].style.transform = 'none';
+            });
+
+            function closeMenu() {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
+                spans[0].style.transform = 'none';
+                spans[1].style.opacity = '1';
+                spans[2].style.transform = 'none';
+            }
+
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+
+            // Configurações de paginação
+            const itemsPerPage = 100;
+            const maxPages = 100;
+            let currentPage = 1;
+            let totalPages = 1;
+            let allActions = [];
+
+            function adjustValue(valor) {
+                if (valor === 0.003 || valor.toFixed(3) === '0.003') {
+                    return 0.006;
+                }
+                return valor;
+            }
+
+            // Função para formatar o valor monetário
+            function formatCurrency(value) {
+                const adjustedValue = adjustValue(value);
+                return adjustedValue.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 3,
+                    maximumFractionDigits: 3
+                });
+            }
+
+            // Carregar dados da API
+            async function loadData(page = 1) {
+                try {
+                    currentPage = page;
+                    historyList.innerHTML = '<tr><td colspan="7" class="no-actions">Carregando...</td></tr>';
+
+                    // Se ainda não carregamos todos os dados, buscar da API
+                    if (allActions.length === 0) {
+                        const response = await fetch("/api/historico_acoes", {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        const historyData = await response.json();
+                        // Filtra para remover ações do tipo "comissao"
+                        allActions = historyData
+                            .filter(action => action.tipo !== "comissao")
+                            .sort((a, b) => new Date(b.data) - new Date(a.data));
+                    }
+
+                    // Calcular total de páginas
+                    totalPages = Math.max(1, Math.min(Math.ceil(allActions.length / itemsPerPage), maxPages));
+
+                    // Atualizar informações de paginação
+                    updatePaginationInfo();
+
+                    // Gerar paginação
+                    generatePagination();
+
+                    // Exibir itens da página atual
+                    displayPageItems();
+
+                } catch (error) {
+                    console.error("Erro ao carregar histórico:", error);
+                    historyList.innerHTML = '<tr><td colspan="7" class="no-actions">Erro ao carregar histórico de ações.</td></tr>';
+                }
+            }
+
+            function displayPageItems() {
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = Math.min(startIndex + itemsPerPage, allActions.length);
+                const pageActions = allActions.slice(startIndex, endIndex);
+
+                if (pageActions.length === 0) {
+                    historyList.innerHTML = '<tr><td colspan="7" class="no-actions">Nenhuma ação encontrada.</td></tr>';
+                    return;
+                }
+
+                historyList.innerHTML = '';
+                pageActions.forEach(action => {
+                    const row = document.createElement("tr");
+                    let statusClass;
+                    if (action.status === "Válida") {
+                        statusClass = "status-valid";
+                    } else if (action.status === "Inválida") {
+                        statusClass = "status-invalid";
+                    } else {
+                        statusClass = "status-pendente";
+                    }
+
+                    const statusText = action.status;
+
+                    const actionLink = (action.status === "Inválida" && action.url_dir) ?
+                        `<a href="${action.url_dir}" class="action-link" target="_blank">Ver</a>` : "";
+
+                    row.innerHTML = `
+                    <td>${new Date(action.data).toLocaleString()}</td>
+                    <td>${action.rede_social}</td>    
+                    <td><a class="action-link" href="detail_account?usuario=${encodeURIComponent(action.nome_usuario)}">${action.nome_usuario}</a></td>  
+                    <td>${action.tipo ? action.tipo.charAt(0).toUpperCase() + action.tipo.slice(1) : "Desconhecido"}</td>       
+                    <td>R$ ${formatCurrency(action.valor_confirmacao)}</td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <span class="${statusClass}">${statusText}</span>
+                            ${actionLink}
+                        </div>
+                    </td>
+                    <td></td>
+                `;
+                    historyList.appendChild(row);
+                });
+            }
+
+            // Atualizar informações de paginação
+            function updatePaginationInfo() {
+                const startItem = (currentPage - 1) * itemsPerPage + 1;
+                const endItem = Math.min(currentPage * itemsPerPage, allActions.length);
+                paginationInfo.textContent = `Mostrando ${startItem}-${endItem} de ${allActions.length} ações`;
+            }
+
+            // Gerar controles de paginação
+            function generatePagination() {
+                pagination.innerHTML = '';
+
+                // Botão Anterior
+                const prevButton = document.createElement("button");
+                prevButton.innerHTML = "&laquo; Anterior";
+                prevButton.disabled = currentPage === 1;
+                prevButton.addEventListener("click", () => loadData(currentPage - 1));
+                pagination.appendChild(prevButton);
+
+                // Botão fixo para página 1
+                const pageOneButton = document.createElement("button");
+                pageOneButton.textContent = "1";
+                if (currentPage === 1) {
+                    pageOneButton.classList.add("active");
+                }
+                pageOneButton.addEventListener("click", () => loadData(1));
+                pagination.appendChild(pageOneButton);
+
+                // Separador se necessário
+                if (currentPage > 6) {
+                    const dots = document.createElement("span");
+                    dots.textContent = "...";
+                    pagination.appendChild(dots);
+                }
+
+                // Botões de páginas após a página 1
+                const maxPageButtons = 5;
+                let startPage = Math.max(2, currentPage); // começa no mínimo da página 2
+                let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const pageButton = document.createElement("button");
+                    pageButton.textContent = i;
+                    if (i === currentPage) {
+                        pageButton.classList.add("active");
+                    }
+                    pageButton.addEventListener("click", () => loadData(i));
+                    pagination.appendChild(pageButton);
+                }
+
+                // Botão Próximo
+                const nextButton = document.createElement("button");
+                nextButton.innerHTML = "Próximo &raquo;";
+                nextButton.disabled = currentPage === totalPages;
+                nextButton.addEventListener("click", () => loadData(currentPage + 1));
+                pagination.appendChild(nextButton);
+            }
+
+            // Inicializar carregando a primeira página
+            loadData(1).then(() => {
+                document.body.classList.add('loaded');
+            });
+        });
+    </script>
+</body>
+
+</html>
