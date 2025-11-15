@@ -7,6 +7,8 @@ import { sendRecoveryEmail } from "./mailer.js";
 import crypto from "crypto";
 import { User, ActionHistory, DailyEarning, Pedido, TemporaryAction, DailyRanking } from "./schema.js";
 
+console.log(">>> MONGODB_URI:", process.env.MONGODB_URI);
+
 // ===== Variáveis globais (colocar no topo do arquivo, fora do handler) =====
 let ultimoRanking = null;
 let ultimaAtualizacao = 0;
