@@ -690,7 +690,7 @@
                 </a>
             </p>
             <!-- Botão Entrar adicionado abaixo da imagem do Telegram -->
-            <a href="https://t.me/ganhesocialofc" class="telegram-button" target="_blank">
+            <a href="https://t.me/ganhesocialcom" class="telegram-button" target="_blank">
                 Participar do grupo no Telegram
             </a>
         </div>
@@ -703,7 +703,7 @@
             const token = localStorage.getItem("token");
 
             if (!token) {
-                window.location.href = "https://ganhesocial.com/login";
+                window.location.href = "https://ganhesocialtest.com/login";
                 return;
             }
 
@@ -757,7 +757,7 @@
                 return;
             }
             try {
-                const response = await fetch(`https://ganhesocial.com/api/get_saldo?token=${token}`);
+                const response = await fetch(`https://ganhesocialtest.com/api/get_saldo?token=${token}`);
                 const data = await response.json();
                 if (!response.ok) {
                     throw new Error(data.error || "Erro ao buscar saldo.");
@@ -787,7 +787,7 @@
             if (!token) return;
 
             try {
-                const response = await fetch(`https://ganhesocial.com/api/get_saldo?token=${token}`);
+                const response = await fetch(`https://ganhesocialtest.com/api/get_saldo?token=${token}`);
                 const data = await response.json();
 
                 if (!response.ok) throw new Error(data.error || "Erro ao buscar saldo.");
@@ -816,7 +816,7 @@
             if (!token) return;
 
             try {
-                const response = await fetch("https://ganhesocial.com/api/ranking_diari", {
+                const response = await fetch("https://ganhesocialtest.com/api/ranking_diario", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -908,7 +908,7 @@
         /* === LOGOUT === */
         function logout() {
             localStorage.removeItem("token");
-            window.location.href = "https://ganhesocial.com";
+            window.location.href = "https://ganhesocialtest.com";
         }
     </script>
 </body>
