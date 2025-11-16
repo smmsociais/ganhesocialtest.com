@@ -1,3 +1,4 @@
+// /api/get-user.js
 import axios from "axios";
 
 export default async function handler(req, res) {
@@ -11,25 +12,34 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Parâmetro 'unique_id' é obrigatório." });
     }
 
-    const url = `https://tiktok-scraper7.p.rapidapi.com/user/info?unique_id=${unique_id}`;
+    const url = "https://scraptik.p.rapidapi.com/get-user";
 
     try {
         const response = await axios.get(url, {
+            params: { username: unique_id },
             headers: {
                 "x-rapidapi-key": process.env.rapidapi_key,
-                "x-rapidapi-host": "tiktok-scraper7.p.rapidapi.com",
+                "x-rapidapi-host": "scraptik.p.rapidapi.com",
             },
         });
 
         const data = response.data;
 
-        if (!data || Object.keys(data).length === 0) {
+        // Scraptik estrutura válida: data.user
+        if (!data || !data.user) {
             return res.status(404).json({ error: "Nenhuma informação encontrada para esse usuário." });
         }
 
         res.json(data);
+
     } catch (error) {
-        console.error("Erro ao buscar dados do TikTok:", error);
-        res.status(500).json({ error: "Erro ao buscar dados do TikTok." });
+        console.error("Erro ao buscar dados no Scraptik:", error?.response?.data || error);
+
+        // Tratamento de erros específicos Scraptik
+        if (error?.response?.status === 404) {
+            return res.status(404).json({ error: "Usuário não encontrado no Scraptik." });
+        }
+
+        res.status(500).json({ error: "Erro ao buscar dados do TikTok via Scraptik." });
     }
 }
