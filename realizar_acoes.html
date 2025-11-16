@@ -1095,72 +1095,53 @@
 
             document.getElementById("actionText").textContent = actionText;
 
-            const tiktokUsername = data.nome_usuario.replace(/^@/, '');
-            // normaliza url: usa data.url_dir apenas se for string válida
-            const rawUrl = data.url_dir;
-            const url = (typeof rawUrl === "string" && rawUrl.trim() !== "") 
-                ? rawUrl 
-                : `https://www.tiktok.com/@${tiktokUsername}`;
-            const profileImg = document.getElementById("profileImage");
-            document.getElementById("actionUrl").href = url;
+ function extrairAvatarScraptik(user) {
+    if (!user) return null;
 
-            if (data.url_dir && typeof data.url_dir === "string" && data.url_dir.includes("/video/")) {
-                // Não carrega imagem de perfil para ações de Curtir (vídeo)
-                profileImg.style.display = "none";
-                profileImg.src = "";
-            } else {
-                try {
-                    // chama a nova rota que usa Scraptik
-                    const resUserInfo = await fetch(`/api/get-user?unique_id=${encodeURIComponent(tiktokUsername)}`);
-                    if (!resUserInfo.ok) throw new Error('Usuário não encontrado');
+    const candidatos = [
+        user.avatar_larger?.url_list,
+        user.avatar_300x300?.url_list,
+        user.avatar_168x168?.url_list,
+        user.avatar_medium?.url_list,
+        user.avatar_thumb?.url_list,
+    ];
 
-                    const userInfo = await resUserInfo.json();
+    for (const lista of candidatos) {
+        if (Array.isArray(lista) && lista.length > 0) {
+            // Retorna a primeira URL válida HTTPS
+            const url = lista.find(u => typeof u === "string" && u.startsWith("http"));
+            if (url) return url;
+        }
+    }
 
-                    // A Scraptik pode devolver user em user | data.user | data — tentamos as possibilidades
-                    const user =
-                        userInfo.user ||
-                        userInfo.data?.user ||
-                        userInfo.data ||
-                        userInfo;
+    return null;
+}           
 
-                    // tentar vários nomes de campo comuns para avatar
-                    let avatar =
-                        user?.avatarLarger ||
-                        user?.avatar ||
-                        user?.avatar_medium ||
-                        user?.avatar_url ||
-                        null;
+try {
+    const resUserInfo = await fetch(`/api/get-user?unique_id=${encodeURIComponent(tiktokUsername)}`);
+    if (!resUserInfo.ok) throw new Error("Usuário não encontrado");
 
-                    // Se avatar for objeto, tentar extrair propriedades comuns
-                    if (avatar && typeof avatar === "object") {
-                        // exemplos: { url: "..." } ou { src: "..." } ou array [ { url: '...' } ]
-                        if (avatar.url) avatar = avatar.url;
-                        else if (avatar.src) avatar = avatar.src;
-                        else if (Array.isArray(avatar) && avatar[0] && avatar[0].url) avatar = avatar[0].url;
-                        else avatar = String(avatar); // fallback seguro (vai virar "[object Object]" — validado abaixo)
-                    }
+    const userInfo = await resUserInfo.json();
 
-                    // validação final: só atribuir se for string e parecer uma URL http(s)
-                    const isValidAvatar = typeof avatar === "string" && /^https?:\/\//i.test(avatar);
+    // Scraptik devolve o usuário em: data.user
+    const user = userInfo.user || userInfo.data?.user || null;
 
-                    const uniqueIdFromApi =
-                        user?.uniqueId || user?.unique_id || user?.uniqueId || tiktokUsername;
+    const avatar = extrairAvatarScraptik(user);
 
-                    if (isValidAvatar) {
-                        profileImg.src = avatar;
-                        profileImg.style.display = "block";
-                        localStorage.setItem("unique_id", uniqueIdFromApi);
-                    } else {
-                        profileImg.style.display = "none";
-                        profileImg.src = "";
-                    }
-                } catch (e) {
-                    // se falhar, esconde imagem e segue
-                    console.warn("Erro ao obter avatar do usuário:", e);
-                    profileImg.style.display = "none";
-                    profileImg.src = "";
-                }
-            }
+    const profileImg = document.getElementById("profileImage");
+
+    if (avatar) {
+        profileImg.src = avatar;
+        profileImg.style.display = "block";
+    } else {
+        profileImg.src = "";
+        profileImg.style.display = "none";
+    }
+} catch (e) {
+    console.error("Erro ao buscar avatar Scraptik:", e);
+    profileImg.style.display = "none";
+    profileImg.src = "";
+}
 
             let valorFinal;
 
