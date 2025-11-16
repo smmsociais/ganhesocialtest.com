@@ -862,20 +862,20 @@
             }
         }
 
-async function bindAccount() {
-    const selectedAccount = document.getElementById("accountSelect").value?.trim();
-    if (!selectedAccount) return;
+        async function bindAccount() {
+            const selectedAccount = document.getElementById("accountSelect").value?.trim();
+            if (!selectedAccount) return;
 
-    // Gera um id_conta estável derivado do nome do usuário
-    const generatedId = "local_" + selectedAccount;
+            // Gera um id_conta estável derivado do nome do usuário
+            const generatedId = "local_" + selectedAccount;
 
-    localStorage.setItem("id_conta", generatedId);
-    localStorage.setItem("conta_invalida", "false");
+            localStorage.setItem("id_conta", generatedId);
+            localStorage.setItem("conta_invalida", "false");
 
-    limparUI();
-    ativarSelecaoTipoAcao();
-    fetchAction();
-}
+            limparUI();
+            ativarSelecaoTipoAcao();
+            fetchAction();
+        }
 
         // variáveis globais
         let contagemEmAndamento = false;
@@ -1000,74 +1000,74 @@ async function bindAccount() {
             atualizarMensagem();
         }
 
-async function fetchAction() {
-    if (buscando) return;
-    buscando = true;
+        async function fetchAction() {
+            if (buscando) return;
+            buscando = true;
 
-    try {
-        const id_conta = localStorage.getItem("id_conta");
-        const token = localStorage.getItem("token");
-        const actionType = document.getElementById("actionType").value;
-        const statusElement = document.getElementById("statusMessage");
-        const contaInvalida = localStorage.getItem("conta_invalida") === "true";
+            try {
+                const id_conta = localStorage.getItem("id_conta");
+                const token = localStorage.getItem("token");
+                const actionType = document.getElementById("actionType").value;
+                const statusElement = document.getElementById("statusMessage");
+                const contaInvalida = localStorage.getItem("conta_invalida") === "true";
 
-        // Validações iniciais (mesma lógica)
-        if (!id_conta || !token || id_conta === "null" || !actionType || actionType === "") {
-            document.getElementById("warningMessage").style.display = "block";
-            document.getElementById("actionContent").style.opacity = "1";
-            return;
-        }
+                // Validações iniciais (mesma lógica)
+                if (!id_conta || !token || id_conta === "null" || !actionType || actionType === "") {
+                    document.getElementById("warningMessage").style.display = "block";
+                    document.getElementById("actionContent").style.opacity = "1";
+                    return;
+                }
 
-        if (!["seguir", "curtir", "seguir_curtir"].includes(actionType)) {
-            if (statusElement) statusElement.textContent = "Tipo de ação inválido.";
-            return;
-        }
+                if (!["seguir", "curtir", "seguir_curtir"].includes(actionType)) {
+                    if (statusElement) statusElement.textContent = "Tipo de ação inválido.";
+                    return;
+                }
 
-        if (document.getElementById("actionType").disabled) return;
-        document.getElementById("warningMessage").style.display = "none";
+                if (document.getElementById("actionType").disabled) return;
+                document.getElementById("warningMessage").style.display = "none";
 
-        if (statusElement && !statusElement.dataset.contagem) {
-            statusElement.innerHTML = `
+                if (statusElement && !statusElement.dataset.contagem) {
+                    statusElement.innerHTML = `
                 <div class="loading-message">Buscando ações, aguarde...</div>
                 <div class="loading-circle-container">
                   <div class="loading-circle"></div>
                 </div>
             `;
-        }
-
-        document.getElementById("actionContent").style.opacity = "0";
-
-        // Função única: tentar buscar no SMM
-        async function tentarBuscarSMM() {
-            try {
-                const response = await fetch(`/api/buscar_acao_smm?id_conta=${id_conta}&token=${token}&tipo=${actionType}`);
-                if (!response.ok) throw new Error("Resposta não OK: " + response.status);
-                const data = await response.json();
-
-                if (data.status === "ENCONTRADA") {
-                    tentativasSemAcoes = 0;
-                    if (statusElement) statusElement.removeAttribute("data-contagem");
-                    await processarAcao(data, "smm");
-                    return true;
                 }
-            } catch (e) {
-                console.error("Erro ao buscar ação SMM:", e);
+
+                document.getElementById("actionContent").style.opacity = "0";
+
+                // Função única: tentar buscar no SMM
+                async function tentarBuscarSMM() {
+                    try {
+                        const response = await fetch(`/api/buscar_acao_smm?id_conta=${id_conta}&token=${token}&tipo=${actionType}`);
+                        if (!response.ok) throw new Error("Resposta não OK: " + response.status);
+                        const data = await response.json();
+
+                        if (data.status === "ENCONTRADA") {
+                            tentativasSemAcoes = 0;
+                            if (statusElement) statusElement.removeAttribute("data-contagem");
+                            await processarAcao(data, "smm");
+                            return true;
+                        }
+                    } catch (e) {
+                        console.error("Erro ao buscar ação SMM:", e);
+                    }
+                    return false;
+                }
+
+                const encontrouSMM = await tentarBuscarSMM();
+
+                if (!encontrouSMM) {
+                    tentativasSemAcoes++;
+                    // se não encontrou em SMM, exibe contagem/regressiva (backoff)
+                    exibirContagemRegressiva();
+                }
+
+            } finally {
+                buscando = false;
             }
-            return false;
         }
-
-        const encontrouSMM = await tentarBuscarSMM();
-
-        if (!encontrouSMM) {
-            tentativasSemAcoes++;
-            // se não encontrou em SMM, exibe contagem/regressiva (backoff)
-            exibirContagemRegressiva();
-        }
-
-    } finally {
-        buscando = false;
-    }
-}
         // Recomenda: resetar tentativas se o usuário trocar tipo de ação ou conta
         document.getElementById("actionType")?.addEventListener("change", () => {
             tentativasSemAcoes = 0;
@@ -1106,23 +1106,45 @@ async function fetchAction() {
                 profileImg.src = "";
             } else {
                 try {
-                    const resUserInfo = await fetch(`/api/user-info?unique_id=${tiktokUsername}`);
+                    // chama a nova rota que usa Scraptik
+                    const resUserInfo = await fetch(`/api/get-user?unique_id=${tiktokUsername}`);
+                    if (!resUserInfo.ok) throw new Error('Usuário não encontrado');
+
                     const userInfo = await resUserInfo.json();
 
-                    if (userInfo.code === 0 && userInfo.data?.user?.avatarLarger) {
-                        profileImg.src = userInfo.data.user.avatarLarger;
-                        profileImg.style.display = "block";
-                        localStorage.setItem("unique_id", userInfo.data.user.uniqueId);
+                    // A Scraptik pode devolver user em user | data.user | data — tentamos as possibilidades
+                    const user =
+                        userInfo.user ||
+                        userInfo.data?.user ||
+                        userInfo.data ||
+                        userInfo;
 
+                    // tentar vários nomes de campo comuns para avatar
+                    const avatar =
+                        user?.avatarLarger ||
+                        user?.avatar ||
+                        user?.avatar_medium ||
+                        user?.avatar_url ||
+                        null;
+
+                    const uniqueIdFromApi =
+                        user?.uniqueId || user?.unique_id || user?.uniqueId || tiktokUsername;
+
+                    if (avatar) {
+                        profileImg.src = avatar;
+                        profileImg.style.display = "block";
+                        localStorage.setItem("unique_id", uniqueIdFromApi);
                     } else {
                         profileImg.style.display = "none";
                         profileImg.src = "";
                     }
                 } catch (e) {
+                    // se falhar, esconde imagem e segue
                     profileImg.style.display = "none";
                     profileImg.src = "";
                 }
             }
+
             let valorFinal;
 
             const isCurtir = (data.url_dir && data.url_dir.includes("/video/")) || actionType === "curtir";
@@ -1348,11 +1370,17 @@ async function fetchAction() {
                     body: JSON.stringify(acao)
                 });
 
-                if (data.status !== "success") {
+                const respJson = await response.json();
+
+                if (!response.ok || respJson.status !== "success") {
                     throw new Error("Falha ao registrar ação pendente.");
                 }
 
+                // opcional: retornar respJson se precisar usar depois
+                return respJson;
+
             } catch (error) {
+                console.error("Erro ao registrar ação pendente:", error);
             }
         }
 
