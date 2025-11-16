@@ -32,6 +32,7 @@
     { "source": "/reset-password", "destination": "/reset-password.html" },
     { "source": "/ranking", "destination": "/ranking.html" },
     { "source": "/docs/api/tiktok", "destination": "/docs/api/tiktok.html" },
+    { "source": "/gerenciar_acoes", "destination": "/gerenciar_acoes.html" },
 
     { "source": "/api/vincular_conta", "destination": "/api/handler.js" },
     { "source": "/api/buscar_acao", "destination": "/api/handler.js" },
@@ -54,6 +55,7 @@
     { "source": "/api/pular_acao", "destination": "/api/handler.js" },
     { "source": "/api/proxy_bind_tk", "destination": "/api/handler.js" },
     { "source": "/api/afiliados", "destination": "/api/handler.js" },
-    { "source": "/api/ranking_diario", "destination": "/api/handler.js" }
+    { "source": "/api/ranking_diario", "destination": "/api/handler.js" },
+    { "source": "/api/gerenciar_acoes", "destination": "/api/handler.js" }
   ]
 }
