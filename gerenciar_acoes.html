@@ -625,54 +625,7 @@
 
     <!-- Conteúdo Principal -->
     <div class="main-container">
-        <!-- Resumo de Ações -->
-        <div class="container fade-in">
-            <div class="container-header">
-                <h2 class="affiliate-title"><i class="fas fa-chart-pie"></i> Resumo de Ações</h2>
-            </div>
-            <div class="container-body">
-                <div class="balance-cards">
-                    <div class="balance-card">
-                        <div class="balance-title">
-                            <i class="fas fa-clock"></i> Ações Pendentes
-                        </div>
-                        <div class="balance-value balance-pending" id="acoesPendentes">0</div>
-                        <div class="balance-footer">
-                            <i class="fas fa-info-circle"></i> Aguardando validação
-                        </div>
-                    </div>
-                    <div class="balance-card">
-                        <div class="balance-title">
-                            <i class="fas fa-check-circle"></i> Ações Válidas
-                        </div>
-                        <div class="balance-value balance-available" id="acoesValidas">0</div>
-                        <div class="balance-footer">
-                            <i class="fas fa-info-circle"></i> Aprovadas e creditadas
-                        </div>
-                    </div>
-                    <div class="balance-card">
-                        <div class="balance-title">
-                            <i class="fas fa-times-circle"></i> Ações Inválidas
-                        </div>
-                        <div class="balance-value balance-failed" id="acoesInvalidas">0</div>
-                        <div class="balance-footer">
-                            <i class="fas fa-info-circle"></i> Rejeitadas ou canceladas
-                        </div>
-                    </div>
-                    <div class="balance-card">
-                        <div class="balance-title">
-                            <i class="fas fa-coins"></i> Total Ganho
-                        </div>
-                        <div class="balance-value balance-available" id="totalGanho">R$ 0,00</div>
-                        <div class="balance-footer">
-                            <i class="fas fa-info-circle"></i> Soma de todas as ações válidas
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filtros -->
+        <!-- Filtros (mantido no topo) -->
         <div class="container fade-in">
             <div class="container-header">
                 <h2 class="affiliate-title"><i class="fas fa-filter"></i> Filtros</h2>
@@ -707,7 +660,46 @@
             </div>
         </div>
 
-        <!-- Lista de Ações -->
+        <!-- Resumo de Ações -->
+        <div class="container fade-in">
+            <div class="container-header">
+                <h2 class="affiliate-title"><i class="fas fa-chart-pie"></i> Resumo de Ações</h2>
+            </div>
+            <div class="container-body">
+                <div class="balance-cards">
+                    <div class="balance-card">
+                        <div class="balance-title">
+                            <i class="fas fa-clock"></i> Ações Pendentes
+                        </div>
+                        <div class="balance-value balance-pending" id="acoesPendentes">0</div>
+                        <div class="balance-footer">
+                            <i class="fas fa-info-circle"></i> Aguardando validação
+                        </div>
+                    </div>
+                    <div class="balance-card">
+                        <div class="balance-title">
+                            <i class="fas fa-check-circle"></i> Ações Válidas
+                        </div>
+                        <div class="balance-value balance-available" id="acoesValidas">0</div>
+                        <div class="balance-footer">
+                            <i class="fas fa-info-circle"></i> Aprovadas e creditadas
+                        </div>
+                    </div>
+                    <div class="balance-card">
+                        <div class="balance-title">
+                            <i class="fas fa-times-circle"></i> Ações Inválidas
+                        </div>
+                        <div class="balance-value balance-failed" id="acoesInvalidas">0</div>
+                        <div class="balance-footer">
+                            <i class="fas fa-info-circle"></i> Rejeitadas ou canceladas
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Ações (readicionada) -->
         <div class="container fade-in">
             <div class="container-header">
                 <h2 class="affiliate-title"><i class="fas fa-list"></i> Lista de Ações</h2>
@@ -744,235 +736,270 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", async function () {
-            const token = localStorage.getItem("token");
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const token = localStorage.getItem("token");
 
-            if (!token) {
-                setTimeout(() => {
-                    window.location.href = "https://ganhesocial.com/login";
-                },);
-                return;
-            }
+    if (!token) {
+        setTimeout(() => {
+            window.location.href = "https://ganhesocialtest.com/login";
+        }, 0);
+        return;
+    }
 
-            // Controle do menu hamburguer
-            const menuToggle = document.getElementById('menuToggle');
-            const menuOverlay = document.getElementById('menuOverlay');
-            const menuContent = document.getElementById('menuContent');
-            const menuCloseBtn = document.getElementById('menuCloseBtn');
+    // Controle do menu hamburguer (mantive seu código)
+    const menuToggle = document.getElementById('menuToggle');
+    const menuOverlay = document.getElementById('menuOverlay');
+    const menuContent = document.getElementById('menuContent');
+    const menuCloseBtn = document.getElementById('menuCloseBtn');
 
-            function toggleMenu() {
-                menuContent.classList.toggle('active');
-                menuOverlay.classList.toggle('active');
+    function toggleMenu() {
+        menuContent.classList.toggle('active');
+        menuOverlay.classList.toggle('active');
 
-                const spans = menuToggle.querySelectorAll('span');
-                if (menuContent.classList.contains('active')) {
-                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
-                    spans[1].style.opacity = '0';
-                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
-                } else {
-                    spans[0].style.transform = 'none';
-                    spans[1].style.opacity = '1';
-                    spans[2].style.transform = 'none';
-                }
-            }
+        const spans = menuToggle.querySelectorAll('span');
+        if (menuContent.classList.contains('active')) {
+            spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+            spans[1].style.opacity = '0';
+            spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+        } else {
+            spans[0].style.transform = 'none';
+            spans[1].style.opacity = '1';
+            spans[2].style.transform = 'none';
+        }
+    }
 
-            function closeMenu() {
-                menuContent.classList.remove('active');
-                menuOverlay.classList.remove('active');
-                const spans = menuToggle.querySelectorAll('span');
-                spans[0].style.transform = 'none';
-                spans[1].style.opacity = '1';
-                spans[2].style.transform = 'none';
-            }
+    function closeMenu() {
+        menuContent.classList.remove('active');
+        menuOverlay.classList.remove('active');
+        const spans = menuToggle.querySelectorAll('span');
+        spans[0].style.transform = 'none';
+        spans[1].style.opacity = '1';
+        spans[2].style.transform = 'none';
+    }
 
-            menuToggle.addEventListener('click', toggleMenu);
-            menuCloseBtn.addEventListener('click', closeMenu);
-            menuOverlay.addEventListener('click', closeMenu);
+    menuToggle.addEventListener('click', toggleMenu);
+    menuCloseBtn.addEventListener('click', closeMenu);
+    menuOverlay.addEventListener('click', closeMenu);
 
-            // Carrega dados das ações
-            await carregarDadosAcoes();
+    document.getElementById('aplicarFiltro').addEventListener('click', aplicarFiltros);
 
-            // Configura botão de aplicar filtros
-            document.getElementById('aplicarFiltro').addEventListener('click', aplicarFiltros);
+    // Carrega lista + resumo inicialmente com os valores padrões dos selects
+    carregarListaAcoes(1);
+    carregarResumo(getSelectedFilters());
 
-            document.body.classList.add('loaded');
+    document.body.classList.add('loaded');
+});
+
+/**
+ * Retorna objeto { periodo, status, tipo } com os valores atuais dos selects
+ */
+function getSelectedFilters() {
+    return {
+        periodo: document.getElementById('periodoSelect').value || 'all',
+        status: document.getElementById('statusSelect').value || 'all',
+        tipo: document.getElementById('tipoSelect').value || 'all'
+    };
+}
+
+/**
+ * Carrega a LISTA de ações (modo: "listar").
+ * Sempre pede os dados ao servidor (sem usar sessão).
+ */
+async function carregarListaAcoes(pagina = 1) {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const { periodo, status, tipo } = getSelectedFilters();
+
+    try {
+        const response = await fetch("https://ganhesocialtest.com/api/gerenciar_acoes", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                modo: "listar",
+                periodo,
+                status,
+                tipo,
+                pagina
+            })
         });
 
-        async function carregarDadosAcoes() {
-            const token = localStorage.getItem("token");
-            if (!token) {
-                console.error("Token não encontrado.");
-                return;
-            }
+        const data = await response.json();
 
-            try {
-                // Carregar resumo
-                const resumoResponse = await fetch("https://ganhesocial.com/api/acoes/resumo", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                });
-                const resumoData = await resumoResponse.json();
-
-                if (!resumoResponse.ok) {
-                    throw new Error(resumoData.error || "Erro ao buscar resumo de ações.");
-                }
-
-                // Atualiza os valores no resumo
-                document.getElementById("acoesPendentes").textContent = resumoData.pendentes || 0;
-                document.getElementById("acoesValidas").textContent = resumoData.validas || 0;
-                document.getElementById("acoesInvalidas").textContent = resumoData.invalidas || 0;
-                document.getElementById("totalGanho").textContent = `R$ ${parseFloat(resumoData.total_ganho || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-                // Carregar lista de ações
-                await carregarListaAcoes();
-
-            } catch (error) {
-                console.error("Erro ao carregar dados de ações:", error);
-            }
+        if (!response.ok) {
+            console.error("Erro ao buscar lista de ações:", data.error || data);
+            atualizarTabelaAcoes([]); // limpa tabela em erro
+            atualizarPaginacao(1, 1);
+            return;
         }
 
-        async function carregarListaAcoes(pagina = 1) {
-            const token = localStorage.getItem("token");
-            if (!token) return;
+        // backend retorna pagina_atual, total_paginas, acoes
+        atualizarTabelaAcoes(data.acoes || []);
+        atualizarPaginacao(data.pagina_atual || 1, data.total_paginas || 1);
 
-            const periodo = document.getElementById('periodoSelect').value;
-            const status = document.getElementById('statusSelect').value;
-            const tipo = document.getElementById('tipoSelect').value;
+    } catch (error) {
+        console.error("Erro ao carregar lista de ações:", error);
+        atualizarTabelaAcoes([]);
+        atualizarPaginacao(1, 1);
+    }
+}
 
-            try {
-                const response = await fetch("https://ganhesocial.com/api/acoes/lista", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        periodo: periodo,
-                        status: status,
-                        tipo: tipo,
-                        pagina: pagina
-                    })
-                });
-                const data = await response.json();
+/**
+ * Carrega o RESUMO (modo: "resumo") aplicando os mesmos filtros (periodo/status/tipo).
+ * Assim o resumo reflete o filtro de data.
+ */
+async function carregarResumo(filters = {}) {
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-                if (!response.ok) {
-                    throw new Error(data.error || "Erro ao buscar lista de ações.");
-                }
+    const payload = Object.assign({ modo: "resumo" }, filters);
 
-                atualizarTabelaAcoes(data.acoes);
-                atualizarPaginacao(data.pagina_atual, data.total_paginas);
+    try {
+        const response = await fetch("https://ganhesocialtest.com/api/gerenciar_acoes", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
 
-            } catch (error) {
-                console.error("Erro ao carregar lista de ações:", error);
-            }
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error("Erro no resumo:", data.error || data);
+            // manter valores anteriores ou zerar
+            document.getElementById("acoesPendentes").textContent = 0;
+            document.getElementById("acoesValidas").textContent = 0;
+            document.getElementById("acoesInvalidas").textContent = 0;
+            return;
         }
 
-        function atualizarTabelaAcoes(acoes) {
-            const tbody = document.getElementById('acoesTableBody');
-            const emptyState = document.getElementById('emptyState');
+        // Atualiza valores no HTML (protegendo contra undefined)
+        document.getElementById("acoesPendentes").textContent = Number(data.pendentes || 0);
+        document.getElementById("acoesValidas").textContent = Number(data.validas || 0);
+        document.getElementById("acoesInvalidas").textContent = Number(data.invalidas || 0);
 
-            tbody.innerHTML = '';
+    } catch (error) {
+        console.error("Erro ao carregar resumo:", error);
+    }
+}
 
-            if (acoes.length === 0) {
-                emptyState.style.display = 'block';
-                return;
-            }
+/* === Funções de UI já existentes (mantive sua lógica) === */
 
-            emptyState.style.display = 'none';
+function atualizarTabelaAcoes(acoes) {
+    const tbody = document.getElementById('acoesTableBody');
+    const emptyState = document.getElementById('emptyState');
 
-            acoes.forEach(acao => {
-                const tr = document.createElement('tr');
+    tbody.innerHTML = '';
 
-                // Formatar data
-                const data = new Date(acao.data);
-                const dataFormatada = data.toLocaleString('pt-BR');
+    if (!acoes || acoes.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+    }
 
-                // Determinar classe de status
-                let statusClass = '';
-                let statusText = '';
+    emptyState.style.display = 'none';
 
-                switch (acao.status) {
-                    case 'pending':
-                        statusClass = 'status-pending';
-                        statusText = 'Pendente';
-                        break;
-                    case 'valid':
-                        statusClass = 'status-valid';
-                        statusText = 'Válida';
-                        break;
-                    case 'invalid':
-                        statusClass = 'status-invalid';
-                        statusText = 'Inválida';
-                        break;
-                }
+    acoes.forEach(acao => {
+        const tr = document.createElement('tr');
 
-                // Determinar classe de valor
-                const valorClass = acao.valor >= 0 ? 'positive' : 'negative';
-                const valorFormatado = acao.valor >= 0 ?
-                    `R$ ${acao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` :
-                    `-R$ ${Math.abs(acao.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const data = new Date(acao.data);
+        const dataFormatada = isNaN(data.getTime()) ? "-" : data.toLocaleString('pt-BR');
 
-                tr.innerHTML = `
-                    <td>${dataFormatada}</td>
-                    <td>${acao.tipo}</td>
-                    <td>${acao.descricao}</td>
-                    <td class="action-value ${valorClass}">${valorFormatado}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                `;
+        let statusClass = '';
+        let statusText = '';
 
-                tbody.appendChild(tr);
-            });
+        switch (acao.status) {
+            case 'pending':
+                statusClass = 'status-pending';
+                statusText = 'Pendente';
+                break;
+            case 'valid':
+                statusClass = 'status-valid';
+                statusText = 'Válida';
+                break;
+            case 'invalid':
+                statusClass = 'status-invalid';
+                statusText = 'Inválida';
+                break;
+            default:
+                statusClass = '';
+                statusText = acao.status || '-';
         }
 
-        function atualizarPaginacao(paginaAtual, totalPaginas) {
-            const pagination = document.getElementById('pagination');
+        const valor = Number(acao.valor || 0);
+        const valorClass = valor >= 0 ? 'positive' : 'negative';
+        const valorFormatado = valor >= 0 ?
+            `R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` :
+            `-R$ ${Math.abs(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-            if (totalPaginas <= 1) {
-                pagination.innerHTML = '';
-                return;
-            }
+        tr.innerHTML = `
+            <td>${dataFormatada}</td>
+            <td>${acao.tipo || '-'}</td>
+            <td>${acao.descricao || '-'}</td>
+            <td class="action-value ${valorClass}">${valorFormatado}</td>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+        `;
 
-            let paginacaoHTML = '';
+        tbody.appendChild(tr);
+    });
+}
 
-            // Botão anterior
-            if (paginaAtual > 1) {
-                paginacaoHTML += `<button class="pagination-btn" onclick="carregarListaAcoes(${paginaAtual - 1})">
-                    <i class="fas fa-chevron-left"></i>
-                </button>`;
-            }
+function atualizarPaginacao(paginaAtual, totalPaginas) {
+    const pagination = document.getElementById('pagination');
 
-            // Páginas
-            for (let i = 1; i <= totalPaginas; i++) {
-                if (i === paginaAtual) {
-                    paginacaoHTML += `<button class="pagination-btn active">${i}</button>`;
-                } else {
-                    paginacaoHTML += `<button class="pagination-btn" onclick="carregarListaAcoes(${i})">${i}</button>`;
-                }
-            }
+    if (!totalPaginas || totalPaginas <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
 
-            // Botão próximo
-            if (paginaAtual < totalPaginas) {
-                paginacaoHTML += `<button class="pagination-btn" onclick="carregarListaAcoes(${paginaAtual + 1})">
-                    <i class="fas fa-chevron-right"></i>
-                </button>`;
-            }
+    let paginacaoHTML = '';
 
-            pagination.innerHTML = paginacaoHTML;
+    if (paginaAtual > 1) {
+        paginacaoHTML += `<button class="pagination-btn" onclick="carregarListaAcoes(${paginaAtual - 1})">
+            <i class="fas fa-chevron-left"></i>
+        </button>`;
+    }
+
+    // limitar número de botões visíveis (por usabilidade)
+    const maxButtons = 7;
+    let start = Math.max(1, paginaAtual - Math.floor(maxButtons / 2));
+    let end = Math.min(totalPaginas, start + maxButtons - 1);
+    if (end - start < maxButtons - 1) start = Math.max(1, end - maxButtons + 1);
+
+    for (let i = start; i <= end; i++) {
+        if (i === paginaAtual) {
+            paginacaoHTML += `<button class="pagination-btn active">${i}</button>`;
+        } else {
+            paginacaoHTML += `<button class="pagination-btn" onclick="carregarListaAcoes(${i})">${i}</button>`;
         }
+    }
 
-        function aplicarFiltros() {
-            carregarListaAcoes(1);
-        }
+    if (paginaAtual < totalPaginas) {
+        paginacaoHTML += `<button class="pagination-btn" onclick="carregarListaAcoes(${paginaAtual + 1})">
+            <i class="fas fa-chevron-right"></i>
+        </button>`;
+    }
 
-        function logout() {
-            localStorage.removeItem("token");
-            window.location.href = "https://ganhesocial.com";
-        }
-    </script>
+    pagination.innerHTML = paginacaoHTML;
+}
+
+/* Aplica filtros: atualiza lista (página 1) e resumo usando os mesmos filtros */
+function aplicarFiltros() {
+    const filters = getSelectedFilters();
+    carregarListaAcoes(1);
+    carregarResumo(filters);
+}
+
+function logout() {
+    localStorage.removeItem("token");
+    window.location.href = "https://ganhesocialtest.com";
+}
+</script>
 </body>
 
 </html>
