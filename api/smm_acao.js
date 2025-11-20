@@ -8,6 +8,9 @@ const handler = async (req, res) => {
   }
 
   try {
+    // ------------------------------
+    // 🔐 VALIDAÇÃO DE TOKEN DA API
+    // ------------------------------
     const { authorization } = req.headers;
     const token = authorization?.split(" ")[1];
 
@@ -17,6 +20,9 @@ const handler = async (req, res) => {
 
     await connectDB();
 
+    // ------------------------------
+    // 📦 EXTRAIR CAMPOS DO BODY
+    // ------------------------------
     const {
       tipo_acao,
       nome_usuario,
@@ -27,6 +33,9 @@ const handler = async (req, res) => {
       valor
     } = req.body;
 
+    // ------------------------------
+    // 🔍 VALIDAÇÃO DOS CAMPOS
+    // ------------------------------
     if (
       !tipo_acao ||
       !nome_usuario ||
@@ -39,9 +48,9 @@ const handler = async (req, res) => {
       return res.status(400).json({ error: "Dados incompletos" });
     }
 
-    const pontos = parseFloat(quantidade_pontos);
-    const qtd = parseInt(quantidade);
-    const val = parseFloat(valor);
+    const pontos = Number(quantidade_pontos);
+    const qtd = Number(quantidade);
+    const val = Number(valor);
 
     if (isNaN(pontos) || pontos <= 0) {
       return res.status(400).json({ error: "Quantidade de pontos inválida" });
@@ -53,21 +62,30 @@ const handler = async (req, res) => {
       return res.status(400).json({ error: "Valor inválido" });
     }
 
-    // Garantir ID numérico de 9 dígitos
+    // ------------------------------
+    // 🔢 GARANTIR ID DE 9 DÍGITOS
+    // ------------------------------
     function gerarIdPedido() {
       return Math.floor(100000000 + Math.random() * 900000000);
     }
 
-    let pedidoId = /^\d{9}$/.test(id_pedido) ? Number(id_pedido) : gerarIdPedido();
+    let pedidoId = /^\d{9}$/.test(id_pedido)
+      ? Number(id_pedido)
+      : gerarIdPedido();
 
-    // <-- CORREÇÃO AQUI
-    const pedidoExistente = await Pedido.findOne({ _id: pedidoId });
+    // ------------------------------
+    // 🛑 IMPEDIR CRIAÇÃO DUPLICADA
+    // ------------------------------
+    let pedidoExistente = await Pedido.findOne({ _id: pedidoId });
 
     if (!pedidoExistente) {
+      // ------------------------------
+      // 🆕 Criar novo pedido
+      // ------------------------------
       const novoPedido = new Pedido({
         _id: pedidoId,
         rede: "tiktok",
-        tipo: tipo_acao.toLowerCase() === "seguir" ? "seguir" : tipo_acao.toLowerCase(),
+        tipo: tipo_acao.toLowerCase().trim(),
         nome: `Ação ${tipo_acao} - ${nome_usuario}`,
         valor: val,
         quantidade: qtd,
@@ -77,12 +95,17 @@ const handler = async (req, res) => {
       });
 
       await novoPedido.save();
+
+      console.log("🆕 Pedido criado:", pedidoId);
+    } else {
+      console.log("ℹ Pedido já existia, retornando ID:", pedidoId);
     }
 
-    console.log("✅ Nova ação registrada:", { tipo_acao, nome_usuario, pedidoId });
-
+    // ------------------------------
+    // 📤 RESPOSTA
+    // ------------------------------
     return res.status(201).json({
-      message: "Ação adicionada com sucesso",
+      message: "Ação registrada com sucesso",
       id_acao_smm: pedidoId.toString()
     });
 
