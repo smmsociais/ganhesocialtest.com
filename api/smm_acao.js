@@ -53,51 +53,41 @@ const handler = async (req, res) => {
       return res.status(400).json({ error: "Valor inválido" });
     }
 
-// Gera um número aleatório de 9 dígitos
-function gerarIdPedido() {
-  return Math.floor(100000000 + Math.random() * 900000000);
-}   
+    // Garantir ID numérico de 9 dígitos
+    function gerarIdPedido() {
+      return Math.floor(100000000 + Math.random() * 900000000);
+    }
 
-// Usa o id_pedido se for um número válido, senão gera um novo
-let pedidoId;
-if (id_pedido && /^\d{9}$/.test(id_pedido)) {
-  pedidoId = parseInt(id_pedido);
-} else {
-  pedidoId = gerarIdPedido();
-}
+    let pedidoId = /^\d{9}$/.test(id_pedido) ? Number(id_pedido) : gerarIdPedido();
 
-// Verifica se já existe
-const pedidoExistente = await Pedido.findById(pedidoId);
+    // <-- CORREÇÃO AQUI
+    const pedidoExistente = await Pedido.findOne({ _id: pedidoId });
 
-if (!pedidoExistente) {
-  const novoPedido = new Pedido({
-    _id: pedidoId,
-    rede: "tiktok",
-    tipo: tipo_acao.toLowerCase() === "seguir" ? "seguir" : tipo_acao.toLowerCase(),
-    nome: `Ação ${tipo_acao} - ${nome_usuario}`,
-    valor: val,
-    quantidade: qtd,
-    link: url_dir,
-    status: "pendente",
-    dataCriacao: new Date(),
-  });
+    if (!pedidoExistente) {
+      const novoPedido = new Pedido({
+        _id: pedidoId,
+        rede: "tiktok",
+        tipo: tipo_acao.toLowerCase() === "seguir" ? "seguir" : tipo_acao.toLowerCase(),
+        nome: `Ação ${tipo_acao} - ${nome_usuario}`,
+        valor: val,
+        quantidade: qtd,
+        link: url_dir,
+        status: "pendente",
+        dataCriacao: new Date(),
+      });
 
-  await novoPedido.save();
-}
+      await novoPedido.save();
+    }
 
-console.log("✅ Nova ação registrada:", { tipo_acao, nome_usuario, id_pedido, pontos });
+    console.log("✅ Nova ação registrada:", { tipo_acao, nome_usuario, pedidoId });
 
-return res.status(201).json({
-  message: "Ação adicionada com sucesso",
-  id_acao_smm: pedidoId.toString()
-});
+    return res.status(201).json({
+      message: "Ação adicionada com sucesso",
+      id_acao_smm: pedidoId.toString()
+    });
 
   } catch (error) {
-    console.error("❌ Erro ao adicionar ação:", {
-      message: error.message,
-      stack: error.stack,
-      detalhes: error
-    });
+    console.error("❌ Erro ao adicionar ação:", error);
     return res.status(500).json({ error: "Erro interno ao adicionar ação" });
   }
 };
