@@ -1,4 +1,4 @@
-//api/buscar_acao_smm.js
+// api/buscar_acao_smm.js
 
 import connectDB from './db.js';
 import mongoose from 'mongoose';
@@ -11,21 +11,30 @@ const handler = async (req, res) => {
 
   const { id_conta, token, tipo } = req.query;
 
+  console.log("➡️ Requisição recebida:");
+  console.log("id_conta:", id_conta);
+  console.log("token:", token);
+  console.log("tipo:", tipo);
+
   if (!id_conta || !token) {
     return res.status(400).json({ error: "id_conta e token são obrigatórios" });
   }
 
   try {
     await connectDB();
+    console.log("✅ Conexão com o banco estabelecida");
 
     const usuario = await User.findOne({ token });
     if (!usuario) {
+      console.log("❌ Token inválido");
       return res.status(401).json({ error: "Token inválido" });
     }
 
+    // Mapeamento dos tipos
     const tipoMap = { seguir: "seguir", curtir: "curtir" };
     const tipoBanco = tipoMap[tipo] || tipo;
 
+    // Buscar pedidos disponíveis
     const query = {
       quantidade: { $gt: 0 },
       status: { $in: ["pendente", "reservada"] }
@@ -39,48 +48,87 @@ const handler = async (req, res) => {
 
     const pedidos = await Pedido.find(query).sort({ dataCriacao: -1 });
 
-    for (const pedido of pedidos) {
+    console.log(`📦 ${pedidos.length} pedidos encontrados`);
 
+    for (const pedido of pedidos) {
       const id_pedido = pedido._id;
 
-      // ❌ Conta já fez ou está com pendente → não pode fazer de novo
-      const jaFez = await ActionHistory.findOne({
+      console.log("🔍 Verificando pedido:", {
         id_pedido,
-        id_conta,
-        acao_validada: { $in: ['pendente', 'validada'] }
+        tipo: pedido.tipo,
+        status: pedido.status,
+        quantidade: pedido.quantidade,
+        valor: pedido.valor,
+        link: pedido.link
       });
 
-      if (jaFez) {
+      //
+      // 🔒 1. SE JÁ ATINGIU O LIMITE DE VALIDADAS → FECHA O PEDIDO
+      //
+      const validadas = await ActionHistory.countDocuments({
+        id_pedido,
+        acao_validada: "valida"
+      });
+
+      if (validadas >= pedido.quantidade) {
+        console.log(`⛔ Pedido ${id_pedido} fechado — já tem ${validadas} validações.`);
         continue;
       }
 
-      // ❌ Conta pulou → não deve receber
+      //
+      // ⛔ 2. Conta pulou esse pedido
+      //
       const pulada = await ActionHistory.findOne({
         id_pedido,
         id_conta,
-        acao_validada: 'pulada',
+        acao_validada: "pulada"
       });
 
       if (pulada) {
+        console.log(`🚫 Ação ${id_pedido} foi pulada por ${id_conta}`);
         continue;
       }
 
-      // ✅ Conta atual nunca fez — verificar se ainda há vagas para o pedido
-      const feitas = await ActionHistory.countDocuments({
+      //
+      // ⛔ 3. Conta já fez (pendente ou validada)
+      //
+      const jaFez = await ActionHistory.findOne({
         id_pedido,
-        acao_validada: { $in: ['pendente', 'validada'] }
+        id_conta,
+        acao_validada: { $in: ["pendente", "valida"] }
       });
 
-      if (feitas >= pedido.quantidade) {
+      if (jaFez) {
+        console.log(`🚫 Conta ${id_conta} já fez o pedido ${id_pedido}`);
         continue;
       }
 
-      // 🟢 ATENÇÃO: Se outra conta tem "pendente", NÃO bloqueia
-      // pois o countDocuments já considera pendentes e ainda há vagas.
+      //
+      // 📊 4. Quantas ações já foram feitas (inclui pendentes)
+      //
+      const feitas = await ActionHistory.countDocuments({
+        id_pedido,
+        acao_validada: { $in: ["pendente", "valida"] }
+      });
 
+      console.log(`📊 Ação ${id_pedido}: feitas=${feitas}, limite=${pedido.quantidade}`);
+
+      //
+      // ⛔ 5. Se já atingiu o limite total (pendente + valida)
+      //
+      if (feitas >= pedido.quantidade) {
+        console.log(`⏩ Pedido ${id_pedido} atingiu o limite total.`);
+        continue;
+      }
+
+      //
+      // ✅ 6. Pedido disponível!
+      //
       const nomeUsuario = pedido.link.includes("@")
         ? pedido.link.split("@")[1].split(/[/?#]/)[0]
         : "";
+
+      console.log(`✅ Ação encontrada: ${nomeUsuario} (pedido ${id_pedido})`);
 
       return res.json({
         status: "ENCONTRADA",
@@ -92,6 +140,7 @@ const handler = async (req, res) => {
       });
     }
 
+    console.log("📭 Nenhuma ação disponível");
     return res.json({ status: "NAO_ENCONTRADA" });
 
   } catch (error) {
