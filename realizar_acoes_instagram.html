@@ -1096,11 +1096,11 @@
             document.getElementById("actionText").textContent = actionText;
 
             // --- começa substituição: bloco para carregar avatar via /api/get-user ---
-            const tiktokUsername = data.nome_usuario.replace(/^@/, '');
+            const instagramusername = data.nome_usuario.replace(/^@/, '');
             const rawUrl = data.url_dir;
             const url = (typeof rawUrl === "string" && rawUrl.trim() !== "")
                 ? rawUrl
-                : `https://www.tiktok.com/@${tiktokUsername}`;
+                : `https://instagram.com/${instagramusername}`;
             const profileImg = document.getElementById("profileImage");
             document.getElementById("actionUrl").href = url;
 
@@ -1111,14 +1111,14 @@
             } else {
                 try {
                     // cache simples por username (pode remover se não quiser)
-                    const cacheKey = `avatar_cache_${tiktokUsername}`;
+                    const cacheKey = `avatar_cache_${instagramusername}`;
                     const cached = localStorage.getItem(cacheKey);
                     if (cached) {
                         profileImg.src = cached;
                         profileImg.style.display = "block";
-                        localStorage.setItem("unique_id", tiktokUsername);
+                        localStorage.setItem("unique_id", instagramusername);
                     } else {
-                        const resUserInfo = await fetch(`/api/get-user?unique_id=${encodeURIComponent(tiktokUsername)}`);
+                        const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(instagramusername)}`);
                         if (!resUserInfo.ok) throw new Error('Usuário não encontrado');
 
                         const userInfo = await resUserInfo.json();
@@ -1165,7 +1165,7 @@
                         if (isValidAvatar) {
                             profileImg.src = avatarUrl;
                             profileImg.style.display = "block";
-                            localStorage.setItem("unique_id", tiktokUsername);
+                            localStorage.setItem("unique_id", instagramusername);
                             // cache por 30 minutos (timestamp)
                             try {
                                 localStorage.setItem(cacheKey, avatarUrl);
