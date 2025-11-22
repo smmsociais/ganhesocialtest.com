@@ -2816,33 +2816,47 @@ if (modo === "resumo") {
     console.error("📄 Stack:", error.stack);
 
 // Rota: /api/buscar_acao_smm
-if (url.startsWith("/api/buscar_acao_smm.js") && method === "GET") {
-  const { id_conta, token, tipo } = req.query;
-
-  console.log("➡️ Requisição recebida:");
-  console.log("id_conta:", id_conta);
-  console.log("token:", token);
-  console.log("tipo:", tipo);
-
-  if (!id_conta || !token) {
-    return res.status(400).json({ error: "id_conta e token são obrigatórios" });
+  if (!url.startsWith("/api/buscar_acao_smm")) {
+    return res.status(404).json({ error: "Rota não encontrada." });
   }
 
-  try {
-    await connectDB();
-    console.log("✅ Conexão com o banco estabelecida");
+  // 🟦 MÉTODOS PERMITIDOS
+  if (method !== "GET") {
+    return res.status(405).json({ error: "Método não permitido." });
+  }
 
+  await connectDB();
+
+  // 🟦 AUTENTICAÇÃO VIA BEARER TOKEN (MESMO PADRÃO DO /profile)
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Não autorizado." });
+  }
+
+  const token = authHeader.split(" ")[1].trim();
+
+  try {
     const usuario = await User.findOne({ token });
     if (!usuario) {
-      console.log("❌ Token inválido");
-      return res.status(401).json({ error: "Token inválido" });
+      return res.status(401).json({ error: "Token inválido." });
     }
 
-    // Mapeamento dos tipos
+    // 🔽 AGORA PEGAMOS OS PARAMETROS DA QUERY
+    const { id_conta, tipo } = req.query;
+
+    if (!id_conta) {
+      return res.status(400).json({ error: "id_conta é obrigatório." });
+    }
+
+    console.log("➡️ Requisição recebida:", { id_conta, tipo });
+
+    // ----------------------------------------------
+    // 🔥 LÓGICA ORIGINAL — SEM ALTERAR SEU FUNCIONAMENTO
+    // ----------------------------------------------
+
     const tipoMap = { seguir: "seguir", curtir: "curtir" };
     const tipoBanco = tipoMap[tipo] || tipo;
 
-    // Buscar pedidos disponíveis
     const query = {
       quantidade: { $gt: 0 },
       status: { $in: ["pendente", "reservada"] }
@@ -2856,87 +2870,47 @@ if (url.startsWith("/api/buscar_acao_smm.js") && method === "GET") {
 
     const pedidos = await Pedido.find(query).sort({ dataCriacao: -1 });
 
-    console.log(`📦 ${pedidos.length} pedidos encontrados`);
-
     for (const pedido of pedidos) {
       const id_pedido = pedido._id;
 
-      console.log("🔍 Verificando pedido:", {
-        id_pedido,
-        tipo: pedido.tipo,
-        status: pedido.status,
-        quantidade: pedido.quantidade,
-        valor: pedido.valor,
-        link: pedido.link
-      });
-
-      //
-      // 🔒 1. SE JÁ ATINGIU O LIMITE DE VALIDADAS → FECHA O PEDIDO
-      //
+      // 1. FECHADO POR TER ATINGIDO O LIMITE
       const validadas = await ActionHistory.countDocuments({
         id_pedido,
         acao_validada: "valida"
       });
 
-      if (validadas >= pedido.quantidade) {
-        console.log(`⛔ Pedido ${id_pedido} fechado — já tem ${validadas} validações.`);
-        continue;
-      }
+      if (validadas >= pedido.quantidade) continue;
 
-      //
-      // ⛔ 2. Conta pulou esse pedido
-      //
+      // 2. PULADA
       const pulada = await ActionHistory.findOne({
         id_pedido,
         id_conta,
         acao_validada: "pulada"
       });
 
-      if (pulada) {
-        console.log(`🚫 Ação ${id_pedido} foi pulada por ${id_conta}`);
-        continue;
-      }
+      if (pulada) continue;
 
-      //
-      // ⛔ 3. Conta já fez (pendente ou validada)
-      //
+      // 3. JÁ FEZ
       const jaFez = await ActionHistory.findOne({
         id_pedido,
         id_conta,
         acao_validada: { $in: ["pendente", "valida"] }
       });
 
-      if (jaFez) {
-        console.log(`🚫 Conta ${id_conta} já fez o pedido ${id_pedido}`);
-        continue;
-      }
+      if (jaFez) continue;
 
-      //
-      // 📊 4. Quantas ações já foram feitas (inclui pendentes)
-      //
+      // 4. QUANTIDADE TOTAL PENDENTE + VALIDAS
       const feitas = await ActionHistory.countDocuments({
         id_pedido,
         acao_validada: { $in: ["pendente", "valida"] }
       });
 
-      console.log(`📊 Ação ${id_pedido}: feitas=${feitas}, limite=${pedido.quantidade}`);
+      if (feitas >= pedido.quantidade) continue;
 
-      //
-      // ⛔ 5. Se já atingiu o limite total (pendente + valida)
-      //
-      if (feitas >= pedido.quantidade) {
-        console.log(`⏩ Pedido ${id_pedido} atingiu o limite total.`);
-        continue;
-      }
-
-      //
-      // ✅ 6. Pedido disponível!
-      //
+      // 5. AÇÃO DISPONÍVEL
       const nomeUsuario = pedido.link.includes("@")
         ? pedido.link.split("@")[1].split(/[/?#]/)[0]
         : "";
-
-      console.log(`✅ Ação encontrada: ${nomeUsuario} (pedido ${id_pedido})`);
 
       return res.json({
         status: "ENCONTRADA",
@@ -2944,19 +2918,15 @@ if (url.startsWith("/api/buscar_acao_smm.js") && method === "GET") {
         quantidade_pontos: pedido.valor,
         url_dir: pedido.link,
         tipo_acao: pedido.tipo,
-        id_pedido: pedido._id
+        id_pedido
       });
     }
 
-    console.log("📭 Nenhuma ação disponível");
     return res.json({ status: "NAO_ENCONTRADA" });
 
   } catch (error) {
     console.error("🔥 Erro ao buscar ação:", error);
-    return res.status(500).json({ error: "Erro interno" });
-  }
-};
-
-    return res.status(500).json({ error: "Erro interno no servidor." });
+    return res.status(500).json({ error: "Erro interno." });
   }
 }
+  }
