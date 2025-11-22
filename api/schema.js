@@ -2,10 +2,16 @@ import mongoose from "mongoose";
 
 // 🔹 Schema para Contas Vinculadas
 const ContaSchema = new mongoose.Schema({
-  nomeConta: { type: String, required: true },
-  id_tiktok: { type: String },
-  id_fake: { type: String },
-  status: { type: String, default: "ativa" },
+    nomeConta: { type: String, required: true },
+    status: { type: String, default: "ativa" },
+    id_conta: { type: String },
+    id_tiktok: { type: String },
+    rede: {
+        type: String,
+        default: "TikTok"
+    },
+
+    dataDesativacao: { type: Date }
 });
 
 // 🔹 Schema para Histórico de Ações (com suporte a comissões de afiliados)
