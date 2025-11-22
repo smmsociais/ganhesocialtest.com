@@ -1851,43 +1851,56 @@ if (url.startsWith("/api/registrar_acao_pendente")) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes." });
   }
 
- try {
-  const idPedidoStr = id_pedido.toString();
-  const tipoAcaoFinal = url_dir.includes("/video/") ? "curtir" : "seguir";
+  try {
+    const idPedidoStr = id_pedido.toString();
 
-  const pontos = parseFloat(quantidade_pontos);
-  const valorBruto = pontos / 1000;
-  const valorDescontado = (valorBruto > 0.003) ? valorBruto - 0.001 : valorBruto;
-  const valorFinalCalculado = Math.min(Math.max(valorDescontado, 0.003), 0.006).toFixed(3);
-  const valorConfirmacaoFinal = (tipoAcaoFinal === "curtir") ? "0.001" : valorFinalCalculado;
+    // === Detectar Rede Social ===
+    let redeFinal = "TikTok";
+    if (url_dir?.includes("instagram.com") || tipo_acao?.toLowerCase().includes("instagram")) {
+      redeFinal = "Instagram";
+    }
 
-  const novaAcao = new ActionHistory({
-    user: usuario._id,
-    token: usuario.token,
-    nome_usuario,
-    id_pedido: idPedidoStr,
-    id_action: idPedidoStr,
-    id_conta,
-    url_dir,
-    unique_id,
-    tipo_acao,
-    quantidade_pontos,
-    tipo: tipoAcaoFinal,
-    rede_social: "TikTok",
-    valor_confirmacao: valorConfirmacaoFinal,
-    acao_validada: "pendente",
-    data: new Date()
-  });
+    // === Detectar Tipo de Ação ===
+    let tipoAcaoFinal = "seguir";
+    if (url_dir.includes("/video/") || url_dir.includes("/p/") || url_dir.includes("/reel/")) {
+      tipoAcaoFinal = "curtir";
+    }
 
-  // 🔁 Salva com controle de limite por usuário
-  await salvarAcaoComLimitePorUsuario(novaAcao);
+    // === Cálculo de valores ===
+    const pontos = parseFloat(quantidade_pontos);
+    const valorBruto = pontos / 1000;
+    const valorDescontado = (valorBruto > 0.003) ? valorBruto - 0.001 : valorBruto;
+    const valorFinalCalculado = Math.min(Math.max(valorDescontado, 0.003), 0.006).toFixed(3);
+    const valorConfirmacaoFinal = (tipoAcaoFinal === "curtir") ? "0.001" : valorFinalCalculado;
 
-  return res.status(200).json({ status: "pendente", message: "Ação registrada com sucesso." });
+    // === Criar Ação ===
+    const novaAcao = new ActionHistory({
+      user: usuario._id,
+      token: usuario.token,
+      nome_usuario,
+      id_pedido: idPedidoStr,
+      id_action: idPedidoStr,
+      id_conta,
+      url_dir,
+      unique_id,
+      tipo_acao,
+      quantidade_pontos,
+      tipo: tipoAcaoFinal,
+      rede_social: redeFinal,     // <---- AQUI AGORA ESTÁ CORRETO
+      valor_confirmacao: valorConfirmacaoFinal,
+      acao_validada: "pendente",
+      data: new Date()
+    });
 
-} catch (error) {
-  console.error("Erro ao registrar ação pendente:", error);
-  return res.status(500).json({ error: "Erro ao registrar ação." });
-}
+    // Salvar com limite
+    await salvarAcaoComLimitePorUsuario(novaAcao);
+
+    return res.status(200).json({ status: "pendente", message: "Ação registrada com sucesso." });
+
+  } catch (error) {
+    console.error("Erro ao registrar ação pendente:", error);
+    return res.status(500).json({ error: "Erro ao registrar ação." });
+  }
 }
 
 // Rota: /api/test/ranking_diario (POST)
