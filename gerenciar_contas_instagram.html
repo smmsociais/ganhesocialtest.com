@@ -565,7 +565,7 @@
             }
 
             try {
-                const response = await fetch("https://ganhesocialtest.com/api/contas", {
+                const response = await fetch("https://ganhesocialtest.com/api/contas_instagram", {
                     method: "GET",
                     headers: {
                         "Authorization": `Bearer ${token}`,
@@ -621,7 +621,7 @@
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando';
 
             try {
-                const url = `https://ganhesocialtest.com/api/contas?nomeConta=${encodeURIComponent(accountName)}`;
+                const url = `https://ganhesocialtest.com/api/contas_instagram?nomeConta=${encodeURIComponent(accountName)}`;
 
                 const response = await fetch(url, {
                     method: "DELETE",
