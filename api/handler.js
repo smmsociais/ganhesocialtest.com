@@ -133,8 +133,8 @@ function shuffleArray(arr) {
   return arr;
 }
 
-// Rota: /api/contas (GET, POST, DELETE)
-if (url.startsWith("/api/contas")) {
+// Rota: /api/contas_tiktok (GET, POST, DELETE)
+if (url.startsWith("/api/contas_tiktok")) {
     try {
         await connectDB();
 
@@ -171,6 +171,7 @@ if (url.startsWith("/api/contas")) {
 
                 // 🔄 Reativar conta
                 contaExistente.status = "ativa";
+                contaExistente.rede = "TikTok"; // 🔥 Garantir que a conta tenha rede correta
                 contaExistente.id_conta = id_conta ?? contaExistente.id_conta;
                 contaExistente.id_tiktok = id_tiktok ?? contaExistente.id_tiktok;
                 contaExistente.dataDesativacao = undefined;
@@ -189,13 +190,12 @@ if (url.startsWith("/api/contas")) {
                 return res.status(400).json({ error: "Já existe uma conta com este nome de usuário." });
             }
 
-            // ===========================
-            // ➕ Adiciona nova conta (SEM validação externa)
-            // ===========================
+            // ➕ Adiciona nova conta TikTok
             user.contas.push({
                 nomeConta: nomeNormalized,
                 id_conta,
                 id_tiktok,
+                rede: "TikTok",  // 🔥 Definindo rede
                 status: "ativa"
             });
 
@@ -208,15 +208,18 @@ if (url.startsWith("/api/contas")) {
         }
 
         // ===========================
-        // 📌 GET → Listar contas ativas
+        // 📌 GET → Listar contas TikTok ativas
         // ===========================
         if (method === "GET") {
+
             if (!user.contas || user.contas.length === 0) {
                 return res.status(200).json([]);
             }
 
-            const contasAtivas = user.contas
-                .filter(conta => !conta.status || conta.status === "ativa")
+            const contasTikTok = user.contas
+                .filter(conta =>
+                    conta.rede === "TikTok" && (conta.status === "ativa" || !conta.status)
+                )
                 .map(conta => {
                     const contaObj = typeof conta.toObject === "function" ? conta.toObject() : conta;
                     return {
@@ -228,7 +231,7 @@ if (url.startsWith("/api/contas")) {
                     };
                 });
 
-            return res.status(200).json(contasAtivas);
+            return res.status(200).json(contasTikTok);
         }
 
         // ===========================
