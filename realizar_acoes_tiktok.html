@@ -1040,7 +1040,7 @@
                 // Função única: tentar buscar no SMM
                 async function tentarBuscarSMM() {
                     try {
-                        const response = await fetch(`/api/buscar_acao_smm?id_conta=${id_conta}&token=${token}&tipo=${actionType}`);
+                        const response = await fetch(`/api/buscar_acao_smm_tiktok?id_conta=${id_conta}&token=${token}&tipo=${actionType}`);
                         if (!response.ok) throw new Error("Resposta não OK: " + response.status);
                         const data = await response.json();
 
@@ -1095,93 +1095,93 @@
 
             document.getElementById("actionText").textContent = actionText;
 
-// --- começa substituição: bloco para carregar avatar via /api/get-user ---
-const tiktokUsername = data.nome_usuario.replace(/^@/, '');
-const rawUrl = data.url_dir;
-const url = (typeof rawUrl === "string" && rawUrl.trim() !== "") 
-    ? rawUrl 
-    : `https://www.tiktok.com/@${tiktokUsername}`;
-const profileImg = document.getElementById("profileImage");
-document.getElementById("actionUrl").href = url;
+            // --- começa substituição: bloco para carregar avatar via /api/get-user ---
+            const tiktokUsername = data.nome_usuario.replace(/^@/, '');
+            const rawUrl = data.url_dir;
+            const url = (typeof rawUrl === "string" && rawUrl.trim() !== "")
+                ? rawUrl
+                : `https://www.tiktok.com/@${tiktokUsername}`;
+            const profileImg = document.getElementById("profileImage");
+            document.getElementById("actionUrl").href = url;
 
-// não carrega avatar para ações de curtida em vídeo
-if (data.url_dir && typeof data.url_dir === "string" && data.url_dir.includes("/video/")) {
-    profileImg.style.display = "none";
-    profileImg.src = "";
-} else {
-    try {
-        // cache simples por username (pode remover se não quiser)
-        const cacheKey = `avatar_cache_${tiktokUsername}`;
-        const cached = localStorage.getItem(cacheKey);
-        if (cached) {
-            profileImg.src = cached;
-            profileImg.style.display = "block";
-            localStorage.setItem("unique_id", tiktokUsername);
-        } else {
-            const resUserInfo = await fetch(`/api/get-user?unique_id=${encodeURIComponent(tiktokUsername)}`);
-            if (!resUserInfo.ok) throw new Error('Usuário não encontrado');
-
-            const userInfo = await resUserInfo.json();
-            const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
-
-            // função utilitária: tenta extrair a primeira URL válida de url_list
-            function firstValidFromUrlList(obj) {
-                const list = obj?.url_list;
-                if (!Array.isArray(list)) return null;
-                for (const item of list) {
-                    if (typeof item === 'string' && /^https?:\/\//i.test(item)) return item;
-                }
-                return null;
-            }
-
-            // Prioridade de campos (maior -> menor)
-            const candidates = [
-                user?.avatar_larger,
-                user?.avatar_300x300,
-                user?.avatar_medium,
-                user?.avatar_168x168,
-                user?.avatar_thumb,
-                user?.avatar,           // caso exista em formatos diferentes
-                user?.avatarLarger,     // variações de nome
-            ];
-
-            let avatarUrl = null;
-            for (const c of candidates) {
-                avatarUrl = firstValidFromUrlList(c);
-                if (avatarUrl) break;
-            }
-
-            // Se ainda for objeto/array inesperado, tente extrair strings
-            if (!avatarUrl) {
-                // exemplos: user.avatar may be a string
-                if (typeof user?.avatar === 'string' && /^https?:\/\//i.test(user.avatar)) {
-                    avatarUrl = user.avatar;
-                }
-            }
-
-            // validação final
-            const isValidAvatar = typeof avatarUrl === "string" && /^https?:\/\//i.test(avatarUrl);
-
-            if (isValidAvatar) {
-                profileImg.src = avatarUrl;
-                profileImg.style.display = "block";
-                localStorage.setItem("unique_id", tiktokUsername);
-                // cache por 30 minutos (timestamp)
-                try {
-                    localStorage.setItem(cacheKey, avatarUrl);
-                    localStorage.setItem(cacheKey + "_ts", String(Date.now()));
-                } catch (e) { /* ignore storage errors */ }
-            } else {
+            // não carrega avatar para ações de curtida em vídeo
+            if (data.url_dir && typeof data.url_dir === "string" && data.url_dir.includes("/video/")) {
                 profileImg.style.display = "none";
                 profileImg.src = "";
+            } else {
+                try {
+                    // cache simples por username (pode remover se não quiser)
+                    const cacheKey = `avatar_cache_${tiktokUsername}`;
+                    const cached = localStorage.getItem(cacheKey);
+                    if (cached) {
+                        profileImg.src = cached;
+                        profileImg.style.display = "block";
+                        localStorage.setItem("unique_id", tiktokUsername);
+                    } else {
+                        const resUserInfo = await fetch(`/api/get-user?unique_id=${encodeURIComponent(tiktokUsername)}`);
+                        if (!resUserInfo.ok) throw new Error('Usuário não encontrado');
+
+                        const userInfo = await resUserInfo.json();
+                        const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
+
+                        // função utilitária: tenta extrair a primeira URL válida de url_list
+                        function firstValidFromUrlList(obj) {
+                            const list = obj?.url_list;
+                            if (!Array.isArray(list)) return null;
+                            for (const item of list) {
+                                if (typeof item === 'string' && /^https?:\/\//i.test(item)) return item;
+                            }
+                            return null;
+                        }
+
+                        // Prioridade de campos (maior -> menor)
+                        const candidates = [
+                            user?.avatar_larger,
+                            user?.avatar_300x300,
+                            user?.avatar_medium,
+                            user?.avatar_168x168,
+                            user?.avatar_thumb,
+                            user?.avatar,           // caso exista em formatos diferentes
+                            user?.avatarLarger,     // variações de nome
+                        ];
+
+                        let avatarUrl = null;
+                        for (const c of candidates) {
+                            avatarUrl = firstValidFromUrlList(c);
+                            if (avatarUrl) break;
+                        }
+
+                        // Se ainda for objeto/array inesperado, tente extrair strings
+                        if (!avatarUrl) {
+                            // exemplos: user.avatar may be a string
+                            if (typeof user?.avatar === 'string' && /^https?:\/\//i.test(user.avatar)) {
+                                avatarUrl = user.avatar;
+                            }
+                        }
+
+                        // validação final
+                        const isValidAvatar = typeof avatarUrl === "string" && /^https?:\/\//i.test(avatarUrl);
+
+                        if (isValidAvatar) {
+                            profileImg.src = avatarUrl;
+                            profileImg.style.display = "block";
+                            localStorage.setItem("unique_id", tiktokUsername);
+                            // cache por 30 minutos (timestamp)
+                            try {
+                                localStorage.setItem(cacheKey, avatarUrl);
+                                localStorage.setItem(cacheKey + "_ts", String(Date.now()));
+                            } catch (e) { /* ignore storage errors */ }
+                        } else {
+                            profileImg.style.display = "none";
+                            profileImg.src = "";
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Erro ao obter avatar do usuário:", e);
+                    profileImg.style.display = "none";
+                    profileImg.src = "";
+                }
             }
-        }
-    } catch (e) {
-        console.warn("Erro ao obter avatar do usuário:", e);
-        profileImg.style.display = "none";
-        profileImg.src = "";
-    }
-}
             let valorFinal;
 
             const isCurtir = (data.url_dir && data.url_dir.includes("/video/")) || actionType === "curtir";
