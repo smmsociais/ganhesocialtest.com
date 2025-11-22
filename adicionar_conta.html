@@ -458,26 +458,26 @@
             <p class="container-subtitle">Selecione a rede social onde deseja adicionar a nova conta.</p>
 
             <div class="social-networks">
-                <div class="network-item" onclick="redirectToTikTokAccountSelection()">
-                    <img src="https://i.imgur.com/6RxMIU9.png" alt="TikTok" class="network-logo">
-                    <div class="network-name">TikTok</div>
-                </div>
-
                 <div class="network-item" onclick="redirectToInstagramAccountSelection()">
                     <img src="https://i.imgur.com/7CoB7je.png" alt="Instagram" class="network-logo">
                     <div class="network-name">Instagram</div>
+                </div>
+
+                <div class="network-item" onclick="redirectToTikTokAccountSelection()">
+                    <img src="https://i.imgur.com/6RxMIU9.png" alt="TikTok" class="network-logo">
+                    <div class="network-name">TikTok</div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        function redirectToTikTokAccountSelection() {
-            window.location.href = "adicionar_conta_tiktok";
-        }
-
         function redirectToInstagramAccountSelection() {
             window.location.href = "adicionar_conta_instagram";
+        }
+
+        function redirectToTikTokAccountSelection() {
+            window.location.href = "adicionar_conta_tiktok";
         }
 
         function logout() {
