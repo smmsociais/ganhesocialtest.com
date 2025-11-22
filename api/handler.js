@@ -133,6 +133,149 @@ function shuffleArray(arr) {
   return arr;
 }
 
+// Rota: /api/contas_instagram (GET, POST, DELETE)
+if (url.startsWith("/api/contas_instagram")) {
+    try {
+        await connectDB();
+
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
+
+        const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader;
+
+        if (!token) return res.status(401).json({ error: "Token inválido." });
+
+        const user = await User.findOne({ token });
+        if (!user) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
+
+        // ===========================
+        // 📌 POST → Adicionar conta Instagram
+        // ===========================
+        if (method === "POST") {
+            const { nomeConta, id_conta, id_instagram } = req.body;
+
+            if (!nomeConta)
+                return res.status(400).json({ error: "Nome da conta é obrigatório." });
+
+            const nomeNormalized = String(nomeConta).trim();
+
+            // 🔍 Verifica se já existe no próprio usuário
+            const contaExistente = user.contas.find(c => c.nomeConta === nomeNormalized);
+
+            if (contaExistente) {
+                if (contaExistente.status === "ativa") {
+                    return res.status(400).json({ error: "Esta conta já está ativa." });
+                }
+
+                // 🔄 Reativar conta
+                contaExistente.status = "ativa";
+                contaExistente.rede = "Instagram";
+                contaExistente.id_conta = id_conta ?? contaExistente.id_conta;
+                contaExistente.id_instagram = id_instagram ?? contaExistente.id_instagram;
+                contaExistente.dataDesativacao = undefined;
+
+                await user.save();
+                return res.status(200).json({ message: "Conta reativada com sucesso!" });
+            }
+
+            // ❌ Verifica se outro usuário já possui esta mesma conta
+            const contaDeOutroUsuario = await User.findOne({
+                _id: { $ne: user._id },
+                "contas.nomeConta": nomeNormalized
+            });
+
+            if (contaDeOutroUsuario) {
+                return res.status(400).json({ error: "Já existe uma conta com este nome de usuário." });
+            }
+
+            // ➕ Adicionar nova conta Instagram
+            user.contas.push({
+                nomeConta: nomeNormalized,
+                id_conta,
+                id_instagram,
+                rede: "Instagram",
+                status: "ativa"
+            });
+
+            await user.save();
+
+            return res.status(201).json({
+                message: "Conta Instagram adicionada com sucesso!",
+                nomeConta: nomeNormalized
+            });
+        }
+
+        // ===========================
+        // 📌 GET → Listar contas Instagram ATIVAS
+        // ===========================
+        if (method === "GET") {
+            console.log("▶ GET /api/contas_instagram - iniciando");
+            console.log(`▶ Usuário: ${user._id}`);
+
+            (user.contas || []).forEach((c, idx) => {
+                console.log(
+                    `  - conta[${idx}]: nome='${c.nomeConta}', rede='${c.rede}', status='${c.status}'`
+                );
+            });
+
+            // 🔥 Filtrar apenas contas Instagram ativas
+            const contasInstagram = (user.contas || [])
+                .filter(conta => {
+                    const rede = String(conta.rede ?? "").trim().toLowerCase();
+                    const status = String(conta.status ?? "").trim().toLowerCase();
+                    return rede === "instagram" && status === "ativa";
+                })
+                .map(conta => {
+                    const contaObj = conta && typeof conta.toObject === "function"
+                        ? conta.toObject()
+                        : JSON.parse(JSON.stringify(conta));
+
+                    return {
+                        ...contaObj,
+                        usuario: {
+                            _id: user._id,
+                            nome: user.nome || ""
+                        }
+                    };
+                });
+
+            console.log("▶ contasInstagram encontradas:", contasInstagram.length);
+
+            return res.status(200).json(contasInstagram);
+        }
+
+        // ===========================
+        // 📌 DELETE → Desativar conta Instagram
+        // ===========================
+        if (method === "DELETE") {
+            const { nomeConta } = req.query;
+
+            if (!nomeConta) {
+                return res.status(400).json({ error: "Nome da conta não fornecido." });
+            }
+
+            const contaIndex = user.contas.findIndex(conta => conta.nomeConta === nomeConta);
+
+            if (contaIndex === -1) {
+                return res.status(404).json({ error: "Conta não encontrada." });
+            }
+
+            user.contas[contaIndex].status = "inativa";
+            user.contas[contaIndex].dataDesativacao = new Date();
+
+            await user.save();
+
+            return res.status(200).json({
+                message: `Conta ${nomeConta} desativada com sucesso.`
+            });
+        }
+
+    } catch (error) {
+        console.error("❌ Erro:", error);
+        return res.status(500).json({ error: "Erro interno no servidor." });
+    }
+}
+
 // Rota: /api/contas_tiktok (GET, POST, DELETE)
 if (url.startsWith("/api/contas_tiktok")) {
     try {
