@@ -21,9 +21,10 @@
     { "source": "/realizar_acoes_tiktok", "destination": "/realizar_acoes_tiktok.html" },
     { "source": "/realizar_acoes_instagram", "destination": "/realizar_acoes_instagram.html" },
     { "source": "/adicionar_conta", "destination": "/adicionar_conta.html" },
-    { "source": "/adicionar_conta_tiktok", "destination": "/adicionar_conta_tiktok.html" },
     { "source": "/adicionar_conta_instagram", "destination": "/adicionar_conta_instagram.html" },
-    { "source": "/conta_adicionada", "destination": "/conta_adicionada.html" },
+    { "source": "/adicionar_conta_tiktok", "destination": "/adicionar_conta_tiktok.html" },
+    { "source": "/conta_adicionada_instagram", "destination": "/conta_adicionada_instagram.html" },
+    { "source": "/conta_adicionada_tiktok", "destination": "/conta_adicionada_tiktok.html" },
     { "source": "/gerenciar_contas", "destination": "/gerenciar_contas.html" },
     { "source": "/gerenciar_contas_tiktok", "destination": "/gerenciar_contas_tiktok.html" },
     { "source": "/gerenciar_contas_instagram", "destination": "/gerenciar_contas_instagram.html" },
@@ -66,4 +67,5 @@
     { "source": "/api/gerenciar_acoes", "destination": "/api/handler.js" }
   ]
 }
+
 
