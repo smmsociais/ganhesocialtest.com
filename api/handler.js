@@ -206,13 +206,11 @@ if (url.startsWith("/api/contas_tiktok")) {
                 nomeConta: nomeNormalized
             });
         }
+    
+// ===========================
+// 📌 GET → Listar contas TikTok ATIVAS
+// ===========================
 
-        // ===========================
-        // 📌 GET → Listar contas TikTok ativas
-        // ===========================
-// ===========================
-// 📌 GET → Listar contas TikTok (com logs de debug)
-// ===========================
 if (method === "GET") {
     console.log("▶ GET /api/contas_tiktok - iniciando");
     console.log("▶ Token usado:", token);
@@ -222,23 +220,26 @@ if (method === "GET") {
         return res.status(404).json([]);
     }
 
-    // loga quantas contas o usuário tem
     console.log(`▶ user ${user._id} tem ${Array.isArray(user.contas) ? user.contas.length : 0} contas`);
 
-    // mostra cada rede para inspeção (entre aspas)
     (user.contas || []).forEach((c, idx) => {
-        console.log(`  - conta[${idx}].nomeConta='${c.nomeConta}', rede='${String(c.rede ?? "")}' status='${String(c.status ?? "")}'`);
+        console.log(
+            `  - conta[${idx}].nomeConta='${c.nomeConta}', rede='${String(c.rede ?? "")}', status='${String(c.status ?? "")}'`
+        );
     });
 
-    // filtro tolerante por "tiktok"
+    // 🔥 AGORA FILTRA SOMENTE CONTAS TIKTOK *ATIVAS*
     const contasTikTok = (user.contas || [])
         .filter(conta => {
             const rede = String(conta.rede ?? "").trim().toLowerCase();
-            return rede === "tiktok";
+            const status = String(conta.status ?? "").trim().toLowerCase();
+            return rede === "tiktok" && status === "ativa";
         })
         .map(conta => {
-            // garante objeto plano (evita problemas ao serializar subdocs)
-            const contaObj = conta && typeof conta.toObject === "function" ? conta.toObject() : JSON.parse(JSON.stringify(conta));
+            const contaObj = conta && typeof conta.toObject === "function"
+                ? conta.toObject()
+                : JSON.parse(JSON.stringify(conta));
+
             return {
                 ...contaObj,
                 usuario: {
@@ -252,7 +253,6 @@ if (method === "GET") {
 
     return res.status(200).json(contasTikTok);
 }
-
         // ===========================
         // 📌 DELETE → Desativar conta
         // ===========================
