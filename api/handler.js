@@ -210,29 +210,48 @@ if (url.startsWith("/api/contas_tiktok")) {
         // ===========================
         // 📌 GET → Listar contas TikTok ativas
         // ===========================
-        if (method === "GET") {
+// ===========================
+// 📌 GET → Listar contas TikTok (com logs de debug)
+// ===========================
+if (method === "GET") {
+    console.log("▶ GET /api/contas_tiktok - iniciando");
+    console.log("▶ Token usado:", token);
 
-            if (!user.contas || user.contas.length === 0) {
-                return res.status(200).json([]);
-            }
+    if (!user) {
+        console.log("⚠ Usuário não encontrado para token:", token);
+        return res.status(404).json([]);
+    }
 
-            const contasTikTok = user.contas
-                .filter(conta =>
-                    conta.rede?.trim().toLowerCase() === "tiktok"
-                )
-                .map(conta => {
-                    const contaObj = typeof conta.toObject === "function" ? conta.toObject() : conta;
-                    return {
-                        ...contaObj,
-                        usuario: {
-                            _id: user._id,
-                            nome: user.nome
-                        }
-                    };
-                });
+    // loga quantas contas o usuário tem
+    console.log(`▶ user ${user._id} tem ${Array.isArray(user.contas) ? user.contas.length : 0} contas`);
 
-            return res.status(200).json(contasTikTok);
-        }
+    // mostra cada rede para inspeção (entre aspas)
+    (user.contas || []).forEach((c, idx) => {
+        console.log(`  - conta[${idx}].nomeConta='${c.nomeConta}', rede='${String(c.rede ?? "")}' status='${String(c.status ?? "")}'`);
+    });
+
+    // filtro tolerante por "tiktok"
+    const contasTikTok = (user.contas || [])
+        .filter(conta => {
+            const rede = String(conta.rede ?? "").trim().toLowerCase();
+            return rede === "tiktok";
+        })
+        .map(conta => {
+            // garante objeto plano (evita problemas ao serializar subdocs)
+            const contaObj = conta && typeof conta.toObject === "function" ? conta.toObject() : JSON.parse(JSON.stringify(conta));
+            return {
+                ...contaObj,
+                usuario: {
+                    _id: user._id,
+                    nome: user.nome || ""
+                }
+            };
+        });
+
+    console.log("▶ contasTikTok encontradas:", contasTikTok.length, contasTikTok.map(c => c.nomeConta));
+
+    return res.status(200).json(contasTikTok);
+}
 
         // ===========================
         // 📌 DELETE → Desativar conta
