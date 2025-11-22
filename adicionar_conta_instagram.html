@@ -510,7 +510,8 @@
 
                 <div id="messageBox" class="message-box" style="display: none;"></div>
 
-                <input type="text" id="accountName" class="input-box" placeholder="Nome de usuário do Instagram, por exemplo @usuario123">
+                <input type="text" id="accountName" class="input-box"
+                    placeholder="Nome de usuário do Instagram, por exemplo @usuario123">
                 <button class="btn-primary" id="addAccountButton" onclick="addAccount()">
                     <span class="btn-text">Adicionar Conta</span>
                 </button>
@@ -580,7 +581,7 @@
                 }
 
                 // 2) Agora basta redirecionar (sem proxy_bind_tk)
-                window.location.href = `conta_adicionada?username=${encodeURIComponent(accountName)}`;
+                window.location.href = `conta_adicionada_instagram?username=${encodeURIComponent(accountName)}`;
 
             } catch (error) {
                 showMessage(error.message || "Erro ao adicionar conta", true);
