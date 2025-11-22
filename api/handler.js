@@ -218,7 +218,7 @@ if (url.startsWith("/api/contas_tiktok")) {
 
             const contasTikTok = user.contas
                 .filter(conta =>
-                    conta.rede === "TikTok" && (conta.status === "ativa" || !conta.status)
+                    conta.rede?.trim().toLowerCase() === "tiktok"
                 )
                 .map(conta => {
                     const contaObj = typeof conta.toObject === "function" ? conta.toObject() : conta;
