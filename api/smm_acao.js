@@ -9,7 +9,7 @@ const handler = async (req, res) => {
 
   try {
     // ------------------------------
-    // 🔐 VALIDAÇÃO DE TOKEN DA API
+    // 🔐 VALIDAÇÃO DE TOKEN
     // ------------------------------
     const { authorization } = req.headers;
     const token = authorization?.split(" ")[1];
@@ -21,7 +21,7 @@ const handler = async (req, res) => {
     await connectDB();
 
     // ------------------------------
-    // 📦 EXTRAIR CAMPOS DO BODY
+    // 📦 CAMPOS DO BODY
     // ------------------------------
     const {
       tipo_acao,
@@ -30,11 +30,12 @@ const handler = async (req, res) => {
       url_dir,
       id_pedido,
       quantidade,
-      valor
+      valor,
+      rede // 🔥 agora permitido (opcional)
     } = req.body;
 
     // ------------------------------
-    // 🔍 VALIDAÇÃO DOS CAMPOS
+    // 🔍 VALIDAÇÃO
     // ------------------------------
     if (
       !tipo_acao ||
@@ -63,6 +64,31 @@ const handler = async (req, res) => {
     }
 
     // ------------------------------
+    // 📌 IDENTIFICAR AUTOMÁTICAMENTE A REDE
+    // ------------------------------
+    let redeFinal = "tiktok"; // padrão (compatibilidade)
+
+    // 1️⃣ — Se o body enviar rede explicitamente
+    if (rede && ["tiktok", "instagram"].includes(rede.toLowerCase())) {
+      redeFinal = rede.toLowerCase();
+    }
+
+    // 2️⃣ — Detectar a partir do tipo_acao
+    else if (tipo_acao.toLowerCase().includes("insta")) {
+      redeFinal = "instagram";
+    }
+
+    // 3️⃣ — Detectar pelo link
+    else if (url_dir.includes("instagram.com")) {
+      redeFinal = "instagram";
+    }
+
+    // 4️⃣ — Detectar pelo link do TikTok
+    else if (url_dir.includes("tiktok.com")) {
+      redeFinal = "tiktok";
+    }
+
+    // ------------------------------
     // 🔢 GARANTIR ID DE 9 DÍGITOS
     // ------------------------------
     function gerarIdPedido() {
@@ -74,7 +100,7 @@ const handler = async (req, res) => {
       : gerarIdPedido();
 
     // ------------------------------
-    // 🛑 IMPEDIR CRIAÇÃO DUPLICADA
+    // 🛑 EVITAR DUPLICAÇÃO
     // ------------------------------
     let pedidoExistente = await Pedido.findOne({ _id: pedidoId });
 
@@ -84,19 +110,19 @@ const handler = async (req, res) => {
       // ------------------------------
       const novoPedido = new Pedido({
         _id: pedidoId,
-        rede,
+        rede: redeFinal,
         tipo: tipo_acao.toLowerCase().trim(),
         nome: `Ação ${tipo_acao} - ${nome_usuario}`,
         valor: val,
         quantidade: qtd,
         link: url_dir,
         status: "pendente",
-        dataCriacao: new Date(),
+        dataCriacao: new Date()
       });
 
       await novoPedido.save();
 
-      console.log("🆕 Pedido criado:", pedidoId);
+      console.log(`🆕 Pedido criado (${redeFinal}):`, pedidoId);
     } else {
       console.log("ℹ Pedido já existia, retornando ID:", pedidoId);
     }
