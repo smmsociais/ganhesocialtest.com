@@ -42,6 +42,7 @@
 
     { "source": "/api/vincular_conta", "destination": "/api/handler.js" },
     { "source": "/api/buscar_acao", "destination": "/api/handler.js" },
+    { "source": "/api/buscar_acao_smm", "destination": "/api/handler.js" },
     { "source": "/api/confirmar_acao", "destination": "/api/handler.js" },
     { "source": "/api/tiktok/get_user", "destination": "/api/handler.js" },
     { "source": "/api/tiktok/get_action", "destination": "/api/handler.js" },
@@ -67,5 +68,6 @@
     { "source": "/api/gerenciar_acoes", "destination": "/api/handler.js" }
   ]
 }
+
 
 
