@@ -717,7 +717,7 @@
     <div class="main-container">
         <div class="container fade-in">
             <div class="container-header">
-                <h2></i> Realizar Ações TikTok</h2>
+                <h2></i> Realizar Ações Instagram</h2>
             </div>
             <div class="container-body">
                 <div class="form-group">
@@ -1040,7 +1040,7 @@
                 // Função única: tentar buscar no SMM
                 async function tentarBuscarSMM() {
                     try {
-                        const response = await fetch(`/api/buscar_acao_smm?id_conta=${id_conta}&token=${token}&tipo=${actionType}`);
+                        const response = await fetch(`/api/buscar_acao_smm_instagram?id_conta=${id_conta}&token=${token}&tipo=${actionType}`);
                         if (!response.ok) throw new Error("Resposta não OK: " + response.status);
                         const data = await response.json();
 
