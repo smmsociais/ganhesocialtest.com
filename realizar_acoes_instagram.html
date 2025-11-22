@@ -1095,93 +1095,123 @@
 
             document.getElementById("actionText").textContent = actionText;
 
-            // --- começa substituição: bloco para carregar avatar via /api/get-user ---
-            const instagramusername = data.nome_usuario.replace(/^@/, '');
-            const rawUrl = data.url_dir;
-            const url = (typeof rawUrl === "string" && rawUrl.trim() !== "")
-                ? rawUrl
-                : `https://instagram.com/${instagramusername}`;
-            const profileImg = document.getElementById("profileImage");
-            document.getElementById("actionUrl").href = url;
+// --- Início do patch para carregar avatar de Instagram ---
+function extractInstagramUsername(data) {
+    // 1) se vier em data.nome_usuario (ex: "@user" ou "user")
+    if (data && data.nome_usuario) {
+        const n = String(data.nome_usuario).trim();
+        if (n.length) {
+            return n.replace(/^@+/, '');
+        }
+    }
 
-            // não carrega avatar para ações de curtida em vídeo
-            if (data.url_dir && typeof data.url_dir === "string" && data.url_dir.includes("/video/")) {
-                profileImg.style.display = "none";
-                profileImg.src = "";
-            } else {
-                try {
-                    // cache simples por username (pode remover se não quiser)
-                    const cacheKey = `avatar_cache_${instagramusername}`;
-                    const cached = localStorage.getItem(cacheKey);
-                    if (cached) {
-                        profileImg.src = cached;
-                        profileImg.style.display = "block";
-                        localStorage.setItem("unique_id", instagramusername);
-                    } else {
-                        const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(instagramusername)}`);
-                        if (!resUserInfo.ok) throw new Error('Usuário não encontrado');
+    // 2) tentar extrair do link (data.url_dir)
+    const url = data && data.url_dir ? String(data.url_dir).trim() : "";
+    if (url) {
+        try {
+            // ex: https://www.instagram.com/username/ ou https://instagram.com/username/?...
+            const m = url.match(/instagram\.com\/(?:p|tv|reel|tv\/|[^/]+\/)?@?([^\/?#&]+)/i);
+            if (m && m[1]) return m[1];
+            // fallback simples: pegar a primeira parte depois de instagram.com/
+            const m2 = url.match(/instagram\.com\/([^\/?#&]+)/i);
+            if (m2 && m2[1]) return m2[1].replace(/@/g, '');
+        } catch (e) { /* ignore */ }
+    }
 
-                        const userInfo = await resUserInfo.json();
-                        const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
+    // 3) tentar extrair de nome com @ dentro do texto (se existir)
+    if (typeof data === "string") {
+        const mm = data.match(/@([A-Za-z0-9._]+)/);
+        if (mm && mm[1]) return mm[1];
+    }
 
-                        // função utilitária: tenta extrair a primeira URL válida de url_list
-                        function firstValidFromUrlList(obj) {
-                            const list = obj?.url_list;
-                            if (!Array.isArray(list)) return null;
-                            for (const item of list) {
-                                if (typeof item === 'string' && /^https?:\/\//i.test(item)) return item;
-                            }
-                            return null;
-                        }
+    return null;
+}
 
-                        // Prioridade de campos (maior -> menor)
-                        const candidates = [
-                            user?.avatar_larger,
-                            user?.avatar_300x300,
-                            user?.avatar_medium,
-                            user?.avatar_168x168,
-                            user?.avatar_thumb,
-                            user?.avatar,           // caso exista em formatos diferentes
-                            user?.avatarLarger,     // variações de nome
-                        ];
+async function loadInstagramAvatar(data) {
+    const profileImg = document.getElementById("profileImage");
+    const instagramusername = extractInstagramUsername(data);
 
-                        let avatarUrl = null;
-                        for (const c of candidates) {
-                            avatarUrl = firstValidFromUrlList(c);
-                            if (avatarUrl) break;
-                        }
+    // Se não encontrou username, não chama API (evita ?username= vazio)
+    if (!instagramusername) {
+        console.warn("Nenhum username do Instagram encontrado para esta ação; avatar não será carregado.");
+        profileImg.style.display = "none";
+        profileImg.src = "";
+        return;
+    }
 
-                        // Se ainda for objeto/array inesperado, tente extrair strings
-                        if (!avatarUrl) {
-                            // exemplos: user.avatar may be a string
-                            if (typeof user?.avatar === 'string' && /^https?:\/\//i.test(user.avatar)) {
-                                avatarUrl = user.avatar;
-                            }
-                        }
+    // cache simples com TTL de 30 minutos
+    const cacheKey = `avatar_cache_instagram_${instagramusername}`;
+    const cacheTsKey = cacheKey + "_ts";
+    try {
+        const cached = localStorage.getItem(cacheKey);
+        const ts = Number(localStorage.getItem(cacheTsKey) || "0");
+        const now = Date.now();
+        const TTL = 30 * 60 * 1000; // 30 minutos
+        if (cached && (now - ts) < TTL) {
+            profileImg.src = cached;
+            profileImg.style.display = "block";
+            localStorage.setItem("unique_id", instagramusername);
+            return;
+        }
+    } catch (e) { /* ignore storage errors */ }
 
-                        // validação final
-                        const isValidAvatar = typeof avatarUrl === "string" && /^https?:\/\//i.test(avatarUrl);
+    // chamada à sua rota de backend (tratativa robusta)
+    try {
+        const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(instagramusername)}`);
+        if (!resUserInfo.ok) {
+            // tratando 400/404/429 sem estourar a aplicação (apenas oculta avatar)
+            console.warn("fetch /api/get-instagram-user não OK:", resUserInfo.status);
+            profileImg.style.display = "none";
+            profileImg.src = "";
+            return;
+        }
 
-                        if (isValidAvatar) {
-                            profileImg.src = avatarUrl;
-                            profileImg.style.display = "block";
-                            localStorage.setItem("unique_id", instagramusername);
-                            // cache por 30 minutos (timestamp)
-                            try {
-                                localStorage.setItem(cacheKey, avatarUrl);
-                                localStorage.setItem(cacheKey + "_ts", String(Date.now()));
-                            } catch (e) { /* ignore storage errors */ }
-                        } else {
-                            profileImg.style.display = "none";
-                            profileImg.src = "";
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Erro ao obter avatar do usuário:", e);
-                    profileImg.style.display = "none";
-                    profileImg.src = "";
-                }
-            }
+        const userInfo = await resUserInfo.json();
+
+        // seu backend pode retornar formas diferentes; normalize aqui
+        // Se a rota que você criou retorna { username, profile_pic, ... } (versão simplificada)
+        // ou retorna { user: {...} } (ou outros formatos), este bloco tenta cobrir os casos.
+        const user =
+            userInfo.user ||
+            userInfo.data?.user ||
+            userInfo.data ||
+            userInfo;
+
+        // Prioridade simples: usar profile_pic / avatar / hd_profile_pic_url_info.url
+        let avatarUrl =
+            user?.profile_pic ||
+            user?.profile_pic_url ||
+            user?.profile_picture ||
+            user?.hd_profile_pic_url_info?.url ||
+            user?.hd_profile_pic_url ||
+            (Array.isArray(user?.avatar) ? user.avatar[0] : null) ||
+            (typeof user?.avatar === "string" ? user.avatar : null);
+
+        // valida URL
+        if (typeof avatarUrl === "string" && /^https?:\/\//i.test(avatarUrl)) {
+            profileImg.src = avatarUrl;
+            profileImg.style.display = "block";
+            localStorage.setItem("unique_id", instagramusername);
+            try {
+                localStorage.setItem(cacheKey, avatarUrl);
+                localStorage.setItem(cacheTsKey, String(Date.now()));
+            } catch (e) { /* ignore storage errors */ }
+        } else {
+            // sem avatar válido
+            profileImg.style.display = "none";
+            profileImg.src = "";
+        }
+    } catch (e) {
+        console.warn("Erro ao obter avatar do usuário (fetch):", e);
+        profileImg.style.display = "none";
+        profileImg.src = "";
+    }
+}
+
+// uso: substituir o bloco que carregava avatar por chamada a loadInstagramAvatar(data)
+await loadInstagramAvatar(data);
+// --- Fim do patch ---
+
             let valorFinal;
 
             const isCurtir = (data.url_dir && data.url_dir.includes("/video/")) || actionType === "curtir";
