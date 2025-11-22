@@ -517,131 +517,131 @@
         </div>
     </div>
 
-<script>
-    // Função para exibir mensagens na página
-    function showMessage(message, isError = false) {
-        const messageBox = document.getElementById('messageBox');
-        messageBox.textContent = message;
-        messageBox.className = isError ? 'message-box error-message' : 'message-box success-message';
-        messageBox.style.display = 'block';
-        messageBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    // Função para formatar o nome de usuário (remover @ se existir)
-    function formatUsername(username) {
-        return username.startsWith('@') ? username.substring(1) : username;
-    }
-
-    async function addAccount() {
-        const inputField = document.getElementById('accountName');
-        const addAccountButton = document.getElementById('addAccountButton');
-        let accountName = inputField.value.trim();
-        const messageBox = document.getElementById('messageBox');
-
-        messageBox.style.display = 'none';
-
-        if (!accountName) {
-            showMessage("Por favor, insira o nome de usuário do TikTok.", true);
-            inputField.value = "";
-            return;
+    <script>
+        // Função para exibir mensagens na página
+        function showMessage(message, isError = false) {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.textContent = message;
+            messageBox.className = isError ? 'message-box error-message' : 'message-box success-message';
+            messageBox.style.display = 'block';
+            messageBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        accountName = formatUsername(accountName);
-
-        const token = localStorage.getItem("token");
-        if (!token) {
-            window.location.href = "/login";
-            return;
+        // Função para formatar o nome de usuário (remover @ se existir)
+        function formatUsername(username) {
+            return username.startsWith('@') ? username.substring(1) : username;
         }
 
-        try {
-            // Show loading state
-            addAccountButton.classList.add("loading");
-            addAccountButton.disabled = true;
+        async function addAccount() {
+            const inputField = document.getElementById('accountName');
+            const addAccountButton = document.getElementById('addAccountButton');
+            let accountName = inputField.value.trim();
+            const messageBox = document.getElementById('messageBox');
 
-            // 1) Criar a conta no backend
-            const response = await fetch("https://ganhesocialtest.com/api/contas", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    nomeConta: accountName,
-                    plataforma: "tiktok"
-                })
-            });
+            messageBox.style.display = 'none';
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data?.error || "Erro ao adicionar conta");
+            if (!accountName) {
+                showMessage("Por favor, insira o nome de usuário do TikTok.", true);
+                inputField.value = "";
+                return;
             }
 
-            // 2) Agora basta redirecionar (sem proxy_bind_tk)
-            window.location.href = `conta_adicionada?username=${encodeURIComponent(accountName)}`;
+            accountName = formatUsername(accountName);
 
-        } catch (error) {
-            showMessage(error.message || "Erro ao adicionar conta", true);
-            inputField.value = "";
-        } finally {
-            addAccountButton.classList.remove("loading");
-            addAccountButton.disabled = false;
+            const token = localStorage.getItem("token");
+            if (!token) {
+                window.location.href = "/login";
+                return;
+            }
+
+            try {
+                // Show loading state
+                addAccountButton.classList.add("loading");
+                addAccountButton.disabled = true;
+
+                // 1) Criar a conta no backend
+                const response = await fetch("https://ganhesocialtest.com/api/contas_tiktok", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        nomeConta: accountName,
+                        plataforma: "tiktok"
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data?.error || "Erro ao adicionar conta");
+                }
+
+                // 2) Agora basta redirecionar (sem proxy_bind_tk)
+                window.location.href = `conta_adicionada?username=${encodeURIComponent(accountName)}`;
+
+            } catch (error) {
+                showMessage(error.message || "Erro ao adicionar conta", true);
+                inputField.value = "";
+            } finally {
+                addAccountButton.classList.remove("loading");
+                addAccountButton.disabled = false;
+            }
         }
-    }
 
-    function logout() {
-        localStorage.removeItem("token");
-        window.location.href = "https://ganhesocialtest.com";
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-        const token = localStorage.getItem("token");
-
-        if (!token) {
-            setTimeout(() => {
-                window.location.href = "https://ganhesocialtest.com/login";
-            }, 0);
-            return;
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocialtest.com";
         }
 
-        const menuToggle = document.getElementById('menuToggle');
-        const menuOverlay = document.getElementById('menuOverlay');
-        const menuContent = document.getElementById('menuContent');
-        const menuCloseBtn = document.getElementById('menuCloseBtn');
+        document.addEventListener("DOMContentLoaded", function () {
+            const token = localStorage.getItem("token");
 
-        function toggleMenu() {
-            menuContent.classList.toggle('active');
-            menuOverlay.classList.toggle('active');
+            if (!token) {
+                setTimeout(() => {
+                    window.location.href = "https://ganhesocialtest.com/login";
+                }, 0);
+                return;
+            }
 
-            const spans = menuToggle.querySelectorAll('span');
-            if (menuContent.classList.contains('active')) {
-                spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
-                spans[1].style.opacity = '0';
-                spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
-            } else {
+            const menuToggle = document.getElementById('menuToggle');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuContent = document.getElementById('menuContent');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+            function toggleMenu() {
+                menuContent.classList.toggle('active');
+                menuOverlay.classList.toggle('active');
+
+                const spans = menuToggle.querySelectorAll('span');
+                if (menuContent.classList.contains('active')) {
+                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                    spans[1].style.opacity = '0';
+                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+                } else {
+                    spans[0].style.transform = 'none';
+                    spans[1].style.opacity = '1';
+                    spans[2].style.transform = 'none';
+                }
+            }
+
+            function closeMenu() {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
                 spans[0].style.transform = 'none';
                 spans[1].style.opacity = '1';
                 spans[2].style.transform = 'none';
             }
-        }
 
-        function closeMenu() {
-            menuContent.classList.remove('active');
-            menuOverlay.classList.remove('active');
-            const spans = menuToggle.querySelectorAll('span');
-            spans[0].style.transform = 'none';
-            spans[1].style.opacity = '1';
-            spans[2].style.transform = 'none';
-        }
+            menuToggle.addEventListener('click', toggleMenu);
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
 
-        menuToggle.addEventListener('click', toggleMenu);
-        menuCloseBtn.addEventListener('click', closeMenu);
-        menuOverlay.addEventListener('click', closeMenu);
-
-        document.body.classList.add('loaded');
-    });
-</script>
+            document.body.classList.add('loaded');
+        });
+    </script>
 </body>
 
 </html>
