@@ -463,10 +463,9 @@
                     <div class="network-name">TikTok</div>
                 </div>
 
-                <div class="network-item">
+                <div class="network-item" onclick="redirectToInstagramAccountSelection()">
                     <img src="https://i.imgur.com/7CoB7je.png" alt="Instagram" class="network-logo">
                     <div class="network-name">Instagram</div>
-                    <div class="coming-soon">Em breve</div>
                 </div>
             </div>
         </div>
@@ -475,6 +474,10 @@
     <script>
         function redirectToTikTokAccountSelection() {
             window.location.href = "adicionar_conta_tiktok";
+        }
+
+        function redirectToInstagramAccountSelection() {
+            window.location.href = "adicionar_conta_instagram";
         }
 
         function logout() {
