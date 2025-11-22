@@ -1131,6 +1131,17 @@ console.log(">> processarAcao: instagramusername=", instagramusername, "rawUrl="
 console.log(">> carregando avatar para", instagramusername);
 await loadInstagramAvatar(data);
 
+
+function extractInstagramUsername(data) {
+    // 1) se vier em data.nome_usuario (ex: "@user" ou "user")
+    if (data && data.nome_usuario) {
+        const n = String(data.nome_usuario).trim();
+        if (n.length) return n.replace(/^@+/, '');
+    }
+
+    return null;
+}
+
 async function loadInstagramAvatar(data) {
     const profileImg = document.getElementById("profileImage");
     const instagramusername = extractInstagramUsername(data);
