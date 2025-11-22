@@ -84,7 +84,7 @@ const handler = async (req, res) => {
       // ------------------------------
       const novoPedido = new Pedido({
         _id: pedidoId,
-        rede: "tiktok",
+        rede,
         tipo: tipo_acao.toLowerCase().trim(),
         nome: `Ação ${tipo_acao} - ${nome_usuario}`,
         valor: val,
