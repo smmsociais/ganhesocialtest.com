@@ -1095,14 +1095,13 @@
 
             document.getElementById("actionText").textContent = actionText;
 
-// --- Início do patch para carregar avatar de Instagram ---
+// --- Início do patch (substituir as funções antigas) ---
+
 function extractInstagramUsername(data) {
     // 1) se vier em data.nome_usuario (ex: "@user" ou "user")
     if (data && data.nome_usuario) {
         const n = String(data.nome_usuario).trim();
-        if (n.length) {
-            return n.replace(/^@+/, '');
-        }
+        if (n.length) return n.replace(/^@+/, '');
     }
 
     // 2) tentar extrair do link (data.url_dir)
@@ -1110,11 +1109,10 @@ function extractInstagramUsername(data) {
     if (url) {
         try {
             // ex: https://www.instagram.com/username/ ou https://instagram.com/username/?...
-            const m = url.match(/instagram\.com\/(?:p|tv|reel|tv\/|[^/]+\/)?@?([^\/?#&]+)/i);
-            if (m && m[1]) return m[1];
-            // fallback simples: pegar a primeira parte depois de instagram.com/
+            const m = url.match(/instagram\.com\/(?:p|tv|reel|reels|[^/]+\/)?@?([^\/?#&]+)/i);
+            if (m && m[1]) return m[1].replace(/\/$/, '');
             const m2 = url.match(/instagram\.com\/([^\/?#&]+)/i);
-            if (m2 && m2[1]) return m2[1].replace(/@/g, '');
+            if (m2 && m2[1]) return m2[1].replace(/@/g, '').replace(/\/$/, '');
         } catch (e) { /* ignore */ }
     }
 
@@ -1139,7 +1137,7 @@ async function loadInstagramAvatar(data) {
         return;
     }
 
-    // cache simples com TTL de 30 minutos
+    // cache simples com TTL de 30 minutos (guardamos a URL PROXIFICADA)
     const cacheKey = `avatar_cache_instagram_${instagramusername}`;
     const cacheTsKey = cacheKey + "_ts";
     try {
@@ -1148,6 +1146,7 @@ async function loadInstagramAvatar(data) {
         const now = Date.now();
         const TTL = 30 * 60 * 1000; // 30 minutos
         if (cached && (now - ts) < TTL) {
+            // cached pode ser uma URL proxificada (interna) ou uma url externa (não desejada)
             profileImg.src = cached;
             profileImg.style.display = "block";
             localStorage.setItem("unique_id", instagramusername);
@@ -1155,45 +1154,35 @@ async function loadInstagramAvatar(data) {
         }
     } catch (e) { /* ignore storage errors */ }
 
-    // chamada à sua rota de backend (tratativa robusta)
+    // chamada à sua rota de backend que agora já retorna profile_pic_proxy
     try {
         const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(instagramusername)}`);
         if (!resUserInfo.ok) {
-            // tratando 400/404/429 sem estourar a aplicação (apenas oculta avatar)
             console.warn("fetch /api/get-instagram-user não OK:", resUserInfo.status);
             profileImg.style.display = "none";
             profileImg.src = "";
             return;
         }
 
-        const userInfo = await resUserInfo.json();
+        const result = await resUserInfo.json();
+        // Esperamos { user: { profile_pic, profile_pic_proxy, ... } }
+        const user = result.user ?? result;
 
-        // seu backend pode retornar formas diferentes; normalize aqui
-        // Se a rota que você criou retorna { username, profile_pic, ... } (versão simplificada)
-        // ou retorna { user: {...} } (ou outros formatos), este bloco tenta cobrir os casos.
-        const user =
-            userInfo.user ||
-            userInfo.data?.user ||
-            userInfo.data ||
-            userInfo;
+        // Preferir proxy (já gerada no backend)
+        let avatarProxyUrl = user?.profile_pic_proxy ?? null;
 
-        // Prioridade simples: usar profile_pic / avatar / hd_profile_pic_url_info.url
-        let avatarUrl =
-            user?.profile_pic ||
-            user?.profile_pic_url ||
-            user?.profile_picture ||
-            user?.hd_profile_pic_url_info?.url ||
-            user?.hd_profile_pic_url ||
-            (Array.isArray(user?.avatar) ? user.avatar[0] : null) ||
-            (typeof user?.avatar === "string" ? user.avatar : null);
+        // Se não vier proxy, mas vier profile_pic (orig), gerar proxy localmente
+        if (!avatarProxyUrl && typeof user?.profile_pic === "string" && /^https?:\/\//i.test(user.profile_pic)) {
+            avatarProxyUrl = `/api/get-instagram-user?image_url=${encodeURIComponent(user.profile_pic)}`;
+        }
 
-        // valida URL
-        if (typeof avatarUrl === "string" && /^https?:\/\//i.test(avatarUrl)) {
-            profileImg.src = avatarUrl;
+        // valida e aplica
+        if (avatarProxyUrl) {
+            profileImg.src = avatarProxyUrl;
             profileImg.style.display = "block";
             localStorage.setItem("unique_id", instagramusername);
             try {
-                localStorage.setItem(cacheKey, avatarUrl);
+                localStorage.setItem(cacheKey, avatarProxyUrl);
                 localStorage.setItem(cacheTsKey, String(Date.now()));
             } catch (e) { /* ignore storage errors */ }
         } else {
@@ -1208,8 +1197,6 @@ async function loadInstagramAvatar(data) {
     }
 }
 
-// uso: substituir o bloco que carregava avatar por chamada a loadInstagramAvatar(data)
-await loadInstagramAvatar(data);
 // --- Fim do patch ---
 
             let valorFinal;
