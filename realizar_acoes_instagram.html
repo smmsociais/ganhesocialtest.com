@@ -1095,35 +1095,41 @@
 
             document.getElementById("actionText").textContent = actionText;
 
-// --- Início do patch (substituir as funções antigas) ---
+// === PATCH: normalizar link e melhorar debug/avatares ===
 
-function extractInstagramUsername(data) {
-    // 1) se vier em data.nome_usuario (ex: "@user" ou "user")
-    if (data && data.nome_usuario) {
-        const n = String(data.nome_usuario).trim();
-        if (n.length) return n.replace(/^@+/, '');
-    }
+// extrai instagramusername (reaproveita sua função ou inline)
+const instagramusername = extractInstagramUsername(data) || (data.nome_usuario ? String(data.nome_usuario).replace(/^@+/, '') : '');
 
-    // 2) tentar extrair do link (data.url_dir)
-    const url = data && data.url_dir ? String(data.url_dir).trim() : "";
-    if (url) {
-        try {
-            // ex: https://www.instagram.com/username/ ou https://instagram.com/username/?...
-            const m = url.match(/instagram\.com\/(?:p|tv|reel|reels|[^/]+\/)?@?([^\/?#&]+)/i);
-            if (m && m[1]) return m[1].replace(/\/$/, '');
-            const m2 = url.match(/instagram\.com\/([^\/?#&]+)/i);
-            if (m2 && m2[1]) return m2[1].replace(/@/g, '').replace(/\/$/, '');
-        } catch (e) { /* ignore */ }
-    }
+// NORMALIZA E MONTA URL ABSOLUTA PARA O HREF
+const rawUrl = (typeof data.url_dir === 'string' && data.url_dir.trim()) ? data.url_dir.trim() : '';
+let finalUrl = '';
 
-    // 3) tentar extrair de nome com @ dentro do texto (se existir)
-    if (typeof data === "string") {
-        const mm = data.match(/@([A-Za-z0-9._]+)/);
-        if (mm && mm[1]) return mm[1];
-    }
-
-    return null;
+// Se já veio com http(s), usa direto; senão, tenta prefixar https://
+if (rawUrl) {
+  finalUrl = rawUrl.match(/^https?:\/\//i) ? rawUrl : `https://${rawUrl.replace(/^\/+/, '')}`;
+} else if (instagramusername) {
+  finalUrl = `https://instagram.com/${instagramusername}`;
+} else {
+  finalUrl = `https://instagram.com/`; // fallback seguro
 }
+
+// Aplica no elemento <a id="actionUrl">
+const actionLink = document.getElementById("actionUrl");
+if (actionLink) {
+  actionLink.href = finalUrl;
+  actionLink.target = "_blank";
+  actionLink.rel = "noopener noreferrer";
+  // opcional: exibir texto do link
+  // actionLink.textContent = finalUrl;
+}
+
+// DEBUG: logue para inspecionar no console
+console.log(">> processarAcao: instagramusername=", instagramusername, "rawUrl=", rawUrl, "finalUrl=", finalUrl);
+
+// --- agora carregue o avatar (sua função já faz proxy/caching) ---
+// adiciona log antes da chamada para facilitar rastreio
+console.log(">> carregando avatar para", instagramusername);
+await loadInstagramAvatar(data);
 
 async function loadInstagramAvatar(data) {
     const profileImg = document.getElementById("profileImage");
