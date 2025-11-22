@@ -458,26 +458,26 @@
             <p class="container-subtitle">Selecione a rede social onde deseja gerenciar suas contas.</p>
 
             <div class="social-networks">
-                <div class="network-item" onclick="redirectToTikTokAccountManagement()">
-                    <img src="https://i.imgur.com/6RxMIU9.png" alt="TikTok" class="network-logo">
-                    <div class="network-name">TikTok</div>
-                </div>
-
                 <div class="network-item" onclick="redirectToInstagramAccountManagement()">
                     <img src="https://i.imgur.com/7CoB7je.png" alt="Instagram" class="network-logo">
                     <div class="network-name">Instagram</div>
+                </div>
+
+                <div class="network-item" onclick="redirectToTikTokAccountManagement()">
+                    <img src="https://i.imgur.com/6RxMIU9.png" alt="TikTok" class="network-logo">
+                    <div class="network-name">TikTok</div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        function redirectToTikTokAccountManagement() {
-            window.location.href = "gerenciar_contas_tiktok";
-        }
-
         function redirectToInstagramAccountManagement() {
             window.location.href = "gerenciar_contas_instagram";
+        }
+
+        function redirectToTikTokAccountManagement() {
+            window.location.href = "gerenciar_contas_tiktok";
         }
 
         function logout() {
