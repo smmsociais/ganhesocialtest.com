@@ -749,7 +749,7 @@
                 <div id="actionContent" class="action-content">
                     <div class="action-details">
                         <p><strong>Ação:</strong> <span id="actionText">Seguir</span></p>
-                        <p><strong>Usuário:</strong> <span id="username"></span></p>
+                        <p id="userInfo" style="display: none;"><strong>Usuário:</strong> <span id="username"></span></p>
                         <p><strong>Valor:</strong> <span id="points"></span></p>
                     </div>
 
@@ -835,41 +835,36 @@
         });
         let currentActionData = null;
 
-function limparUI() {
-    currentActionData = null;
-    tentativasSemAcoes = 0;
+        function limparUI() {
+            currentActionData = null;
+            tentativasSemAcoes = 0;
 
-    const username = document.getElementById("username");
-    const usernameLabel = document.getElementById("usernameLabel"); // opcional (se existir)
-    const points = document.getElementById("points");
-    const actionText = document.getElementById("actionText");
-    const profileImage = document.getElementById("profileImage");
-    const actionUrl = document.getElementById("actionUrl");
-    const statusMessage = document.getElementById("statusMessage");
-    const actionContent = document.getElementById("actionContent");
+            const username = document.getElementById("username");
+            const points = document.getElementById("points");
+            const actionText = document.getElementById("actionText");
+            const profileImage = document.getElementById("profileImage");
+            const actionUrl = document.getElementById("actionUrl");
+            const statusMessage = document.getElementById("statusMessage");
+            const actionContent = document.getElementById("actionContent");
+            const userInfo = document.getElementById("userInfo");
 
-    // Limpa conteúdo e garante que o elemento do usuário volte a estar visível por padrão.
-    if (username) {
-        username.textContent = "";
-        username.style.display = ""; // remove inline style que possa ter sido aplicado
-    }
-    if (usernameLabel) {
-        usernameLabel.style.display = "";
-    }
-
-    if (points) points.textContent = "";
-    if (actionText) actionText.textContent = "";
-    if (profileImage) {
-        profileImage.src = "";
-        profileImage.style.display = "none";
-    }
-    if (actionUrl) actionUrl.href = "#";
-    if (statusMessage) statusMessage.textContent = "";
-    if (actionContent) {
-        actionContent.style.opacity = "0";
-        actionContent.style.display = "none";
-    }
-}
+            if (username) username.textContent = "";
+            if (points) points.textContent = "";
+            if (actionText) actionText.textContent = "";
+            if (profileImage) {
+                profileImage.src = "";
+                profileImage.style.display = "none";
+            }
+            if (actionUrl) actionUrl.href = "#";
+            if (statusMessage) statusMessage.textContent = "";
+            if (actionContent) {
+                actionContent.style.opacity = "0";
+                actionContent.style.display = "none";
+            }
+            if (userInfo) {
+                userInfo.style.display = "none";
+            }
+        }
 
         async function bindAccount() {
             const selectedAccount = document.getElementById("accountSelect").value?.trim();
@@ -1087,57 +1082,23 @@ function limparUI() {
 
         async function processarAcao(data, origem) {
             document.getElementById("skipButton").style.display = "inline-block";
-// limpa mensagem de status
-document.getElementById("statusMessage").textContent = "";
+            document.getElementById("statusMessage").textContent = "";
+            document.getElementById("username").textContent = data.nome_usuario;
 
-// Determina texto da ação com a sua lógica existente
-const actionType = document.getElementById("actionType").value;
-let actionText = "Seguir";
+            // Atualiza o texto da ação com base no tipo selecionado
+            const actionType = document.getElementById("actionType").value;
+            let actionText = "Seguir";
 
-if (data.url_dir && data.url_dir.includes("/video/")) {
-    actionText = "Curtir";
-} else if (actionType === "seguir_curtir") {
-    actionText = origem === "local" ? "Seguir" : "Seguir";
-} else if (actionType === "curtir") {
-    actionText = "Curtir";
-}
+            if (data.url_dir && data.url_dir.includes("/video/")) {
+                actionText = "Curtir";
+            } else if (actionType === "seguir_curtir") {
+                actionText = origem === "local" ? "Seguir" : "Seguir";
+            } else if (actionType === "curtir") {
+                actionText = "Curtir";
+            }
 
-document.getElementById("actionText").textContent = actionText;
+            document.getElementById("actionText").textContent = actionText;
 
-// --- Exibe ou esconde o campo de usuário conforme ação ---
-// elemento onde aparece apenas o nome (ex: <span id="username"></span>)
-const usernameEl = document.getElementById("username");
-// rótulo que precede o nome (opcional). Recomendo colocar no HTML:
-// <label id="usernameLabel">Usuário:</label> ou similar.
-const usernameLabel = document.getElementById("usernameLabel");
-
-// Função utilitária para esconder/exibir label+username
-function showUsername(name) {
-    if (usernameEl) {
-        usernameEl.textContent = name || "";
-        usernameEl.style.display = ""; // mostra (restaura)
-    }
-    if (usernameLabel) usernameLabel.style.display = "";
-}
-function hideUsername() {
-    if (usernameEl) {
-        usernameEl.textContent = "";
-        usernameEl.style.display = "none";
-    }
-    if (usernameLabel) usernameLabel.style.display = "none";
-}
-
-// Para curtidas: esconder "Usuário"; para seguir: mostrar
-const isCurtir = (data.url_dir && data.url_dir.includes("/video/")) || actionType === "curtir";
-if (isCurtir) {
-    // esconde usuário (deixa apenas Ação e Valor)
-    hideUsername();
-} else {
-    // mostra usuário (seguidores / seguir)
-    // preferir data.nome_usuario se existir
-    const nomeUsuario = data.nome_usuario ? String(data.nome_usuario).replace(/^@+/, '') : "";
-    showUsername(nomeUsuario);
-}
             // === PATCH: normalizar link e melhorar debug/avatares ===
 
             // extrai instagramusername (reaproveita sua função ou inline)
@@ -1174,6 +1135,15 @@ if (isCurtir) {
             console.log(">> carregando avatar para", instagramusername);
             await loadInstagramAvatar(data);
 
+            // MODIFICAÇÃO: Mostrar/ocultar linha do usuário baseado no tipo de ação
+            const userInfo = document.getElementById("userInfo");
+            const isCurtir = (data.url_dir && data.url_dir.includes("/video/")) || actionType === "curtir";
+            
+            if (isCurtir) {
+                userInfo.style.display = "none";
+            } else {
+                userInfo.style.display = "block";
+            }
 
             function extractInstagramUsername(data) {
                 // 1) se vier em data.nome_usuario (ex: "@user" ou "user")
@@ -1260,6 +1230,8 @@ if (isCurtir) {
             // --- Fim do patch ---
 
             let valorFinal;
+
+            const isCurtir = (data.url_dir && data.url_dir.includes("/video/")) || actionType === "curtir";
 
             if (isCurtir) {
                 valorFinal = "0.001";
