@@ -1080,177 +1080,198 @@
             if (e.key === "id_conta") tentativasSemAcoes = 0;
         });
 
-        async function processarAcao(data, origem) {
-            document.getElementById("skipButton").style.display = "inline-block";
-            document.getElementById("statusMessage").textContent = "";
-            document.getElementById("username").textContent = data.nome_usuario;
+async function processarAcao(data, origem) {
+    // garante que o botão de pular apareça e limpa mensagens
+    document.getElementById("skipButton").style.display = "inline-block";
+    const statusEl = document.getElementById("statusMessage");
+    if (statusEl) statusEl.textContent = "";
 
-            // Atualiza o texto da ação com base no tipo selecionado
-            const actionType = document.getElementById("actionType").value;
-            let actionText = "Seguir";
+    // --- Normaliza e decide tipo de ação (Curtir vs Seguir) ---
+    const actionType = document.getElementById("actionType").value || "";
 
-            if (data.url_dir && data.url_dir.includes("/video/")) {
-                actionText = "Curtir";
-            } else if (actionType === "seguir_curtir") {
-                actionText = origem === "local" ? "Seguir" : "Seguir";
-            } else if (actionType === "curtir") {
-                actionText = "Curtir";
-            }
+    // normaliza a URL para checagens (evita undefined)
+    const rawUrl = (typeof data.url_dir === 'string' ? data.url_dir.trim() : '');
+    const rawUrlLower = rawUrl.toLowerCase();
 
-            document.getElementById("actionText").textContent = actionText;
+    // detecta padrões típicos de post do Instagram (post, reel, tv, video)
+    const isPostUrl = /\/(?:p|reel|tv|video)\/[A-Za-z0-9_-]*/i.test(rawUrl) ||
+                      /instagram\.com\/(?:p|reel|tv|video)\//i.test(rawUrl);
 
-            // === PATCH: normalizar link e melhorar debug/avatares ===
+    // Se o usuário explicitamente escolheu "curtir", sempre Curtir.
+    // Se escolheu "seguir", sempre Seguir.
+    // Se escolheu "seguir_curtir", decidir com base na URL: post => Curtir, senão => Seguir.
+    let isCurtir = false;
+    if (actionType === 'curtir') {
+        isCurtir = true;
+    } else if (actionType === 'seguir') {
+        isCurtir = false;
+    } else if (actionType === 'seguir_curtir') {
+        isCurtir = Boolean(isPostUrl);
+    } else {
+        isCurtir = Boolean(isPostUrl);
+    }
 
-            // extrai instagramusername (reaproveita sua função ou inline)
-            const instagramusername = extractInstagramUsername(data) || (data.nome_usuario ? String(data.nome_usuario).replace(/^@+/, '') : '');
+    // Atualiza o texto de Ação exibido
+    const actionTextEl = document.getElementById("actionText");
+    if (actionTextEl) actionTextEl.textContent = isCurtir ? "Curtir" : "Seguir";
 
-            // NORMALIZA E MONTA URL ABSOLUTA PARA O HREF
-            const rawUrl = (typeof data.url_dir === 'string' && data.url_dir.trim()) ? data.url_dir.trim() : '';
-            let finalUrl = '';
-
-            // Se já veio com http(s), usa direto; senão, tenta prefixar https://
-            if (rawUrl) {
-                finalUrl = rawUrl.match(/^https?:\/\//i) ? rawUrl : `https://${rawUrl.replace(/^\/+/, '')}`;
-            } else if (instagramusername) {
-                finalUrl = `https://instagram.com/${instagramusername}`;
-            } else {
-                finalUrl = `https://instagram.com/`; // fallback seguro
-            }
-
-            // Aplica no elemento <a id="actionUrl">
-            const actionLink = document.getElementById("actionUrl");
-            if (actionLink) {
-                actionLink.href = finalUrl;
-                actionLink.target = "_blank";
-                actionLink.rel = "noopener noreferrer";
-                // opcional: exibir texto do link
-                // actionLink.textContent = finalUrl;
-            }
-
-            // DEBUG: logue para inspecionar no console
-            console.log(">> processarAcao: instagramusername=", instagramusername, "rawUrl=", rawUrl, "finalUrl=", finalUrl);
-
-            // --- agora carregue o avatar (sua função já faz proxy/caching) ---
-            // adiciona log antes da chamada para facilitar rastreio
-            console.log(">> carregando avatar para", instagramusername);
-            await loadInstagramAvatar(data);
-
-            // MODIFICAÇÃO: Mostrar/ocultar linha do usuário baseado no tipo de ação
-            const userInfo = document.getElementById("userInfo");
-            const isCurtir = (data.url_dir && data.url_dir.includes("/video/")) || actionType === "curtir";
-            
-            if (isCurtir) {
-                userInfo.style.display = "none";
-            } else {
-                userInfo.style.display = "block";
-            }
-
-            function extractInstagramUsername(data) {
-                // 1) se vier em data.nome_usuario (ex: "@user" ou "user")
-                if (data && data.nome_usuario) {
-                    const n = String(data.nome_usuario).trim();
-                    if (n.length) return n.replace(/^@+/, '');
-                }
-
-                return null;
-            }
-
-            async function loadInstagramAvatar(data) {
-                const profileImg = document.getElementById("profileImage");
-                const instagramusername = extractInstagramUsername(data);
-
-                // Se não encontrou username, não chama API (evita ?username= vazio)
-                if (!instagramusername) {
-                    console.warn("Nenhum username do Instagram encontrado para esta ação; avatar não será carregado.");
-                    profileImg.style.display = "none";
-                    profileImg.src = "";
-                    return;
-                }
-
-                // cache simples com TTL de 30 minutos (guardamos a URL PROXIFICADA)
-                const cacheKey = `avatar_cache_instagram_${instagramusername}`;
-                const cacheTsKey = cacheKey + "_ts";
-                try {
-                    const cached = localStorage.getItem(cacheKey);
-                    const ts = Number(localStorage.getItem(cacheTsKey) || "0");
-                    const now = Date.now();
-                    const TTL = 30 * 60 * 1000; // 30 minutos
-                    if (cached && (now - ts) < TTL) {
-                        // cached pode ser uma URL proxificada (interna) ou uma url externa (não desejada)
-                        profileImg.src = cached;
-                        profileImg.style.display = "block";
-                        localStorage.setItem("unique_id", instagramusername);
-                        return;
-                    }
-                } catch (e) { /* ignore storage errors */ }
-
-                // chamada à sua rota de backend que agora já retorna profile_pic_proxy
-                try {
-                    const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(instagramusername)}`);
-                    if (!resUserInfo.ok) {
-                        console.warn("fetch /api/get-instagram-user não OK:", resUserInfo.status);
-                        profileImg.style.display = "none";
-                        profileImg.src = "";
-                        return;
-                    }
-
-                    const result = await resUserInfo.json();
-                    // Esperamos { user: { profile_pic, profile_pic_proxy, ... } }
-                    const user = result.user ?? result;
-
-                    // Preferir proxy (já gerada no backend)
-                    let avatarProxyUrl = user?.profile_pic_proxy ?? null;
-
-                    // Se não vier proxy, mas vier profile_pic (orig), gerar proxy localmente
-                    if (!avatarProxyUrl && typeof user?.profile_pic === "string" && /^https?:\/\//i.test(user.profile_pic)) {
-                        avatarProxyUrl = `/api/get-instagram-user?image_url=${encodeURIComponent(user.profile_pic)}`;
-                    }
-
-                    // valida e aplica
-                    if (avatarProxyUrl) {
-                        profileImg.src = avatarProxyUrl;
-                        profileImg.style.display = "block";
-                        localStorage.setItem("unique_id", instagramusername);
-                        try {
-                            localStorage.setItem(cacheKey, avatarProxyUrl);
-                            localStorage.setItem(cacheTsKey, String(Date.now()));
-                        } catch (e) { /* ignore storage errors */ }
-                    } else {
-                        // sem avatar válido
-                        profileImg.style.display = "none";
-                        profileImg.src = "";
-                    }
-                } catch (e) {
-                    console.warn("Erro ao obter avatar do usuário (fetch):", e);
-                    profileImg.style.display = "none";
-                    profileImg.src = "";
-                }
-            }
-
-            // --- Fim do patch ---
-
-            let valorFinal;
-
-            if (isCurtir) {
-                valorFinal = "0.001";
-            } else if (origem === "smm") {
-                valorFinal = "0.006";
-            } else {
-                const pontos = parseFloat(data.quantidade_pontos || 0);
-                const valorBruto = pontos / 1000;
-                let valorDescontado = (valorBruto > 0.004) ? valorBruto - 0.001 : valorBruto;
-                valorFinal = Math.min(Math.max(valorDescontado, 0.004), 0.006).toFixed(3);
-            }
-            document.getElementById("points").textContent = `R$ ${valorFinal}`;
-            document.getElementById("confirmButton").style.display = "none";
-
-            currentActionData = {
-                ...data,
-                origem
-            };
-            document.getElementById("actionContent").style.display = "block";
-            document.getElementById("actionContent").style.opacity = "1";
+    // --- Monta URL final para o link da ação ---
+    // tenta extrair username (se disponível) para montar fallback quando necessário
+    function extractInstagramUsername(data) {
+        if (data && data.nome_usuario) {
+            const n = String(data.nome_usuario).trim();
+            if (n.length) return n.replace(/^@+/, '');
         }
+        return null;
+    }
+    const instagramusername = extractInstagramUsername(data);
+    let finalUrl = '';
+
+    if (rawUrl) {
+        finalUrl = rawUrl.match(/^https?:\/\//i) ? rawUrl : `https://${rawUrl.replace(/^\/+/, '')}`;
+    } else if (instagramusername) {
+        finalUrl = `https://instagram.com/${instagramusername}`;
+    } else {
+        finalUrl = `https://instagram.com/`; // fallback seguro
+    }
+
+    const actionLink = document.getElementById("actionUrl");
+    if (actionLink) {
+        actionLink.href = finalUrl;
+        actionLink.target = "_blank";
+        actionLink.rel = "noopener noreferrer";
+    }
+
+    // --- Carrega avatar apenas se vamos mostrar usuário (seguir) ---
+    async function loadInstagramAvatar(data) {
+        const profileImg = document.getElementById("profileImage");
+        const username = extractInstagramUsername(data);
+        if (!username) {
+            // sem username, oculta avatar
+            if (profileImg) {
+                profileImg.style.display = "none";
+                profileImg.src = "";
+            }
+            return;
+        }
+
+        // cache TTL local
+        const cacheKey = `avatar_cache_instagram_${username}`;
+        const cacheTsKey = cacheKey + "_ts";
+        try {
+            const cached = localStorage.getItem(cacheKey);
+            const ts = Number(localStorage.getItem(cacheTsKey) || "0");
+            const now = Date.now();
+            const TTL = 30 * 60 * 1000; // 30 minutos
+            if (cached && (now - ts) < TTL) {
+                if (profileImg) {
+                    profileImg.src = cached;
+                    profileImg.style.display = "block";
+                }
+                localStorage.setItem("unique_id", username);
+                return;
+            }
+        } catch (e) { /* ignore storage errors */ }
+
+        // fetch backend que retorna profile_pic_proxy
+        try {
+            const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(username)}`);
+            if (!resUserInfo.ok) {
+                if (profileImg) {
+                    profileImg.style.display = "none";
+                    profileImg.src = "";
+                }
+                return;
+            }
+
+            const result = await resUserInfo.json();
+            const user = result.user ?? result;
+            let avatarProxyUrl = user?.profile_pic_proxy ?? null;
+
+            if (!avatarProxyUrl && typeof user?.profile_pic === "string" && /^https?:\/\//i.test(user.profile_pic)) {
+                avatarProxyUrl = `/api/get-instagram-user?image_url=${encodeURIComponent(user.profile_pic)}`;
+            }
+
+            if (avatarProxyUrl) {
+                if (profileImg) {
+                    profileImg.src = avatarProxyUrl;
+                    profileImg.style.display = "block";
+                }
+                localStorage.setItem("unique_id", username);
+                try {
+                    localStorage.setItem(cacheKey, avatarProxyUrl);
+                    localStorage.setItem(cacheTsKey, String(Date.now()));
+                } catch (e) { /* ignore storage errors */ }
+            } else {
+                if (profileImg) {
+                    profileImg.style.display = "none";
+                    profileImg.src = "";
+                }
+            }
+        } catch (e) {
+            console.warn("Erro ao obter avatar do usuário (fetch):", e);
+            const profileImg = document.getElementById("profileImage");
+            if (profileImg) {
+                profileImg.style.display = "none";
+                profileImg.src = "";
+            }
+        }
+    }
+
+    // --- Exibir / ocultar bloco do usuário (userInfo) e preencher nome quando aplicável ---
+    const userInfo = document.getElementById("userInfo");
+    const usernameSpan = document.getElementById("username");
+    if (isCurtir) {
+        // Curtir: ocultar usuário e avatar
+        if (userInfo) userInfo.style.display = "none";
+        if (usernameSpan) usernameSpan.textContent = "";
+        const profileImg = document.getElementById("profileImage");
+        if (profileImg) {
+            profileImg.style.display = "none";
+            profileImg.src = "";
+        }
+    } else {
+        // Seguir: mostrar usuário e avatar (se houver)
+        if (userInfo) userInfo.style.display = "block";
+        const nomeUsuario = data.nome_usuario ? String(data.nome_usuario).replace(/^@+/, '') : '';
+        if (usernameSpan) usernameSpan.textContent = nomeUsuario;
+        // carregar avatar (async) — não bloqueia a UI principal
+        await loadInstagramAvatar(data);
+    }
+
+    // --- Calcular valor exibido (mesma regra que você já usava) ---
+    let valorFinal;
+    if (isCurtir) {
+        valorFinal = "0.001";
+    } else if (origem === "smm") {
+        valorFinal = "0.006";
+    } else {
+        const pontos = parseFloat(data.quantidade_pontos || 0);
+        const valorBruto = pontos / 1000;
+        let valorDescontado = (valorBruto > 0.004) ? valorBruto - 0.001 : valorBruto;
+        valorFinal = Math.min(Math.max(valorDescontado, 0.004), 0.006).toFixed(3);
+    }
+    const pointsEl = document.getElementById("points");
+    if (pointsEl) pointsEl.textContent = `R$ ${valorFinal}`;
+
+    // Esconde o botão de confirmar até o usuário visualizar (comportamento original)
+    const confirmBtn = document.getElementById("confirmButton");
+    if (confirmBtn) confirmBtn.style.display = "none";
+
+    // Guarda a action atual e mostra o container
+    currentActionData = {
+        ...data,
+        origem
+    };
+    const actionContent = document.getElementById("actionContent");
+    if (actionContent) {
+        actionContent.style.display = "block";
+        actionContent.style.opacity = "1";
+    }
+
+    // Debug rápido no console (ajuda em testes)
+    console.log("processarAcao -> isCurtir:", isCurtir, "actionType:", actionType, "rawUrl:", rawUrl, "username:", instagramusername);
+}
 
         function showConfirmButton() {
             document.getElementById("confirmButton").style.display = "block";
