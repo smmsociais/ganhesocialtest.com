@@ -835,32 +835,41 @@
         });
         let currentActionData = null;
 
-        function limparUI() {
-            currentActionData = null;
-            tentativasSemAcoes = 0;
+function limparUI() {
+    currentActionData = null;
+    tentativasSemAcoes = 0;
 
-            const username = document.getElementById("username");
-            const points = document.getElementById("points");
-            const actionText = document.getElementById("actionText");
-            const profileImage = document.getElementById("profileImage");
-            const actionUrl = document.getElementById("actionUrl");
-            const statusMessage = document.getElementById("statusMessage");
-            const actionContent = document.getElementById("actionContent");
+    const username = document.getElementById("username");
+    const usernameLabel = document.getElementById("usernameLabel"); // opcional (se existir)
+    const points = document.getElementById("points");
+    const actionText = document.getElementById("actionText");
+    const profileImage = document.getElementById("profileImage");
+    const actionUrl = document.getElementById("actionUrl");
+    const statusMessage = document.getElementById("statusMessage");
+    const actionContent = document.getElementById("actionContent");
 
-            if (username) username.textContent = "";
-            if (points) points.textContent = "";
-            if (actionText) actionText.textContent = "";
-            if (profileImage) {
-                profileImage.src = "";
-                profileImage.style.display = "none";
-            }
-            if (actionUrl) actionUrl.href = "#";
-            if (statusMessage) statusMessage.textContent = "";
-            if (actionContent) {
-                actionContent.style.opacity = "0";
-                actionContent.style.display = "none";
-            }
-        }
+    // Limpa conteúdo e garante que o elemento do usuário volte a estar visível por padrão.
+    if (username) {
+        username.textContent = "";
+        username.style.display = ""; // remove inline style que possa ter sido aplicado
+    }
+    if (usernameLabel) {
+        usernameLabel.style.display = "";
+    }
+
+    if (points) points.textContent = "";
+    if (actionText) actionText.textContent = "";
+    if (profileImage) {
+        profileImage.src = "";
+        profileImage.style.display = "none";
+    }
+    if (actionUrl) actionUrl.href = "#";
+    if (statusMessage) statusMessage.textContent = "";
+    if (actionContent) {
+        actionContent.style.opacity = "0";
+        actionContent.style.display = "none";
+    }
+}
 
         async function bindAccount() {
             const selectedAccount = document.getElementById("accountSelect").value?.trim();
@@ -1078,147 +1087,179 @@
 
         async function processarAcao(data, origem) {
             document.getElementById("skipButton").style.display = "inline-block";
-            document.getElementById("statusMessage").textContent = "";
-            document.getElementById("username").textContent = data.nome_usuario;
+// limpa mensagem de status
+document.getElementById("statusMessage").textContent = "";
 
-            // Atualiza o texto da ação com base no tipo selecionado
-            const actionType = document.getElementById("actionType").value;
-            let actionText = "Seguir";
+// Determina texto da ação com a sua lógica existente
+const actionType = document.getElementById("actionType").value;
+let actionText = "Seguir";
 
-            if (data.url_dir && data.url_dir.includes("/video/")) {
-                actionText = "Curtir";
-            } else if (actionType === "seguir_curtir") {
-                actionText = origem === "local" ? "Seguir" : "Seguir";
-            } else if (actionType === "curtir") {
-                actionText = "Curtir";
+if (data.url_dir && data.url_dir.includes("/video/")) {
+    actionText = "Curtir";
+} else if (actionType === "seguir_curtir") {
+    actionText = origem === "local" ? "Seguir" : "Seguir";
+} else if (actionType === "curtir") {
+    actionText = "Curtir";
+}
+
+document.getElementById("actionText").textContent = actionText;
+
+// --- Exibe ou esconde o campo de usuário conforme ação ---
+// elemento onde aparece apenas o nome (ex: <span id="username"></span>)
+const usernameEl = document.getElementById("username");
+// rótulo que precede o nome (opcional). Recomendo colocar no HTML:
+// <label id="usernameLabel">Usuário:</label> ou similar.
+const usernameLabel = document.getElementById("usernameLabel");
+
+// Função utilitária para esconder/exibir label+username
+function showUsername(name) {
+    if (usernameEl) {
+        usernameEl.textContent = name || "";
+        usernameEl.style.display = ""; // mostra (restaura)
+    }
+    if (usernameLabel) usernameLabel.style.display = "";
+}
+function hideUsername() {
+    if (usernameEl) {
+        usernameEl.textContent = "";
+        usernameEl.style.display = "none";
+    }
+    if (usernameLabel) usernameLabel.style.display = "none";
+}
+
+// Para curtidas: esconder "Usuário"; para seguir: mostrar
+const isCurtir = (data.url_dir && data.url_dir.includes("/video/")) || actionType === "curtir";
+if (isCurtir) {
+    // esconde usuário (deixa apenas Ação e Valor)
+    hideUsername();
+} else {
+    // mostra usuário (seguidores / seguir)
+    // preferir data.nome_usuario se existir
+    const nomeUsuario = data.nome_usuario ? String(data.nome_usuario).replace(/^@+/, '') : "";
+    showUsername(nomeUsuario);
+}
+            // === PATCH: normalizar link e melhorar debug/avatares ===
+
+            // extrai instagramusername (reaproveita sua função ou inline)
+            const instagramusername = extractInstagramUsername(data) || (data.nome_usuario ? String(data.nome_usuario).replace(/^@+/, '') : '');
+
+            // NORMALIZA E MONTA URL ABSOLUTA PARA O HREF
+            const rawUrl = (typeof data.url_dir === 'string' && data.url_dir.trim()) ? data.url_dir.trim() : '';
+            let finalUrl = '';
+
+            // Se já veio com http(s), usa direto; senão, tenta prefixar https://
+            if (rawUrl) {
+                finalUrl = rawUrl.match(/^https?:\/\//i) ? rawUrl : `https://${rawUrl.replace(/^\/+/, '')}`;
+            } else if (instagramusername) {
+                finalUrl = `https://instagram.com/${instagramusername}`;
+            } else {
+                finalUrl = `https://instagram.com/`; // fallback seguro
             }
 
-            document.getElementById("actionText").textContent = actionText;
+            // Aplica no elemento <a id="actionUrl">
+            const actionLink = document.getElementById("actionUrl");
+            if (actionLink) {
+                actionLink.href = finalUrl;
+                actionLink.target = "_blank";
+                actionLink.rel = "noopener noreferrer";
+                // opcional: exibir texto do link
+                // actionLink.textContent = finalUrl;
+            }
 
-// === PATCH: normalizar link e melhorar debug/avatares ===
+            // DEBUG: logue para inspecionar no console
+            console.log(">> processarAcao: instagramusername=", instagramusername, "rawUrl=", rawUrl, "finalUrl=", finalUrl);
 
-// extrai instagramusername (reaproveita sua função ou inline)
-const instagramusername = extractInstagramUsername(data) || (data.nome_usuario ? String(data.nome_usuario).replace(/^@+/, '') : '');
-
-// NORMALIZA E MONTA URL ABSOLUTA PARA O HREF
-const rawUrl = (typeof data.url_dir === 'string' && data.url_dir.trim()) ? data.url_dir.trim() : '';
-let finalUrl = '';
-
-// Se já veio com http(s), usa direto; senão, tenta prefixar https://
-if (rawUrl) {
-  finalUrl = rawUrl.match(/^https?:\/\//i) ? rawUrl : `https://${rawUrl.replace(/^\/+/, '')}`;
-} else if (instagramusername) {
-  finalUrl = `https://instagram.com/${instagramusername}`;
-} else {
-  finalUrl = `https://instagram.com/`; // fallback seguro
-}
-
-// Aplica no elemento <a id="actionUrl">
-const actionLink = document.getElementById("actionUrl");
-if (actionLink) {
-  actionLink.href = finalUrl;
-  actionLink.target = "_blank";
-  actionLink.rel = "noopener noreferrer";
-  // opcional: exibir texto do link
-  // actionLink.textContent = finalUrl;
-}
-
-// DEBUG: logue para inspecionar no console
-console.log(">> processarAcao: instagramusername=", instagramusername, "rawUrl=", rawUrl, "finalUrl=", finalUrl);
-
-// --- agora carregue o avatar (sua função já faz proxy/caching) ---
-// adiciona log antes da chamada para facilitar rastreio
-console.log(">> carregando avatar para", instagramusername);
-await loadInstagramAvatar(data);
+            // --- agora carregue o avatar (sua função já faz proxy/caching) ---
+            // adiciona log antes da chamada para facilitar rastreio
+            console.log(">> carregando avatar para", instagramusername);
+            await loadInstagramAvatar(data);
 
 
-function extractInstagramUsername(data) {
-    // 1) se vier em data.nome_usuario (ex: "@user" ou "user")
-    if (data && data.nome_usuario) {
-        const n = String(data.nome_usuario).trim();
-        if (n.length) return n.replace(/^@+/, '');
-    }
+            function extractInstagramUsername(data) {
+                // 1) se vier em data.nome_usuario (ex: "@user" ou "user")
+                if (data && data.nome_usuario) {
+                    const n = String(data.nome_usuario).trim();
+                    if (n.length) return n.replace(/^@+/, '');
+                }
 
-    return null;
-}
+                return null;
+            }
 
-async function loadInstagramAvatar(data) {
-    const profileImg = document.getElementById("profileImage");
-    const instagramusername = extractInstagramUsername(data);
+            async function loadInstagramAvatar(data) {
+                const profileImg = document.getElementById("profileImage");
+                const instagramusername = extractInstagramUsername(data);
 
-    // Se não encontrou username, não chama API (evita ?username= vazio)
-    if (!instagramusername) {
-        console.warn("Nenhum username do Instagram encontrado para esta ação; avatar não será carregado.");
-        profileImg.style.display = "none";
-        profileImg.src = "";
-        return;
-    }
+                // Se não encontrou username, não chama API (evita ?username= vazio)
+                if (!instagramusername) {
+                    console.warn("Nenhum username do Instagram encontrado para esta ação; avatar não será carregado.");
+                    profileImg.style.display = "none";
+                    profileImg.src = "";
+                    return;
+                }
 
-    // cache simples com TTL de 30 minutos (guardamos a URL PROXIFICADA)
-    const cacheKey = `avatar_cache_instagram_${instagramusername}`;
-    const cacheTsKey = cacheKey + "_ts";
-    try {
-        const cached = localStorage.getItem(cacheKey);
-        const ts = Number(localStorage.getItem(cacheTsKey) || "0");
-        const now = Date.now();
-        const TTL = 30 * 60 * 1000; // 30 minutos
-        if (cached && (now - ts) < TTL) {
-            // cached pode ser uma URL proxificada (interna) ou uma url externa (não desejada)
-            profileImg.src = cached;
-            profileImg.style.display = "block";
-            localStorage.setItem("unique_id", instagramusername);
-            return;
-        }
-    } catch (e) { /* ignore storage errors */ }
+                // cache simples com TTL de 30 minutos (guardamos a URL PROXIFICADA)
+                const cacheKey = `avatar_cache_instagram_${instagramusername}`;
+                const cacheTsKey = cacheKey + "_ts";
+                try {
+                    const cached = localStorage.getItem(cacheKey);
+                    const ts = Number(localStorage.getItem(cacheTsKey) || "0");
+                    const now = Date.now();
+                    const TTL = 30 * 60 * 1000; // 30 minutos
+                    if (cached && (now - ts) < TTL) {
+                        // cached pode ser uma URL proxificada (interna) ou uma url externa (não desejada)
+                        profileImg.src = cached;
+                        profileImg.style.display = "block";
+                        localStorage.setItem("unique_id", instagramusername);
+                        return;
+                    }
+                } catch (e) { /* ignore storage errors */ }
 
-    // chamada à sua rota de backend que agora já retorna profile_pic_proxy
-    try {
-        const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(instagramusername)}`);
-        if (!resUserInfo.ok) {
-            console.warn("fetch /api/get-instagram-user não OK:", resUserInfo.status);
-            profileImg.style.display = "none";
-            profileImg.src = "";
-            return;
-        }
+                // chamada à sua rota de backend que agora já retorna profile_pic_proxy
+                try {
+                    const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(instagramusername)}`);
+                    if (!resUserInfo.ok) {
+                        console.warn("fetch /api/get-instagram-user não OK:", resUserInfo.status);
+                        profileImg.style.display = "none";
+                        profileImg.src = "";
+                        return;
+                    }
 
-        const result = await resUserInfo.json();
-        // Esperamos { user: { profile_pic, profile_pic_proxy, ... } }
-        const user = result.user ?? result;
+                    const result = await resUserInfo.json();
+                    // Esperamos { user: { profile_pic, profile_pic_proxy, ... } }
+                    const user = result.user ?? result;
 
-        // Preferir proxy (já gerada no backend)
-        let avatarProxyUrl = user?.profile_pic_proxy ?? null;
+                    // Preferir proxy (já gerada no backend)
+                    let avatarProxyUrl = user?.profile_pic_proxy ?? null;
 
-        // Se não vier proxy, mas vier profile_pic (orig), gerar proxy localmente
-        if (!avatarProxyUrl && typeof user?.profile_pic === "string" && /^https?:\/\//i.test(user.profile_pic)) {
-            avatarProxyUrl = `/api/get-instagram-user?image_url=${encodeURIComponent(user.profile_pic)}`;
-        }
+                    // Se não vier proxy, mas vier profile_pic (orig), gerar proxy localmente
+                    if (!avatarProxyUrl && typeof user?.profile_pic === "string" && /^https?:\/\//i.test(user.profile_pic)) {
+                        avatarProxyUrl = `/api/get-instagram-user?image_url=${encodeURIComponent(user.profile_pic)}`;
+                    }
 
-        // valida e aplica
-        if (avatarProxyUrl) {
-            profileImg.src = avatarProxyUrl;
-            profileImg.style.display = "block";
-            localStorage.setItem("unique_id", instagramusername);
-            try {
-                localStorage.setItem(cacheKey, avatarProxyUrl);
-                localStorage.setItem(cacheTsKey, String(Date.now()));
-            } catch (e) { /* ignore storage errors */ }
-        } else {
-            // sem avatar válido
-            profileImg.style.display = "none";
-            profileImg.src = "";
-        }
-    } catch (e) {
-        console.warn("Erro ao obter avatar do usuário (fetch):", e);
-        profileImg.style.display = "none";
-        profileImg.src = "";
-    }
-}
+                    // valida e aplica
+                    if (avatarProxyUrl) {
+                        profileImg.src = avatarProxyUrl;
+                        profileImg.style.display = "block";
+                        localStorage.setItem("unique_id", instagramusername);
+                        try {
+                            localStorage.setItem(cacheKey, avatarProxyUrl);
+                            localStorage.setItem(cacheTsKey, String(Date.now()));
+                        } catch (e) { /* ignore storage errors */ }
+                    } else {
+                        // sem avatar válido
+                        profileImg.style.display = "none";
+                        profileImg.src = "";
+                    }
+                } catch (e) {
+                    console.warn("Erro ao obter avatar do usuário (fetch):", e);
+                    profileImg.style.display = "none";
+                    profileImg.src = "";
+                }
+            }
 
-// --- Fim do patch ---
+            // --- Fim do patch ---
 
             let valorFinal;
-
-            const isCurtir = (data.url_dir && data.url_dir.includes("/video/")) || actionType === "curtir";
 
             if (isCurtir) {
                 valorFinal = "0.001";
