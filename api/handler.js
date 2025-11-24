@@ -1428,16 +1428,18 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
   }
 }
 
-// Rota: /api/confirm_action (POST)
+// Rota: /api/tiktok/confirm_action (POST)
 if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
   await connectDB();
 
-  const { token, id_action, id_tiktok } = req.body;
-  if (!token || !id_action || !id_tiktok) {
-    return res.status(400).json({ error: "Parâmetros obrigatórios ausentes." });
+  const { token, id_action } = req.body;
+
+  if (!token || !id_action) {
+    return res.status(400).json({ error: "Parâmetros 'token' e 'id_action' são obrigatórios." });
   }
 
   try {
+    // 🔐 Valida token
     const usuario = await User.findOne({ token });
     if (!usuario) {
       return res.status(403).json({ error: "Acesso negado. Token inválido." });
@@ -1457,75 +1459,43 @@ if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
       return mapa[tipo?.toLowerCase?.()] || "seguir";
     }
 
-    // 🔍 Verificar se a ação é local (existe no Pedido)
+    // 🔍 Buscar pedido local
     const pedidoLocal = await Pedido.findById(id_action);
 
-    let valorFinal = 0;
-    let tipo_acao = "Seguir";
-    let url_dir = "";
-
-    if (pedidoLocal) {
-      console.log("📦 Confirmando ação local:", id_action);
-
-      tipo_acao = normalizarTipo(pedidoLocal.tipo_acao || pedidoLocal.tipo);
-
-      if (tipo_acao === "curtir") {
-        valorFinal = 0.001;
-      } else if (tipo_acao === "seguir") {
-        valorFinal = 0.006;
-      }
-
-      url_dir = pedidoLocal.link;
-    } else {
-      // 🔍 AÇÃO EXTERNA – Buscar no TemporaryAction
-      const tempAction = await TemporaryAction.findOne({ id_tiktok, id_action });
-
-      if (!tempAction) {
-        console.log("❌ TemporaryAction não encontrada para ação externa:", id_tiktok, id_action);
-        return res.status(404).json({ error: "Ação temporária não encontrada" });
-      }
-
-      // 🔐 Confirmar ação via API externa
-      const payload = {
-        token: "944c736c-6408-465d-9129-0b2f11ce0971",
-        sha1: "e5990261605cd152f26c7919192d4cd6f6e22227",
-        id_conta: id_tiktok,
-        id_pedido: id_action,
-        is_tiktok: "1",
-      };
-
-      let confirmData = {};
-      try {
-        const confirmResponse = await axios.post(
-          "https://api.ganharnoinsta.com/confirm_action.php",
-          payload,
-          { timeout: 5000 }
-        );
-        confirmData = confirmResponse.data || {};
-        console.log("📬 Resposta da API confirmar ação:", confirmData);
-      } catch (err) {
-        console.error("❌ Erro ao confirmar ação (externa):", err.response?.data || err.message);
-        return res.status(502).json({ error: "Falha na confirmação externa." });
-      }
-
-      const valorOriginal = parseFloat(confirmData.valor || tempAction?.valor || 0);
-      const valorDescontado = valorOriginal > 0.003 ? valorOriginal - 0.001 : valorOriginal;
-      valorFinal = parseFloat(Math.min(Math.max(valorDescontado, 0.003), 0.006).toFixed(3));
-      tipo_acao = normalizarTipo(confirmData.tipo_acao || tempAction?.tipo_acao);
-      url_dir = tempAction?.url_dir || "";
+    if (!pedidoLocal) {
+      console.log("❌ Pedido local não encontrado:", id_action);
+      return res.status(404).json({ error: "Ação não encontrada." });
     }
 
-    // 💾 Salva o valor real (sem arredondar para exibição)
+    console.log("📦 Confirmando ação local:", id_action);
+
+    // --------- DEFINIR TIPO E VALOR DA AÇÃO ---------
+
+    const tipo_acao = normalizarTipo(pedidoLocal.tipo_acao || pedidoLocal.tipo);
+
+    let valorFinal = 0.006; // default — seguir
+    if (tipo_acao === "curtir") {
+      valorFinal = 0.001;
+    }
+
+    // --------- PEGAR NOME DO PERFIL DO LINK ---------
+
+    const url_dir = pedidoLocal.link;
+
+    let nomeDoPerfil = "";
+    if (url_dir.includes("@")) {
+      nomeDoPerfil = url_dir.split("@")[1].split(/[/?#]/)[0];
+    }
+
+    // --------- REGISTRAR HISTÓRICO ---------
+
     const newAction = new ActionHistory({
       token,
-      nome_usuario: usuario.contas.find(
-        (c) => c.id_tiktok === id_tiktok || c.id_fake === id_tiktok
-      )?.nomeConta,
+      nome_usuario: nomeDoPerfil || "desconhecido",
       tipo_acao,
       tipo: tipo_acao,
       quantidade_pontos: valorFinal,
       url_dir,
-      id_conta: id_tiktok,
       id_action,
       id_pedido: id_action,
       user: usuario._id,
@@ -1535,17 +1505,19 @@ if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
     });
 
     const saved = await newAction.save();
+
     usuario.historico_acoes.push(saved._id);
     await usuario.save();
 
-    // ✅ Exibição: apenas 0.003 vira 0.004 no retorno
+    // --------- VALOR PARA EXIBIÇÃO ---------
     const valorExibicao = valorFinal === 0.003 ? 0.004 : valorFinal;
 
     return res.status(200).json({
-      status: "sucess",
+      status: "success",
       message: "ação confirmada com sucesso",
       valor: valorExibicao,
     });
+
   } catch (error) {
     console.error("💥 Erro ao processar requisição:", error.message);
     return res.status(500).json({ error: "Erro interno ao processar requisição." });
