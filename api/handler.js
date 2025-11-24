@@ -1421,18 +1421,22 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
   }
 }
 
-// Rota: /api/tiktok/confirm_action (POST)
+// ---------------------------------------------------------
+// ROTA: /api/tiktok/confirm_action (POST)
+// ---------------------------------------------------------
 if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
   await connectDB();
 
-  const { token, id_action } = req.body;
+  const { token, id_action, nome_usuario } = req.body;
 
-  if (!token || !id_action) {
-    return res.status(400).json({ error: "Parâmetros 'token' e 'id_action' são obrigatórios." });
+  if (!token || !id_action || !nome_usuario) {
+    return res.status(400).json({
+      error: "Parâmetros 'token', 'id_action' e 'nome_usuario' são obrigatórios."
+    });
   }
 
   try {
-    // 🔐 Valida token
+    // 🔐 Validar token
     const usuario = await User.findOne({ token });
     if (!usuario) {
       return res.status(403).json({ error: "Acesso negado. Token inválido." });
@@ -1440,6 +1444,7 @@ if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
 
     console.log("🧩 id_action recebido:", id_action);
 
+    // Normalizar tipo
     function normalizarTipo(tipo) {
       const mapa = {
         seguir: "seguir",
@@ -1462,38 +1467,44 @@ if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
 
     console.log("📦 Confirmando ação local:", id_action);
 
-    // --------- DEFINIR TIPO E VALOR DA AÇÃO ---------
+    // Definir tipo da ação
+    const tipo_acao = normalizarTipo(
+      pedidoLocal.tipo_acao ||
+      pedidoLocal.tipo
+    );
 
-    const tipo_acao = normalizarTipo(pedidoLocal.tipo_acao || pedidoLocal.tipo);
+    // Valor da ação
+    const valorFinal = tipo_acao === "curtir" ? 0.001 : 0.006;
 
-    let valorFinal = tipo_acao === "curtir" ? 0.001 : 0.006;
-
-    // --------- PEGAR NOME DO PERFIL DO LINK (PERFIL ALVO) ---------
-
+    // URL do perfil alvo
     const url_dir = pedidoLocal.link;
 
+    // Extrair nome de usuário do perfil alvo
     let nomeDoPerfil = "";
     if (url_dir.includes("@")) {
       nomeDoPerfil = url_dir.split("@")[1].split(/[/?#]/)[0];
     }
 
-    // --------- REGISTRAR HISTÓRICO ---------
-    // AGORA 100% CORRETO:
-    // nome_usuario → usuário que FEZ a ação
-    // nome_usuario_perfil → perfil do TikTok da ação
+    // ---------------------------------------------------------
+    // REGISTRAR HISTÓRICO CORRETAMENTE
+    // nome_usuario → conta vinculada que EXECUTOU a ação
+    // nome_usuario_perfil → usuário alvo do TikTok
+    // ---------------------------------------------------------
+
     const newAction = new ActionHistory({
+      user: usuario._id,
       token,
-      nome_usuario: usuario.nome_usuario,          // ✔ CORRETO: usuário logado
-      nome_usuario_perfil: nomeDoPerfil,           // ✔ perfil alvo
+      nome_usuario,                  // ✔ agora sempre salvo corretamente
+      nome_usuario_perfil: nomeDoPerfil,
       tipo_acao,
       tipo: tipo_acao,
       quantidade_pontos: valorFinal,
-      url_dir,
-      id_action,
-      id_pedido: id_action,
-      user: usuario._id,
-      acao_validada: "pendente",
       valor_confirmacao: valorFinal,
+      rede_social: "TikTok",
+      url_dir,
+      id_action,                    // id do pedido local
+      id_pedido: id_action,
+      acao_validada: "pendente",
       data: new Date(),
     });
 
@@ -1504,7 +1515,7 @@ if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
 
     return res.status(200).json({
       status: "success",
-      message: "ação confirmada com sucesso",
+      message: "Ação confirmada com sucesso.",
       valor: valorFinal,
     });
 
@@ -1514,25 +1525,36 @@ if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
   }
 }
 
-// Rota: /api/pular_acao
+// ---------------------------------------------------------
+// ROTA: /api/pular_acao  (POST)
+// ---------------------------------------------------------
 if (url.startsWith("/api/pular_acao") && method === "POST") {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Método não permitido" });
   }
 
   const {
     token,
     id_pedido,
     id_conta,
-    nome_usuario,
+    nome_usuario,        // ✔ agora este nome será salvo corretamente
     url_dir,
     quantidade_pontos,
     tipo_acao,
     tipo
   } = req.body;
 
-  if (!token || !id_pedido || !id_conta || !nome_usuario || !url_dir || !quantidade_pontos || !tipo_acao || !tipo) {
-    return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
+  if (
+    !token ||
+    !id_pedido ||
+    !id_conta ||
+    !nome_usuario ||
+    !url_dir ||
+    !quantidade_pontos ||
+    !tipo_acao ||
+    !tipo
+  ) {
+    return res.status(400).json({ error: "Campos obrigatórios ausentes" });
   }
 
   try {
@@ -1540,43 +1562,46 @@ if (url.startsWith("/api/pular_acao") && method === "POST") {
 
     const user = await User.findOne({ token });
     if (!user) {
-      return res.status(401).json({ error: 'Token inválido' });
+      return res.status(401).json({ error: "Token inválido" });
     }
 
-const existente = await ActionHistory.findOne({
-  id_pedido,
-  id_conta,
-  acao_validada: 'pulada',
-});
+    // Verificar se já existe ação pulada deste pedido + conta
+    const existente = await ActionHistory.findOne({
+      id_pedido,
+      id_conta,
+      acao_validada: "pulada",
+    });
 
-if (existente) {
-  return res.status(200).json({ status: 'JA_PULADA' });
-}
+    if (existente) {
+      return res.status(200).json({ status: "JA_PULADA" });
+    }
 
-const novaAcao = new ActionHistory({
-  user: user._id,
-  token,
-  nome_usuario,
-  id_action: crypto.randomUUID(),
-  id_pedido,
-  id_conta,
-  url_dir,
-  quantidade_pontos,
-  tipo_acao,
-  tipo,
-  acao_validada: 'pulada',
-  rede_social: 'TikTok',
-  createdAt: new Date()
-});
+    // Registrar ação pulada
+    const novaAcao = new ActionHistory({
+      user: user._id,
+      token,
+      nome_usuario,         // ✔ salvo corretamente
+      id_action: crypto.randomUUID(),
+      id_pedido,
+      id_conta,
+      url_dir,
+      quantidade_pontos,
+      tipo_acao,
+      tipo,
+      acao_validada: "pulada",
+      rede_social: "TikTok",
+      createdAt: new Date(),
+    });
 
     await novaAcao.save();
 
-    return res.status(200).json({ status: 'PULADA_REGISTRADA' });
+    return res.status(200).json({ status: "PULADA_REGISTRADA" });
+
   } catch (error) {
-    console.error('Erro ao registrar ação pulada:', error);
-    return res.status(500).json({ error: 'Erro interno' });
+    console.error("Erro ao registrar ação pulada:", error);
+    return res.status(500).json({ error: "Erro interno" });
   }
-};
+}
 
 // 🔹 Rota: /api/afiliados
 if (url.startsWith("/api/afiliados") && method === "POST") {
