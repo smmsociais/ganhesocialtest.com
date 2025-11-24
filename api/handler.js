@@ -1423,7 +1423,6 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
 
 // ---------------------------------------------------------
 // ROTA: /api/tiktok/confirm_action (POST)
-// ---------------------------------------------------------
 if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
   await connectDB();
 
@@ -1485,25 +1484,19 @@ if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
       nomeDoPerfil = url_dir.split("@")[1].split(/[/?#]/)[0];
     }
 
-    // ---------------------------------------------------------
-    // REGISTRAR HISTÓRICO CORRETAMENTE
-    // nome_usuario → conta vinculada que EXECUTOU a ação
-    // nome_usuario_perfil → usuário alvo do TikTok
-    // ---------------------------------------------------------
-
+    // Criar registro no histórico
     const newAction = new ActionHistory({
       user: usuario._id,
       token,
-      nome_usuario,                  // ✔ agora sempre salvo corretamente
+      nome_usuario,
       nome_usuario_perfil: nomeDoPerfil,
       tipo_acao,
       tipo: tipo_acao,
       quantidade_pontos: valorFinal,
       valor_confirmacao: valorFinal,
       rede_social: "TikTok",
-      url_dir,
-      id_action,                    // id do pedido local
-      id_pedido: id_action,
+      url: url_dir,            // ✔ CORRIGIDO
+      id_action,
       acao_validada: "pendente",
       data: new Date(),
     });
