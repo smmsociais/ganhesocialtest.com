@@ -1351,13 +1351,21 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
       debug: !!debug
     });
 
-    // valida usuário + conta vinculada
-    const usuario = await User.findOne({ token, "contas.nome_usuario": nome_usuario });
-    if (!usuario) {
-      console.log("[GET_ACTION] Token inválido ou nome_usuario não correspondente");
-      return res.status(401).json({ error: "Token inválido" });
-    }
+// valida usuário pelo token (encontra o usuário dono do token)
+const usuario = await User.findOne({ token });
+if (!usuario) {
+  console.log("[GET_ACTION] Token inválido");
+  return res.status(401).json({ error: "Token inválido" });
+}
 
+// garante que o token corresponde à conta nome_usuario enviada
+const contaVinculada = Array.isArray(usuario.contas) &&
+  usuario.contas.some(c => c.nome_usuario === nome_usuario);
+
+if (!contaVinculada) {
+  console.log("[GET_ACTION] Token não pertence à conta solicitada:", nome_usuario);
+  return res.status(401).json({ error: "Token não pertence à conta solicitada" });
+}
     // normalizar tipo
     const tipoNormalized = typeof tipo === 'string' ? String(tipo).trim().toLowerCase() : null;
     let tipoBanco;
