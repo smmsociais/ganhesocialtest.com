@@ -19,6 +19,7 @@ const ActionHistorySchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   token: { type: String },
   nome_usuario: { type: String },
+  nome_usuario_perfil: { type: String },
   id_action: { type: String, required: true },
   id_acao_smm: { type: String, required: false },
   unique_id: { type: String },
