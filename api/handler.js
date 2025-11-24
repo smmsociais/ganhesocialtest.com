@@ -1337,16 +1337,16 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
 
 // Rota: /api/tiktok/get_action (GET)
 if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
-  const { nome_usuario, token, tipo } = req.query;
+  const { id_conta, token, tipo } = req.query;
 
-  if (!nome_usuario || !token) {
-    return res.status(400).json({ error: "Parâmetros 'nome_usuario' e 'token' são obrigatórios" });
+  if (!id_conta || !token) {
+    return res.status(400).json({ error: "Parâmetros 'id_conta' e 'token' são obrigatórios" });
   }
 
   try {
     await connectDB();
 
-    console.log("[GET_ACTION] Requisição:", { nome_usuario, token: token ? "***" + token.slice(-6) : null, tipo });
+    console.log("[GET_ACTION] Requisição:", { id_conta, token: token ? "***" + token.slice(-6) : null, tipo });
 
     // 🔐 Validação do token (usuário que solicita a ação)
     const usuario = await User.findOne({ token });
@@ -1398,7 +1398,7 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
       });
 
       if (pulada) {
-        console.log(`[GET_ACTION] Conta ${nome_usuario} pulou pedido ${id_pedido} — pulando`);
+        console.log(`[GET_ACTION] Conta ${id_conta} pulou pedido ${id_pedido} — pulando`);
         continue;
       }
 
@@ -1410,7 +1410,7 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
       });
 
       if (jaFez) {
-        console.log(`[GET_ACTION] Conta ${nome_usuario} já realizou pedido ${id_pedido} — pulando`);
+        console.log(`[GET_ACTION] Conta ${id_conta} já realizou pedido ${id_pedido} — pulando`);
         continue;
       }
 
@@ -1707,7 +1707,8 @@ if (url.startsWith("/api/registrar_acao_pendente")) {
   }
 
   const {
-    id_action,
+    id_conta,
+    id_pedido,
     nome_usuario,
     url,
     tipo_acao,
@@ -1715,12 +1716,12 @@ if (url.startsWith("/api/registrar_acao_pendente")) {
     unique_id
   } = req.body;
 
-  if (!id_action || !nome_usuario || !tipo_acao || quantidade_pontos == null) {
+  if (!id_pedido || !id_conta || !nome_usuario || !tipo_acao || quantidade_pontos == null) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes." });
   }
 
   try {
-    const idActionStr = id_action.toString();
+    const idPedidoStr = id_pedido.toString();
 
     // === Detectar Rede Social ===
     let redeFinal = "TikTok";
@@ -1738,8 +1739,7 @@ if (url.startsWith("/api/registrar_acao_pendente")) {
     const pontos = parseFloat(quantidade_pontos);
     const valorBruto = pontos / 1000;
     const valorDescontado = (valorBruto > 0.003) ? valorBruto - 0.001 : valorBruto;
-    const valorFinalCalculado = Math.min(Math.max(valorDescontado, 0.003), 0.006).toFixed(6);
-    
+    const valorFinalCalculado = Math.min(Math.max(valorDescontado, 0.003), 0.006).toFixed(3);
     const valorConfirmacaoFinal = (tipoAcaoFinal === "curtir") ? "0.001" : valorFinalCalculado;
 
     // === Criar Ação ===
@@ -1747,7 +1747,9 @@ if (url.startsWith("/api/registrar_acao_pendente")) {
       user: usuario._id,
       token: usuario.token,
       nome_usuario,
-      id_action: idActionStr,
+      id_pedido: idPedidoStr,
+      id_action: idPedidoStr,
+      id_conta,
       url,
       unique_id,
       tipo_acao,
