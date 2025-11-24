@@ -1333,10 +1333,9 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
   }
 }
 
-// Rota: /api/tiktok/get_action (GET)
+// Rota: /api/tiktok/get_action (GET) — versão alinhada ao buscar_acao_smm_instagram.js
 if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
-
-  const { nome_usuario, token, tipo } = req.query;
+  const { nome_usuario, token, tipo, debug } = req.query;
 
   if (!nome_usuario || !token) {
     return res.status(400).json({
@@ -1350,105 +1349,140 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
     console.log("[GET_ACTION] Requisição:", {
       nome_usuario,
       token: token ? "***" + token.slice(-6) : null,
-      tipo
+      tipo,
+      debug: !!debug
     });
 
-    // 🔐 Validação do token + nome_usuario
-const usuario = await User.findOne({
-  token,
-  "contas.nome_usuario": nome_usuario
-});
+    // Validar usuário pelo token e pela conta vinculada
+    const usuario = await User.findOne({
+      token,
+      "contas.nome_usuario": nome_usuario
+    });
 
     if (!usuario) {
       console.log("[GET_ACTION] Token inválido ou nome_usuario não correspondente");
       return res.status(401).json({ error: "Token inválido" });
     }
 
-    // Normaliza tipo
+    // normalizar tipo
+    const tipoNormalized = typeof tipo === 'string' ? String(tipo).trim().toLowerCase() : null;
     let tipoBanco;
-    if (tipo === "2" || tipo === "curtir") tipoBanco = "curtir";
-    else if (tipo === "3" || tipo === "seguir_curtir")
+    if (tipo === "2" || tipoNormalized === "2" || tipoNormalized === "curtir") tipoBanco = "curtir";
+    else if (tipo === "3" || tipoNormalized === "3" || tipoNormalized === "seguir_curtir")
       tipoBanco = { $in: ["seguir", "curtir"] };
     else tipoBanco = "seguir";
 
-    // Query base — TikTok apenas
+    // query base — tiktok, status e quantidade disponível
     const query = {
       quantidade: { $gt: 0 },
       status: { $in: ["pendente", "reservada"] },
-      rede: "tiktok"
+      rede: { $regex: new RegExp(`^tiktok$`, "i") }
     };
 
     if (typeof tipoBanco === "string") query.tipo = tipoBanco;
     else query.tipo = tipoBanco;
 
-    const pedidos = await Pedido.find(query).sort({ dataCriacao: -1 });
+    // DEBUG: conta quantos batem com a query base
+    const totalMatching = await Pedido.countDocuments(query);
+    console.log(`[GET_ACTION] Pedidos que batem com query inicial: ${totalMatching}`);
 
-    console.log(`[GET_ACTION] ${pedidos.length} pedidos TikTok encontrados`);
+    const pedidos = await Pedido.find(query).sort({ dataCriacao: -1 }).lean();
+    console.log(`[GET_ACTION] ${pedidos.length} pedidos encontrados (após find)`);
+
+    if (debug === "1") {
+      return res.status(200).json({
+        debug: true,
+        totalMatching,
+        sampleQuery: query,
+        pedidosSample: pedidos.slice(0, 6)
+      });
+    }
 
     for (const pedido of pedidos) {
       const id_pedido = pedido._id;
 
-      console.log("[GET_ACTION] Checando pedido:", {
+      console.log("🔍 Verificando pedido:", {
         id_pedido,
         tipo: pedido.tipo,
+        status: pedido.status,
         quantidade: pedido.quantidade,
-        link: pedido.link
+        valor: pedido.valor,
+        link: pedido.link,
+        rede: pedido.rede
       });
 
-      // 1) Fechar pedido se já atingiu validações
+      // garantir que quantidade é número válido
+      const quantidadePedido = Number(pedido.quantidade || 0);
+      if (isNaN(quantidadePedido) || quantidadePedido <= 0) {
+        console.log(`⚠ Ignorando pedido ${id_pedido} por quantidade inválida:`, pedido.quantidade);
+        continue;
+      }
+
+      // 1) Fechar pedido se já atingiu o limite confirmado (valida)
       const validadas = await ActionHistory.countDocuments({
         id_pedido,
         acao_validada: "valida"
       });
-
-      if (validadas >= pedido.quantidade) {
-        console.log(`[GET_ACTION] Pedido ${id_pedido} fechado — pulando`);
+      if (validadas >= quantidadePedido) {
+        console.log(`⛔ Pedido ${id_pedido} fechado — já tem ${validadas} validações.`);
         continue;
       }
 
-      // 2) Se o usuário pulou este pedido
+      // 2) Usuário pulou esse pedido?
       const pulada = await ActionHistory.findOne({
         id_pedido,
-        nome_usuario,
+        $or: [
+          { nome_usuario },
+          { user: usuario._id }
+        ],
         acao_validada: "pulada"
       });
-
       if (pulada) {
-        console.log(`[GET_ACTION] Usuário ${nome_usuario} pulou ${id_pedido} — pulando`);
+        console.log(`🚫 Ação ${id_pedido} foi pulada por usuário ${nome_usuario}`);
         continue;
       }
 
-      // 3) Se o usuário já realizou essa ação
+      // 3) Usuário já fez (pendente ou validada)?
       const jaFez = await ActionHistory.findOne({
         id_pedido,
-        nome_usuario,
+        $or: [
+          { nome_usuario },
+          { user: usuario._id }
+        ],
         acao_validada: { $in: ["pendente", "valida"] }
       });
-
       if (jaFez) {
-        console.log(`[GET_ACTION] Usuário ${nome_usuario} já fez pedido ${id_pedido} — pulando`);
+        console.log(`🚫 Usuário ${nome_usuario} já fez o pedido ${id_pedido}`);
         continue;
       }
 
-      // 4) Total feitas no geral
+      // 4) Quantas ações já foram feitas (pendente + valida)
       const feitas = await ActionHistory.countDocuments({
         id_pedido,
         acao_validada: { $in: ["pendente", "valida"] }
       });
-
-      if (feitas >= pedido.quantidade) {
-        console.log(`[GET_ACTION] Pedido ${id_pedido} atingiu limite — pulando`);
+      console.log(`📊 Ação ${id_pedido}: feitas=${feitas}, limite=${quantidadePedido}`);
+      if (feitas >= quantidadePedido) {
+        console.log(`⏩ Pedido ${id_pedido} atingiu o limite total.`);
         continue;
       }
 
-      // Extrai nome de perfil do TikTok
-      const nomeUsuarioAlvo = pedido.link && pedido.link.includes("@")
-        ? pedido.link.split("@")[1].split(/[/?#]/)[0]
-        : (pedido.nome || "");
+      // extrai nome do perfil alvo (tiktok tolerant)
+      let nomeUsuarioAlvo = "";
+      if (typeof pedido.link === "string") {
+        if (pedido.link.includes("@")) {
+          nomeUsuarioAlvo = pedido.link.split("@")[1].split(/[/?#]/)[0];
+        } else {
+          try {
+            const m = pedido.link.match(/tiktok\.com\/@?([^\/?#&]+)/i);
+            if (m && m[1]) nomeUsuarioAlvo = m[1].replace(/\/$/, "");
+          } catch (e) { /* ignore */ }
+        }
+      }
 
-      console.log(`[GET_ACTION] Ação encontrada para ${nome_usuario}: ${nomeUsuarioAlvo}`);
+      console.log(`✅ Ação encontrada: ${nomeUsuarioAlvo || '<sem-usuario>'} (pedido ${id_pedido})`);
 
-      // Valor retornado
+      // valor retornado (mantém compatibilidade com seu frontend)
       const valorFinal =
         typeof pedido.valor !== "undefined" && pedido.valor !== null
           ? String(pedido.valor)
@@ -1456,7 +1490,7 @@ const usuario = await User.findOne({
 
       return res.status(200).json({
         status: "success",
-        nome_usuario,                  // quem está realizando a ação
+        nome_usuario,                     // quem está realizando a ação
         id_action: id_pedido.toString(),
         url: pedido.link,
         nome_usuario_perfil: nomeUsuarioAlvo,
