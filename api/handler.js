@@ -1335,27 +1335,24 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
   }
 }
 
-// Rota: /api/get_action (GET)
+// Rota: /api/tiktok/get_action (GET)
 if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Método não permitido" });
+
+  const { nome_usuario, token, tipo } = req.query;
+
+  if (!nome_usuario || !token) {
+    return res.status(400).json({ error: "Parâmetros 'nome_usuario' e 'token' são obrigatórios" });
   }
 
-const { id_tiktok, token, tipo } = req.query;
-
-let tipoAcao = "seguir";
-if (tipo === "2") tipoAcao = "curtir";
-else if (tipo === "3") tipoAcao = { $in: ["seguir", "curtir"] };
-
-
-  if (!id_tiktok || !token) {
-    return res.status(400).json({ error: "Parâmetros 'id_tiktok' e 'token' são obrigatórios" });
-  }
+  // Define o tipo da ação
+  let tipoAcao = "seguir";
+  if (tipo === "2") tipoAcao = "curtir";
+  else if (tipo === "3") tipoAcao = { $in: ["seguir", "curtir"] };
 
   try {
     await connectDB();
 
-    console.log("[GET_ACTION] Iniciando busca de ação para:", id_tiktok);
+    console.log("[GET_ACTION] Buscando ação para:", nome_usuario);
 
     // 🔐 Validação do token
     const usuario = await User.findOne({ token });
@@ -1367,33 +1364,35 @@ else if (tipo === "3") tipoAcao = { $in: ["seguir", "curtir"] };
     console.log("[GET_ACTION] Token válido para usuário:", usuario._id);
 
     // 🔍 Buscar pedidos locais válidos
-const pedidos = await Pedido.find({
-  rede: "tiktok",
-  tipo: tipoAcao,
-  status: { $ne: "concluida" },
-  $expr: { $lt: ["$quantidadeExecutada", "$quantidade"] }
-}).sort({ dataCriacao: -1 });
+    const pedidos = await Pedido.find({
+      rede: "tiktok",
+      tipo: tipoAcao,
+      status: { $ne: "concluida" },
+      $expr: { $lt: ["$quantidadeExecutada", "$quantidade"] }
+    }).sort({ dataCriacao: -1 });
 
     console.log(`[GET_ACTION] ${pedidos.length} pedidos locais encontrados`);
 
     for (const pedido of pedidos) {
       const id_action = pedido._id;
 
-const jaFez = await ActionHistory.findOne({
-  id_pedido: pedido._id,
-  id_conta: id_tiktok,
-  acao_validada: { $in: ['pendente', 'validada'] }
-});
+      // Verifica se este usuário já fez essa ação nesse pedido
+      const jaFez = await ActionHistory.findOne({
+        id_pedido: pedido._id,
+        nome_usuario: nome_usuario,
+        acao_validada: { $in: ["pendente", "validada"] }
+      });
 
       if (jaFez) {
-        console.log(`[GET_ACTION] Ação local já feita para pedido ${id_action}, pulando`);
+        console.log(`[GET_ACTION] Ação já feita para pedido ${id_action}, pulando`);
         continue;
       }
 
-const feitas = await ActionHistory.countDocuments({
-  id_pedido: pedido._id,
-  acao_validada: { $in: ['pendente', 'validada'] }
-});
+      // Verifica se já alcançou o limite
+      const feitas = await ActionHistory.countDocuments({
+        id_pedido: pedido._id,
+        acao_validada: { $in: ["pendente", "validada"] }
+      });
 
       if (feitas >= pedido.quantidade) {
         console.log(`[GET_ACTION] Limite atingido para pedido ${id_action}, pulando`);
@@ -1402,99 +1401,32 @@ const feitas = await ActionHistory.countDocuments({
 
       console.log("[GET_ACTION] Ação local encontrada:", pedido.link);
 
-      const nomeUsuario = pedido.link.includes("@")
+      const nomeUsuarioExtraido = pedido.link.includes("@")
         ? pedido.link.split("@")[1].split(/[/?#]/)[0]
         : pedido.nome;
 
-let valorFinal;
-if (pedido.tipo === "curtir") {
-  valorFinal = "0.001";
-} else {
-  valorFinal = "0.006";
-}
+      const valorFinal = pedido.tipo === "curtir" ? "0.001" : "0.006";
+      const tipoAcaoRetorno = pedido.tipo === "curtir" ? "curtir" : "seguir";
 
-const tipoAcaoRetorno = pedido.tipo === "curtir" ? "curtir" : "seguir";
-
-return res.status(200).json({
-  status: "sucess",
-  id_tiktok,
-  id_action: pedido._id.toString(),
-  url: pedido.link,
-  nome_usuario: nomeUsuario,
-  tipo_acao: tipoAcaoRetorno,
-  valor: valorFinal
-});
-
+      return res.status(200).json({
+        status: "success",
+        nome_usuario,
+        id_action: pedido._id.toString(),
+        url: pedido.link,
+        nome_usuario_perfil: nomeUsuarioExtraido,
+        tipo_acao: tipoAcaoRetorno,
+        valor: valorFinal
+      });
     }
 
-console.log("[GET_ACTION] Nenhuma ação local válida encontrada, buscando na API externa...");
-
-console.log("[GET_ACTION] Nenhuma ação local válida encontrada.");
-
-if (tipo === "2") {
-  console.log("[GET_ACTION] Tipo 2 (curtidas locais) e nenhuma ação local encontrada. Ignorando API externa.");
-  return res.status(200).json({ status: "fail", message: "nenhuma ação disponível no momento" });
-}
-
-// 🔁 Se não for tipo 2, continua buscando na API externa
-console.log("[GET_ACTION] Nenhuma ação local válida encontrada, buscando na API externa...");
-
-const apiURL = `https://api.ganharnoinsta.com/get_action.php?token=944c736c-6408-465d-9129-0b2f11ce0971&sha1=e5990261605cd152f26c7919192d4cd6f6e22227&id_conta=${id_tiktok}&is_tiktok=1&tipo=1`;
-const response = await axios.get(apiURL);
-const data = response.data;
-
-if (data.status === "CONTA_INEXISTENTE") {
-  console.log("[GET_ACTION] Conta inexistente na API externa:", id_tiktok);
-  return res.status(200).json({ status: "fail", id_tiktok, message: "Nenhuma ação disponível no momento." });
-}
-
-if (data.status === "ENCONTRADA") {
-  const pontos = parseFloat(data.quantidade_pontos);
-
-  // ❌ REMOVIDO o trecho que ignorava ações com 4 pontos
-
-  // ✅ Agora processa qualquer valor de pontos normalmente
-  const valorBruto = pontos / 1000;
-  const valorDescontado = (valorBruto > 0.004)
-    ? valorBruto - 0.001
-    : valorBruto;
-  const valorFinal = Math.min(Math.max(valorDescontado, 0.004), 0.006).toFixed(3);
-
-  const idPedidoOriginal = String(data.id_pedido);
-
-  const temp = await TemporaryAction.create({
-    id_tiktok,
-    url_dir: data.url_dir,
-    nome_usuario: data.nome_usuario,
-    tipo_acao: "seguir",
-    valor: valorFinal,
-    id_action: idPedidoOriginal,
-    expiresAt: new Date(Date.now() + 5 * 60 * 1000)
-  });
-
-  console.log("[GET_ACTION] TemporaryAction salva:", temp);
-  console.log("[GET_ACTION] Ação externa registrada em TemporaryAction");
-
-  return res.status(200).json({
-    status: "sucess",
-    id_tiktok,
-    id_action: idPedidoOriginal,
-    url: data.url_dir,
-    nome_usuario: data.nome_usuario,
-    tipo_acao: data.tipo_acao,
-    valor: valorFinal
-  });
-}
-
-    console.log("[GET_ACTION] Nenhuma ação encontrada local ou externa.");
+    console.log("[GET_ACTION] Nenhuma ação local disponível.");
     return res.status(200).json({ status: "fail", message: "nenhuma ação disponível no momento" });
 
   } catch (err) {
     console.error("[GET_ACTION] Erro ao buscar ação:", err);
     return res.status(500).json({ error: "Erro interno ao buscar ação" });
   }
-  
-};
+}
 
 // Rota: /api/confirm_action (POST)
 if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
