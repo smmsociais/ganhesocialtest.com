@@ -1356,10 +1356,7 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
     // 🔐 Validação do token + nome_usuario
 const usuario = await User.findOne({
   token,
-  $or: [
-    { nome_usuario },
-    { nomeConta: nome_usuario }
-  ]
+  "contas.nome_usuario": nome_usuario
 });
 
     if (!usuario) {
