@@ -1337,83 +1337,120 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
 
 // Rota: /api/tiktok/get_action (GET)
 if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
+  const { id_conta, token, tipo } = req.query;
 
-  const { token, tipo } = req.query;
-
-  if (!token) {
-    return res.status(400).json({ error: "Parâmetros 'token' é obrigatório" });
+  if (!id_conta || !token) {
+    return res.status(400).json({ error: "Parâmetros 'id_conta' e 'token' são obrigatórios" });
   }
-
-  // Define o tipo da ação
-  let tipoAcao = "seguir";
-  if (tipo === "2") tipoAcao = "curtir";
-  else if (tipo === "3") tipoAcao = { $in: ["seguir", "curtir"] };
 
   try {
     await connectDB();
 
-    // 🔐 Validação do token
+    console.log("[GET_ACTION] Requisição:", { id_conta, token: token ? "***" + token.slice(-6) : null, tipo });
+
+    // 🔐 Validação do token (usuário que solicita a ação)
     const usuario = await User.findOne({ token });
     if (!usuario) {
+      console.log("[GET_ACTION] Token inválido:", token);
       return res.status(401).json({ error: "Token inválido" });
     }
 
-    console.log("[GET_ACTION] Buscando ação para:", usuario.nome_usuario);
+    // Normaliza tipo (aceita tanto códigos quanto nomes)
+    let tipoBanco;
+    if (tipo === "2" || tipo === "curtir") tipoBanco = "curtir";
+    else if (tipo === "3" || tipo === "seguir_curtir") tipoBanco = { $in: ["seguir", "curtir"] };
+    else tipoBanco = "seguir";
 
-    // 🔍 Buscar pedidos locais válidos
-    const pedidos = await Pedido.find({
-      rede: "tiktok",
-      tipo: tipoAcao,
-      status: { $ne: "concluida" },
-      $expr: { $lt: ["$quantidadeExecutada", "$quantidade"] }
-    }).sort({ dataCriacao: -1 });
+    // Monta query — apenas TikTok, pendente/reservada e quantidade disponível
+    const query = {
+      quantidade: { $gt: 0 },
+      status: { $in: ["pendente", "reservada"] },
+      rede: "tiktok"
+    };
 
-    console.log(`[GET_ACTION] ${pedidos.length} pedidos locais encontrados`);
+    if (tipoBanco && typeof tipoBanco === "string") query.tipo = tipoBanco;
+    else if (tipoBanco && typeof tipoBanco === "object") query.tipo = tipoBanco;
+
+    const pedidos = await Pedido.find(query).sort({ dataCriacao: -1 });
+    console.log(`[GET_ACTION] ${pedidos.length} pedidos TikTok encontrados`);
 
     for (const pedido of pedidos) {
-      const id_action = pedido._id;
+      const id_pedido = pedido._id;
 
-      // Verifica se este usuário já fez essa ação nesse pedido
+      console.log("[GET_ACTION] Checando pedido:", { id_pedido, tipo: pedido.tipo, quantidade: pedido.quantidade, link: pedido.link });
+
+      // 1) Fechar pedido se já atingiu validações
+      const validadas = await ActionHistory.countDocuments({
+        id_pedido,
+        acao_validada: "valida"
+      });
+
+      if (validadas >= pedido.quantidade) {
+        console.log(`[GET_ACTION] Pedido ${id_pedido} já tem ${validadas} validações — pulando`);
+        continue;
+      }
+
+      // 2) Verifica se a conta pulou essa ação
+      const pulada = await ActionHistory.findOne({
+        id_pedido,
+        id_conta,
+        acao_validada: "pulada"
+      });
+
+      if (pulada) {
+        console.log(`[GET_ACTION] Conta ${id_conta} pulou pedido ${id_pedido} — pulando`);
+        continue;
+      }
+
+      // 3) Verifica se a conta já fez essa ação (pendente ou valida)
       const jaFez = await ActionHistory.findOne({
-        id_pedido: pedido._id,
-        nome_usuario: usuario.nome_usuario,
-        acao_validada: { $in: ["pendente", "validada"] }
+        id_pedido,
+        id_conta,
+        acao_validada: { $in: ["pendente", "valida"] }
       });
 
       if (jaFez) {
-        console.log(`[GET_ACTION] Ação já feita para pedido ${id_action}, pulando`);
+        console.log(`[GET_ACTION] Conta ${id_conta} já realizou pedido ${id_pedido} — pulando`);
         continue;
       }
 
-      // Verifica limite
+      // 4) Total de ações já realizadas (pendente + valida)
       const feitas = await ActionHistory.countDocuments({
-        id_pedido: pedido._id,
-        acao_validada: { $in: ["pendente", "validada"] }
+        id_pedido,
+        acao_validada: { $in: ["pendente", "valida"] }
       });
 
+      console.log(`[GET_ACTION] Pedido ${id_pedido}: feitas=${feitas}, limite=${pedido.quantidade}`);
       if (feitas >= pedido.quantidade) {
+        console.log(`[GET_ACTION] Pedido ${id_pedido} atingiu limite total — pulando`);
         continue;
       }
 
-      const nomeUsuarioExtraido = pedido.link.includes("@")
+      // Pedido disponível -> extrai o nome do usuário alvo
+      const nomeUsuarioAlvo = pedido.link && pedido.link.includes("@")
         ? pedido.link.split("@")[1].split(/[/?#]/)[0]
-        : pedido.nome;
+        : (pedido.nome || "");
 
-      const valorFinal = pedido.tipo === "curtir" ? "0.001" : "0.006";
-      const tipoAcaoRetorno = pedido.tipo === "curtir" ? "curtir" : "seguir";
+      console.log(`[GET_ACTION] Ação encontrada para conta ${id_conta}: ${nomeUsuarioAlvo} (pedido ${id_pedido})`);
+
+      // valor de retorno (formato compatível com frontend)
+      const valorFinal = (typeof pedido.valor !== "undefined" && pedido.valor !== null)
+        ? String(pedido.valor)
+        : (pedido.tipo === "curtir" ? "0.001" : "0.006");
 
       return res.status(200).json({
         status: "success",
-        nome_usuario: usuario.nome_usuario,
-        id_action: pedido._id.toString(),
+        nome_usuario: usuario.nome_usuario,        // usuário que está solicitando (via token)
+        id_action: id_pedido.toString(),
         url: pedido.link,
-        nome_usuario_perfil: nomeUsuarioExtraido,
-        tipo_acao: tipoAcaoRetorno,
+        nome_usuario_perfil: nomeUsuarioAlvo,
+        tipo_acao: pedido.tipo,
         valor: valorFinal
       });
     }
 
-    return res.status(200).json({ status: "fail", message: "nenhuma ação disponível" });
+    console.log("[GET_ACTION] Nenhuma ação disponível");
+    return res.status(200).json({ status: "fail", message: "nenhuma ação disponível no momento" });
 
   } catch (err) {
     console.error("[GET_ACTION] Erro ao buscar ação:", err);
@@ -1421,7 +1458,6 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
   }
 }
 
-// ---------------------------------------------------------
 // ROTA: /api/tiktok/confirm_action (POST)
 if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
   await connectDB();
