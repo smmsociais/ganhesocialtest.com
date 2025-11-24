@@ -20,8 +20,6 @@ const ActionHistorySchema = new mongoose.Schema({
   token: { type: String },
   nome_usuario: { type: String },
   id_action: { type: String, required: true },
-  id_pedido: { type: String, required: true },
-  id_conta: { type: String, required: true },
   id_acao_smm: { type: String, required: false },
   unique_id: { type: String },
   url_dir: { type: String, required: true },
