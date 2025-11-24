@@ -1271,7 +1271,69 @@ await acaoComissao.save();
     console.error("💥 Erro em /withdraw:", error);
     return res.status(500).json({ error: "Erro ao processar saque." });
   }
-}    
+}
+
+// Rota: /api/tiktok/get_user (GET)
+if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
+  await connectDB();
+  let { token, nome_usuario } = req.query;
+
+  // Normaliza nome de usuário
+  if (!token || !nome_usuario) {
+    return res.status(400).json({ error: "Os parâmetros 'token' e 'nome_usuario' são obrigatórios." });
+  }
+
+  nome_usuario = nome_usuario.trim().toLowerCase();
+
+  try {
+    // Verifica usuário pelo token
+    const usuario = await User.findOne({ token });
+    if (!usuario) {
+      return res.status(403).json({ error: "Acesso negado. Token inválido." });
+    }
+
+    // Verifica se essa conta já está vinculada a outro usuário
+    const contaJaRegistrada = await User.findOne({
+      "contas.nomeConta": nome_usuario,
+      token: { $ne: token }
+    });
+
+    if (contaJaRegistrada) {
+      return res.status(200).json({
+        status: "fail",
+        message: "Essa conta TikTok já está vinculada a outro usuário."
+      });
+    }
+
+    // Verifica se o usuário já possui essa conta cadastrada
+    const contaIndex = usuario.contas.findIndex(c => c.nomeConta === nome_usuario);
+
+    if (contaIndex !== -1) {
+      // Atualiza status da conta existente
+      usuario.contas[contaIndex].status = "ativa";
+    } else {
+      // Cria novo registro de conta (sem id_tiktok, pois API foi removida)
+      usuario.contas.push({
+        nomeConta: nome_usuario,
+        id_tiktok: null,
+        id_fake: null,
+        status: "ativa"
+      });
+    }
+
+    await usuario.save();
+
+    return res.status(200).json({
+      status: "success",
+      message: "Conta TikTok vinculada com sucesso.",
+      nome_usuario
+    });
+
+  } catch (error) {
+    console.error("Erro ao processar requisição:", error.response?.data || error.message);
+    return res.status(500).json({ error: "Erro interno ao processar requisição." });
+  }
+}
 
 // Rota: /api/get_action (GET)
 if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
@@ -2687,67 +2749,6 @@ if (modo === "resumo") {
     console.error("📄 Mensagem:", error.message);
     console.error("📄 Stack:", error.stack);
 
-// Rota: /api/tiktok/get_user (GET)
-if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
-  await connectDB();
-  let { token, nome_usuario } = req.query;
-
-  // Normaliza nome de usuário
-  if (!token || !nome_usuario) {
-    return res.status(400).json({ error: "Os parâmetros 'token' e 'nome_usuario' são obrigatórios." });
-  }
-
-  nome_usuario = nome_usuario.trim().toLowerCase();
-
-  try {
-    // Verifica usuário pelo token
-    const usuario = await User.findOne({ token });
-    if (!usuario) {
-      return res.status(403).json({ error: "Acesso negado. Token inválido." });
-    }
-
-    // Verifica se essa conta já está vinculada a outro usuário
-    const contaJaRegistrada = await User.findOne({
-      "contas.nomeConta": nome_usuario,
-      token: { $ne: token }
-    });
-
-    if (contaJaRegistrada) {
-      return res.status(200).json({
-        status: "fail",
-        message: "Essa conta TikTok já está vinculada a outro usuário."
-      });
-    }
-
-    // Verifica se o usuário já possui essa conta cadastrada
-    const contaIndex = usuario.contas.findIndex(c => c.nomeConta === nome_usuario);
-
-    if (contaIndex !== -1) {
-      // Atualiza status da conta existente
-      usuario.contas[contaIndex].status = "ativa";
-    } else {
-      // Cria novo registro de conta (sem id_tiktok, pois API foi removida)
-      usuario.contas.push({
-        nomeConta: nome_usuario,
-        id_tiktok: null,
-        id_fake: null,
-        status: "ativa"
-      });
-    }
-
-    await usuario.save();
-
-    return res.status(200).json({
-      status: "success",
-      message: "Conta TikTok vinculada com sucesso.",
-      nome_usuario
-    });
-
-  } catch (error) {
-    console.error("Erro ao processar requisição:", error.response?.data || error.message);
-    return res.status(500).json({ error: "Erro interno ao processar requisição." });
-  }
-}
 
     return res.status(500).json({ error: "Erro interno no servidor." });
   }
