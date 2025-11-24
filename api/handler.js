@@ -1338,10 +1338,10 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
 // Rota: /api/tiktok/get_action (GET)
 if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
 
-  const { nome_usuario, token, tipo } = req.query;
+  const { token, tipo } = req.query;
 
-  if (!nome_usuario || !token) {
-    return res.status(400).json({ error: "Parâmetros 'nome_usuario' e 'token' são obrigatórios" });
+  if (!token) {
+    return res.status(400).json({ error: "Parâmetros 'token' é obrigatório" });
   }
 
   // Define o tipo da ação
@@ -1352,16 +1352,13 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
   try {
     await connectDB();
 
-    console.log("[GET_ACTION] Buscando ação para:", nome_usuario);
-
     // 🔐 Validação do token
     const usuario = await User.findOne({ token });
     if (!usuario) {
-      console.log("[GET_ACTION] Token inválido:", token);
       return res.status(401).json({ error: "Token inválido" });
     }
 
-    console.log("[GET_ACTION] Token válido para usuário:", usuario._id);
+    console.log("[GET_ACTION] Buscando ação para:", usuario.nome_usuario);
 
     // 🔍 Buscar pedidos locais válidos
     const pedidos = await Pedido.find({
@@ -1379,7 +1376,7 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
       // Verifica se este usuário já fez essa ação nesse pedido
       const jaFez = await ActionHistory.findOne({
         id_pedido: pedido._id,
-        nome_usuario: nome_usuario,
+        nome_usuario: usuario.nome_usuario,
         acao_validada: { $in: ["pendente", "validada"] }
       });
 
@@ -1388,18 +1385,15 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
         continue;
       }
 
-      // Verifica se já alcançou o limite
+      // Verifica limite
       const feitas = await ActionHistory.countDocuments({
         id_pedido: pedido._id,
         acao_validada: { $in: ["pendente", "validada"] }
       });
 
       if (feitas >= pedido.quantidade) {
-        console.log(`[GET_ACTION] Limite atingido para pedido ${id_action}, pulando`);
         continue;
       }
-
-      console.log("[GET_ACTION] Ação local encontrada:", pedido.link);
 
       const nomeUsuarioExtraido = pedido.link.includes("@")
         ? pedido.link.split("@")[1].split(/[/?#]/)[0]
@@ -1410,7 +1404,7 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
 
       return res.status(200).json({
         status: "success",
-        nome_usuario,
+        nome_usuario: usuario.nome_usuario,
         id_action: pedido._id.toString(),
         url: pedido.link,
         nome_usuario_perfil: nomeUsuarioExtraido,
@@ -1419,8 +1413,7 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
       });
     }
 
-    console.log("[GET_ACTION] Nenhuma ação local disponível.");
-    return res.status(200).json({ status: "fail", message: "nenhuma ação disponível no momento" });
+    return res.status(200).json({ status: "fail", message: "nenhuma ação disponível" });
 
   } catch (err) {
     console.error("[GET_ACTION] Erro ao buscar ação:", err);
