@@ -1473,12 +1473,9 @@ if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
 
     const tipo_acao = normalizarTipo(pedidoLocal.tipo_acao || pedidoLocal.tipo);
 
-    let valorFinal = 0.006; // default — seguir
-    if (tipo_acao === "curtir") {
-      valorFinal = 0.001;
-    }
+    let valorFinal = tipo_acao === "curtir" ? 0.001 : 0.006;
 
-    // --------- PEGAR NOME DO PERFIL DO LINK ---------
+    // --------- PEGAR NOME DO PERFIL DO LINK (PERFIL ALVO) ---------
 
     const url_dir = pedidoLocal.link;
 
@@ -1488,10 +1485,13 @@ if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
     }
 
     // --------- REGISTRAR HISTÓRICO ---------
-
+    // AGORA 100% CORRETO:
+    // nome_usuario → usuário que FEZ a ação
+    // nome_usuario_perfil → perfil do TikTok da ação
     const newAction = new ActionHistory({
       token,
-      nome_usuario: nomeDoPerfil || "desconhecido",
+      nome_usuario: usuario.nome_usuario,          // ✔ CORRETO: usuário logado
+      nome_usuario_perfil: nomeDoPerfil,           // ✔ perfil alvo
       tipo_acao,
       tipo: tipo_acao,
       quantidade_pontos: valorFinal,
@@ -1509,13 +1509,10 @@ if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
     usuario.historico_acoes.push(saved._id);
     await usuario.save();
 
-    // --------- VALOR PARA EXIBIÇÃO ---------
-    const valorExibicao = valorFinal === 0.003 ? 0.004 : valorFinal;
-
     return res.status(200).json({
       status: "success",
       message: "ação confirmada com sucesso",
-      valor: valorExibicao,
+      valor: valorFinal,
     });
 
   } catch (error) {
