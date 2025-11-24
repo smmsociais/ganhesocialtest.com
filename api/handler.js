@@ -1356,7 +1356,14 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
     });
 
     // 🔐 Validação do token + nome_usuario
-    const usuario = await User.findOne({ token, nome_usuario });
+const usuario = await User.findOne({
+  token,
+  $or: [
+    { nome_usuario },
+    { nomeConta: nome_usuario }
+  ]
+});
+
     if (!usuario) {
       console.log("[GET_ACTION] Token inválido ou nome_usuario não correspondente");
       return res.status(401).json({ error: "Token inválido" });
