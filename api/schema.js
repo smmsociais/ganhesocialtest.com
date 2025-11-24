@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 // 🔹 Schema para Contas Vinculadas
 const ContaSchema = new mongoose.Schema({
-    nomeConta: { type: String, required: true },
+    nome_usuario: { type: String, required: true },
     status: { type: String, default: "ativa" },
     id_conta: { type: String },
     id_tiktok: { type: String },
