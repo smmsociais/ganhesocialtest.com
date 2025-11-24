@@ -1273,12 +1273,10 @@ await acaoComissao.save();
   }
 }
 
-// Rota: /api/tiktok/get_user (GET)
 if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
   await connectDB();
   let { token, nome_usuario } = req.query;
 
-  // Normaliza nome de usuário
   if (!token || !nome_usuario) {
     return res.status(400).json({ error: "Os parâmetros 'token' e 'nome_usuario' são obrigatórios." });
   }
@@ -1294,7 +1292,7 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
 
     // Verifica se essa conta já está vinculada a outro usuário
     const contaJaRegistrada = await User.findOne({
-      "contas.nomeConta": nome_usuario,
+      "contas.nome_usuario": nome_usuario,
       token: { $ne: token }
     });
 
@@ -1306,15 +1304,15 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
     }
 
     // Verifica se o usuário já possui essa conta cadastrada
-    const contaIndex = usuario.contas.findIndex(c => c.nomeConta === nome_usuario);
+    const contaIndex = usuario.contas.findIndex(
+      c => c.nome_usuario === nome_usuario
+    );
 
     if (contaIndex !== -1) {
-      // Atualiza status da conta existente
       usuario.contas[contaIndex].status = "ativa";
     } else {
-      // Cria novo registro de conta (sem id_tiktok, pois API foi removida)
       usuario.contas.push({
-        nomeConta: nome_usuario,
+        nome_usuario,
         id_tiktok: null,
         id_fake: null,
         status: "ativa"
@@ -1330,7 +1328,7 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
     });
 
   } catch (error) {
-    console.error("Erro ao processar requisição:", error.response?.data || error.message);
+    console.error("Erro ao processar requisição:", error);
     return res.status(500).json({ error: "Erro interno ao processar requisição." });
   }
 }
