@@ -598,7 +598,7 @@
     <script>
         function logout() {
             localStorage.removeItem("token");
-            window.location.href = "https://ganhesocial.com";
+            window.location.href = "https://ganhesocialtest.com";
         }
 
         document.addEventListener("DOMContentLoaded", function () {
@@ -606,7 +606,7 @@
 
             if (!token) {
                 setTimeout(() => {
-                    window.location.href = "https://ganhesocial.com/login";
+                    window.location.href = "https://ganhesocialtest.com/login";
                 },);
                 return;
             }
@@ -662,13 +662,6 @@
             let currentPage = 1;
             let totalPages = 1;
             let allActions = [];
-
-            function adjustValue(valor) {
-                if (valor === 0.003 || valor.toFixed(3) === '0.003') {
-                    return 0.006;
-                }
-                return valor;
-            }
 
             // Função para formatar o valor monetário
             function formatCurrency(value) {
