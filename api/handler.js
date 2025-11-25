@@ -530,12 +530,11 @@ if (url.startsWith("/api/historico_acoes")) {
   
       return {
         nome_usuario: action.nome_usuario,
-        acao_validada: action.acao_validada,
-        valor_confirmacao: action.valor_confirmacao,
+        quantidade_pontos: action.quantidade_pontos,
         data: action.data,
-        rede_social: action.rede_social || "TikTok",
-        tipo: action.tipo || "Seguir",
-        url_dir: action.url_dir || null,
+        rede_social: action.rede_social,
+        tipo: action.tipo,
+        url: action.url,
         status
       };
     });
@@ -556,16 +555,15 @@ if (url.startsWith("/api/historico_acoes")) {
 
       return {
         nome_usuario: action.nome_usuario,
-        acao_validada: action.acao_validada,
-        valor_confirmacao: action.valor_confirmacao,
+        quantidade_pontos: action.quantidade_pontos,
         data: action.data,
-        rede_social: action.rede_social || "TikTok",
-        tipo: action.tipo || "Seguir",
-        url_dir: action.url_dir || null,
+        rede_social: action.rede_social,
+        tipo: action.tipo,
+        url: action.url,
         status
       };
-    });    
-
+    });
+    
     return res.status(200).json(formattedData);
   } catch (error) {
     console.error("💥 Erro em /historico_acoes:", error);
