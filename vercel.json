@@ -47,7 +47,9 @@
     { "source": "/api/tiktok/get_user", "destination": "/api/handler.js" },
     { "source": "/api/tiktok/get_action", "destination": "/api/handler.js" },
     { "source": "/api/tiktok/confirm_action", "destination": "/api/handler.js" },
-    { "source": "/api/contas", "destination": "/api/handler.js" },
+    { "source": "/api/instagram/get_user", "destination": "/api/handler.js" },
+    { "source": "/api/instagram/get_action", "destination": "/api/handler.js" },
+    { "source": "/api/instagram/confirm_action", "destination": "/api/handler.js" },
     { "source": "/api/contas_tiktok", "destination": "/api/handler.js" },
     { "source": "/api/contas_instagram", "destination": "/api/handler.js" },
     { "source": "/api/get_saldo", "destination": "/api/handler.js" },
@@ -68,6 +70,3 @@
     { "source": "/api/gerenciar_acoes", "destination": "/api/handler.js" }
   ]
 }
-
-
-
