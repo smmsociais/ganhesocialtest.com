@@ -1930,21 +1930,18 @@ if (url.startsWith("/api/instagram/confirm_action") && method === "POST") {
       }
     }
 
-    // Criar registro no histórico — salvando ambos id_pedido (número) e id_action (string)
+    // Criar registro no histórico
     const newAction = new ActionHistory({
       user: usuario._id,
       token,
-      nome_usuario,                       // conta que executou a ação (normalizada)
-      nome_usuario_perfil: nomeDoPerfil,  // alvo (perfil ou post id)
+      nome_usuario,
       tipo_acao,
       tipo: tipo_acao,
       quantidade_pontos: valorFinal,
-      valor_confirmacao: valorFinal,
-      rede_social: "Instagram",           // importante: rede Instagram
+      rede_social: "Instagram",
       url: url_dir,
-      id_pedido: pedidoLocal._id,         // salva id_pedido numérico
-      id_action: String(pedidoLocal._id), // salva id_action em string (compatibilidade)
-      acao_validada: "pendente",
+      id_action: String(pedidoLocal._id),
+      status: "pendente",
       data: new Date(),
     });
 
