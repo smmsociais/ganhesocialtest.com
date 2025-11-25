@@ -663,15 +663,6 @@
             let totalPages = 1;
             let allActions = [];
 
-            // Função para formatar o valor monetário
-            function formatCurrency(value) {
-                const adjustedValue = adjustValue(value);
-                return adjustedValue.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 3,
-                    maximumFractionDigits: 3
-                });
-            }
-
             // Carregar dados da API
             async function loadData(page = 1) {
                 try {
