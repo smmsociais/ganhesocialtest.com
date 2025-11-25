@@ -1802,6 +1802,127 @@ if (url.startsWith("/api/instagram/get_action") && method === "GET") {
   }
 }
 
+// ROTA: /api/instagram/confirm_action (POST)
+if (url.startsWith("/api/instagram/confirm_action") && method === "POST") {
+  await connectDB();
+
+  let { token, id_action, nome_usuario } = req.body;
+
+  if (!token || !id_action || !nome_usuario) {
+    return res.status(400).json({
+      error: "Parâmetros 'token', 'id_action' e 'nome_usuario' são obrigatórios."
+    });
+  }
+
+  // Normaliza o nome de usuário recebido para comparações
+  nome_usuario = String(nome_usuario).trim().toLowerCase();
+
+  try {
+    // 🔐 Validar token (acha o usuário dono do token)
+    const usuario = await User.findOne({ token });
+    if (!usuario) {
+      return res.status(403).json({ error: "Acesso negado. Token inválido." });
+    }
+
+    // Garantir que o token pertence à conta informada (evita token de A agir por B)
+    const contaVinculada = Array.isArray(usuario.contas) &&
+      usuario.contas.some(c => String(c.nome_usuario).trim().toLowerCase() === nome_usuario);
+    if (!contaVinculada) {
+      console.log("[CONFIRM_ACTION][IG] Token não pertence à conta:", nome_usuario);
+      return res.status(403).json({ error: "Token não pertence à conta informada." });
+    }
+
+    console.log("🧩 id_action recebido:", id_action);
+
+    // Normalizar tipo (mapa robusto)
+    function normalizarTipo(tipo) {
+      const mapa = {
+        seguir: "seguir",
+        seguiram: "seguir",
+        Seguir: "seguir",
+        curtidas: "curtir",
+        curtir: "curtir",
+        Curtir: "curtir",
+      };
+      return mapa[String(tipo || "").toLowerCase()] || "seguir";
+    }
+
+    // 🔍 Buscar pedido local (pelo id numérico)
+    const pedidoLocal = await Pedido.findById(id_action);
+
+    if (!pedidoLocal) {
+      console.log("[CONFIRM_ACTION][IG] Pedido local não encontrado:", id_action);
+      return res.status(404).json({ error: "Ação não encontrada." });
+    }
+
+    console.log("📦 Confirmando ação local (IG):", id_action);
+
+    // Definir tipo da ação (pode vir de pedidoLocal.tipo_acao ou pedidoLocal.tipo)
+    const tipo_acao = normalizarTipo(pedidoLocal.tipo_acao || pedidoLocal.tipo);
+
+    // Valor da ação (mesma regra já usada)
+    const valorFinal = tipo_acao === "curtir" ? 0.001 : 0.006;
+
+    // URL do alvo
+    const url_dir = pedidoLocal.link;
+
+    // Extrair alvo do link (perfil ou post)
+    let nomeDoPerfil = "";
+    if (typeof url_dir === "string" && url_dir.length) {
+      const link = url_dir.trim();
+
+      // tentativa 1: post (/p/ID/)
+      const postMatch = link.match(/instagram\.com\/p\/([^\/?#&]+)/i);
+      if (postMatch && postMatch[1]) {
+        nomeDoPerfil = postMatch[1];
+      } else {
+        // tentativa 2: perfil (/username/)
+        const profileMatch = link.match(/instagram\.com\/@?([^\/?#&\/]+)/i);
+        if (profileMatch && profileMatch[1]) {
+          nomeDoPerfil = profileMatch[1].replace(/\/$/, "");
+        } else {
+          // fallback para usar campo nome do pedido
+          nomeDoPerfil = pedidoLocal.nome || "";
+        }
+      }
+    }
+
+    // Criar registro no histórico — salvando ambos id_pedido (número) e id_action (string)
+    const newAction = new ActionHistory({
+      user: usuario._id,
+      token,
+      nome_usuario,                       // conta que executou a ação (normalizada)
+      nome_usuario_perfil: nomeDoPerfil,  // alvo (perfil ou post id)
+      tipo_acao,
+      tipo: tipo_acao,
+      quantidade_pontos: valorFinal,
+      valor_confirmacao: valorFinal,
+      rede_social: "Instagram",           // importante: rede Instagram
+      url: url_dir,
+      id_pedido: pedidoLocal._id,         // salva id_pedido numérico
+      id_action: String(pedidoLocal._id), // salva id_action em string (compatibilidade)
+      acao_validada: "pendente",
+      data: new Date(),
+    });
+
+    const saved = await newAction.save();
+
+    // vincular histórico ao usuário e salvar
+    usuario.historico_acoes.push(saved._id);
+    await usuario.save();
+
+    return res.status(200).json({
+      status: "success",
+      message: "Ação confirmada com sucesso.",
+      valor: valorFinal,
+    });
+
+  } catch (error) {
+    console.error("💥 [CONFIRM_ACTION][IG] Erro ao processar requisição:", error);
+    return res.status(500).json({ error: "Erro interno ao processar requisição." });
+  }
+}
+
 // ROTA: /api/pular_acao
 if (url.startsWith("/api/pular_acao") && method === "POST") {
   if (req.method !== "POST") {
