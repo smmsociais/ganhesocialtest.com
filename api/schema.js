@@ -18,14 +18,12 @@ const ActionHistorySchema = new mongoose.Schema({
   nome_usuario: { type: String },
   nome_usuario_perfil: { type: String },
   id_action: { type: String, required: true },
-  id_acao_smm: { type: String, required: false },
   unique_id: { type: String },
   url: { type: String, required: true },
   acao_validada: { type: String, enum: ['valida', 'pendente', 'pulada', 'invalida'], default: 'pendente' },
-  valor_confirmacao: { type: Number, default: 0 },
   quantidade_pontos: { type: Number, required: true },
   tipo_acao: { type: String, required: true },
-  rede_social: { type: String, default: "TikTok" },
+  rede_social: { type: String},
   tipo: { type: String, required: true }, // exemplo: "seguimento", "curtida", "comissao"
   afiliado: { type: String },             // 🔹 código do afiliado responsável pela comissão
   valor: { type: Number, default: 0 },    // 🔹 valor da comissão, quando tipo = "comissao"
@@ -78,24 +76,10 @@ const PedidoSchema = new mongoose.Schema({
   rede: String,
   tipo: String,
   nome: String,
-  valor: Number,
   quantidade: { type: Number, required: true },
   link: String,
   status: { type: String, enum: ["pendente", "reservada", "concluida"], default: "pendente" },
   dataCriacao: { type: Date, default: Date.now }
-});
-
-const TemporaryActionSchema = new mongoose.Schema({
-  id_tiktok: String,
-  url_dir: String,
-  nome_usuario: String,
-  tipo_acao: String,
-  valor: String,
-  id_action: String,
-  expiresAt: {
-    type: Date,
-    default: () => new Date(Date.now() + 5 * 60 * 1000)
-  }
 });
 
 const DailyEarningSchema = new mongoose.Schema({
@@ -120,7 +104,6 @@ const DailyEarningSchema = new mongoose.Schema({
 });
 
 DailyEarningSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-TemporaryActionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // 🔹 Schema para Ranking Diário (atualizado)
 const DailyRankingItemSchema = new mongoose.Schema({
@@ -155,8 +138,7 @@ DailyRankingSchema.index({ data: 1 }, { unique: true });
 const User = mongoose.models.User || mongoose.model("User", UserSchema);
 const ActionHistory = mongoose.models.ActionHistory || mongoose.model("ActionHistory", ActionHistorySchema);
 const Pedido = mongoose.models.Pedido || mongoose.model("Pedido", PedidoSchema);
-const TemporaryAction = mongoose.models.TemporaryAction || mongoose.model("TemporaryAction", TemporaryActionSchema);
 const DailyEarning = mongoose.models.DailyEarning || mongoose.model("DailyEarning", DailyEarningSchema);
 const DailyRanking = mongoose.models.DailyRanking || mongoose.model("DailyRanking", DailyRankingSchema);
 
-export { User, ActionHistory, Pedido, TemporaryAction, DailyEarning, DailyRanking };
+export { User, ActionHistory, Pedido, DailyEarning, DailyRanking };
