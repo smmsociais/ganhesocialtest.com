@@ -1651,7 +1651,7 @@ if (url.startsWith("/api/instagram/get_user") && method === "GET") {
   }
 }
 
-// Rota: /api/instagram/get_action (GET) — compatível com registros que usam `status` ou `acao_validada`
+// Rota: /api/instagram/get_action (GET) — corrige conflito entre tipos (seguir vs curtir)
 if (url.startsWith("/api/instagram/get_action") && method === "GET") {
   const { nome_usuario, token, tipo, debug } = req.query;
 
@@ -1688,7 +1688,7 @@ if (url.startsWith("/api/instagram/get_action") && method === "GET") {
       return res.status(401).json({ error: "Token não pertence à conta solicitada" });
     }
 
-    // normalizar tipo
+    // normalizar tipo (entrada)
     const tipoNormalized = typeof tipo === 'string' ? String(tipo).trim().toLowerCase() : null;
     let tipoBanco;
     if (tipo === "2" || tipoNormalized === "2" || tipoNormalized === "curtir") tipoBanco = "curtir";
@@ -1733,64 +1733,70 @@ if (url.startsWith("/api/instagram/get_action") && method === "GET") {
         continue;
       }
 
+      // --- IMPORTANTE: filtrar histórico PELO MESMO TIPO do pedido ---
+      const tipoFilter = { tipo: pedido.tipo }; // ex: { tipo: "seguir" } ou { tipo: "curtir" }
+
       // helpers para checar estados: consideram tanto acao_validada quanto status
       const matchValida = { $or: [{ acao_validada: "valida" }, { status: "valida" }] };
       const matchPendenteOrValida = { $or: [{ acao_validada: { $in: ["pendente", "valida"] } }, { status: { $in: ["pendente", "valida"] } }] };
       const matchPulada = { $or: [{ acao_validada: "pulada" }, { status: "pulada" }] };
 
-      // 0) Se já houver N confirmações (valida) igual ou maior que quantidade, fecha
+      // 0) Se já houver N confirmações (valida) do MESMO TIPO >= quantidade, fecha
       const validadas = await ActionHistory.countDocuments({
-        $or: [{ id_pedido }, { id_action: idPedidoStr }],
-        $or: [ { acao_validada: "valida" }, { status: "valida" } ]
-      });
-      if (validadas >= quantidadePedido) {
-        console.log(`[GET_ACTION][IG] Pedido ${id_pedido} fechado — já tem ${validadas} validações.`);
-        continue;
-      }
-
-      // 1) Total feitas (pendente + valida)
-      const feitas = await ActionHistory.countDocuments({
-        $or: [{ id_pedido }, { id_action: idPedidoStr }],
-        $or: [
-          { acao_validada: { $in: ["pendente", "valida"] } },
-          { status: { $in: ["pendente", "valida"] } }
+        $and: [
+          { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
+          tipoFilter,
+          matchValida
         ]
       });
-      console.log(`[GET_ACTION][IG] Ação ${id_pedido}: feitas=${feitas}, limite=${quantidadePedido}`);
-      if (feitas >= quantidadePedido) {
-        console.log(`[GET_ACTION][IG] Pedido ${id_pedido} atingiu limite — pulando`);
+      if (validadas >= quantidadePedido) {
+        console.log(`[GET_ACTION][IG] Pedido ${id_pedido} fechado (tipo ${pedido.tipo}) — já tem ${validadas} validações.`);
         continue;
       }
 
-      // 2) Verificar se ESTE NOME_DE_CONTA pulou => bloqueia só esta conta
+      // 1) Total feitas (pendente + valida) DO MESMO TIPO
+      const feitas = await ActionHistory.countDocuments({
+        $and: [
+          { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
+          tipoFilter,
+          matchPendenteOrValida
+        ]
+      });
+      console.log(`[GET_ACTION][IG] Ação ${id_pedido} (tipo ${pedido.tipo}): feitas=${feitas}, limite=${quantidadePedido}`);
+      if (feitas >= quantidadePedido) {
+        console.log(`[GET_ACTION][IG] Pedido ${id_pedido} atingiu limite (tipo ${pedido.tipo}) — pulando`);
+        continue;
+      }
+
+      // 2) Verificar se ESTE NOME_DE_CONTA pulou => bloqueia só esta conta e só para este tipo
       const pulada = await ActionHistory.findOne({
-        $or: [{ id_pedido }, { id_action: idPedidoStr }],
-        nome_usuario: nomeUsuarioRequest,
-        $or: [
-          { acao_validada: "pulada" },
-          { status: "pulada" }
+        $and: [
+          { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
+          tipoFilter,
+          { nome_usuario: nomeUsuarioRequest },
+          matchPulada
         ]
       });
       if (pulada) {
-        console.log(`[GET_ACTION][IG] Usuário ${nomeUsuarioRequest} pulou o pedido ${id_pedido} — pulando`);
+        console.log(`[GET_ACTION][IG] Usuário ${nomeUsuarioRequest} pulou o pedido ${id_pedido} (tipo ${pedido.tipo}) — pulando`);
         continue;
       }
 
-      // 3) Verificar se ESTE NOME_DE_CONTA já possui pendente/valida => bloqueia só esta conta
+      // 3) Verificar se ESTE NOME_DE_CONTA já possui pendente/valida => bloqueia só esta conta (mesmo tipo)
       const jaFez = await ActionHistory.findOne({
-        $or: [{ id_pedido }, { id_action: idPedidoStr }],
-        nome_usuario: nomeUsuarioRequest,
-        $or: [
-          { acao_validada: { $in: ["pendente", "valida"] } },
-          { status: { $in: ["pendente", "valida"] } }
+        $and: [
+          { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
+          tipoFilter,
+          { nome_usuario: nomeUsuarioRequest },
+          matchPendenteOrValida
         ]
       });
       if (jaFez) {
-        console.log(`[GET_ACTION][IG] Usuário ${nomeUsuarioRequest} já possuí ação pendente/validada para pedido ${id_pedido} — pulando`);
+        console.log(`[GET_ACTION][IG] Usuário ${nomeUsuarioRequest} já possuí ação pendente/validada para pedido ${id_pedido} (tipo ${pedido.tipo}) — pulando`);
         continue;
       }
 
-      // Se chegou aqui: feitas < quantidade AND este nome_usuario ainda NÃO fez => pode pegar
+      // Se chegou aqui: feitas < quantidade AND este nome_usuario ainda NÃO fez (para este tipo) => pode pegar
       // extrair alvo do link (Instagram tolerant)
       let nomeUsuarioAlvo = "";
       if (typeof pedido.link === "string") {
@@ -1799,35 +1805,32 @@ if (url.startsWith("/api/instagram/get_action") && method === "GET") {
         // 1) post (curtir): /p/POST_ID/
         const postMatch = link.match(/instagram\.com\/p\/([^\/?#&]+)/i);
         if (postMatch && postMatch[1]) {
-          nomeUsuarioAlvo = postMatch[1]; // devolve o id do post (ex: DQfvCmnDYNN)
+          nomeUsuarioAlvo = postMatch[1]; // devolve o id do post
         } else {
-          // 2) perfil: /username/  (pega primeiro segmento após instagram.com)
+          // 2) perfil: /username/
           const m = link.match(/instagram\.com\/@?([^\/?#&\/]+)/i);
           if (m && m[1]) {
             nomeUsuarioAlvo = m[1].replace(/\/$/, "");
           } else {
-            // fallback: usar campo nome do pedido, se existir
             nomeUsuarioAlvo = pedido.nome || "";
           }
         }
       }
 
-      console.log(`[GET_ACTION][IG] Ação disponível para ${nomeUsuarioRequest}: ${nomeUsuarioAlvo || '<sem-usuario>'} (pedido ${id_pedido}) — feitas=${feitas}/${quantidadePedido}`);
+      console.log(`[GET_ACTION][IG] Ação disponível para ${nomeUsuarioRequest}: ${nomeUsuarioAlvo || '<sem-usuario>'} (pedido ${id_pedido}, tipo ${pedido.tipo}) — feitas=${feitas}/${quantidadePedido}`);
 
-      const valorFinal = pedido.valor
+      const valorFinal = typeof pedido.valor !== "undefined" && pedido.valor !== null
         ? String(pedido.valor)
         : (pedido.tipo === "curtir" ? "0.001" : "0.006");
 
-      const tipoAcao = pedido.tipo;
-
-      // 🔥 DIFERENCIAÇÃO SEGUIR vs CURTIR
-      if (tipoAcao === "seguir") {
+      // retorno diferenciado para seguir x curtir
+      if (pedido.tipo === "seguir") {
         return res.status(200).json({
           status: "success",
           id_action: idPedidoStr,
           url: pedido.link,
-          usuario: nomeUsuarioAlvo, // ← só para seguir
-          tipo_acao: tipoAcao,
+          usuario: nomeUsuarioAlvo,
+          tipo_acao: pedido.tipo,
           valor: valorFinal
         });
       } else {
@@ -1835,7 +1838,7 @@ if (url.startsWith("/api/instagram/get_action") && method === "GET") {
           status: "success",
           id_action: idPedidoStr,
           url: pedido.link,
-          tipo_acao: tipoAcao,
+          tipo_acao: pedido.tipo,
           valor: valorFinal
         });
       }
