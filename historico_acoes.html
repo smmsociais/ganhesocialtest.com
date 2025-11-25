@@ -725,15 +725,15 @@
 
                     const statusText = action.status;
 
-                    const actionLink = (action.status === "Inválida" && action.url_dir) ?
-                        `<a href="${action.url_dir}" class="action-link" target="_blank">Ver</a>` : "";
+                    const actionLink = (action.status === "Inválida" && action.url) ?
+                        `<a href="${action.url}" class="action-link" target="_blank">Ver</a>` : "";
 
                     row.innerHTML = `
                     <td>${new Date(action.data).toLocaleString()}</td>
                     <td>${action.rede_social}</td>    
                     <td><a class="action-link" href="detail_account?usuario=${encodeURIComponent(action.nome_usuario)}">${action.nome_usuario}</a></td>  
                     <td>${action.tipo ? action.tipo.charAt(0).toUpperCase() + action.tipo.slice(1) : "Desconhecido"}</td>       
-                    <td>R$ ${formatCurrency(action.valor_confirmacao)}</td>
+                    <td>R$ ${(action.quantidade_pontos)}</td>
                     <td>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <span class="${statusClass}">${statusText}</span>
