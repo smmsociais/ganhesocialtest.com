@@ -1602,15 +1602,16 @@ if (url.startsWith("/api/instagram/get_user") && method === "GET") {
       });
     }
 
-    // Verifica se o usuário já possui essa conta cadastrada
+    // PROCURAR conta IGUAL pelo nome_usuario E PELA REDE "Instagram"
     const contaIndex = usuario.contas.findIndex(
-      c => c.nome_usuario === nome_usuario
+      c => c.nome_usuario === nome_usuario && c.rede === "Instagram"
     );
 
     if (contaIndex !== -1) {
+      // Conta IG existente → reativar
       usuario.contas[contaIndex].status = "ativa";
-      usuario.contas[contaIndex].rede = "Instagram";
     } else {
+      // Criar NOVO documento mesmo se nome_usuario for igual ao de outra rede
       usuario.contas.push({
         nome_usuario,
         status: "ativa",
@@ -1631,9 +1632,7 @@ if (url.startsWith("/api/instagram/get_user") && method === "GET") {
   }
 }
 
-// ---------------------------------------------------------
-// ROTA: /api/pular_acao  (POST)
-// ---------------------------------------------------------
+// ROTA: /api/pular_acao
 if (url.startsWith("/api/pular_acao") && method === "POST") {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método não permitido" });
