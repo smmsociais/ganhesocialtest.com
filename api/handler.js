@@ -1630,7 +1630,7 @@ if (url.startsWith("/api/instagram/get_user") && method === "GET") {
   }
 }
 
-// Rota: /api/instagram/get_action (GET)
+// Rota: /api/instagram/get_action (GET) — compatível com registros que usam `status` ou `acao_validada`
 if (url.startsWith("/api/instagram/get_action") && method === "GET") {
   const { nome_usuario, token, tipo, debug } = req.query;
 
@@ -1712,10 +1712,15 @@ if (url.startsWith("/api/instagram/get_action") && method === "GET") {
         continue;
       }
 
+      // helpers para checar estados: consideram tanto acao_validada quanto status
+      const matchValida = { $or: [{ acao_validada: "valida" }, { status: "valida" }] };
+      const matchPendenteOrValida = { $or: [{ acao_validada: { $in: ["pendente", "valida"] } }, { status: { $in: ["pendente", "valida"] } }] };
+      const matchPulada = { $or: [{ acao_validada: "pulada" }, { status: "pulada" }] };
+
       // 0) Se já houver N confirmações (valida) igual ou maior que quantidade, fecha
       const validadas = await ActionHistory.countDocuments({
         $or: [{ id_pedido }, { id_action: idPedidoStr }],
-        acao_validada: "valida"
+        $or: [ { acao_validada: "valida" }, { status: "valida" } ]
       });
       if (validadas >= quantidadePedido) {
         console.log(`[GET_ACTION][IG] Pedido ${id_pedido} fechado — já tem ${validadas} validações.`);
@@ -1725,8 +1730,12 @@ if (url.startsWith("/api/instagram/get_action") && method === "GET") {
       // 1) Total feitas (pendente + valida)
       const feitas = await ActionHistory.countDocuments({
         $or: [{ id_pedido }, { id_action: idPedidoStr }],
-        acao_validada: { $in: ["pendente", "valida"] }
+        $or: [
+          { acao_validada: { $in: ["pendente", "valida"] } },
+          { status: { $in: ["pendente", "valida"] } }
+        ]
       });
+      console.log(`[GET_ACTION][IG] Ação ${id_pedido}: feitas=${feitas}, limite=${quantidadePedido}`);
       if (feitas >= quantidadePedido) {
         console.log(`[GET_ACTION][IG] Pedido ${id_pedido} atingiu limite — pulando`);
         continue;
@@ -1736,7 +1745,10 @@ if (url.startsWith("/api/instagram/get_action") && method === "GET") {
       const pulada = await ActionHistory.findOne({
         $or: [{ id_pedido }, { id_action: idPedidoStr }],
         nome_usuario: nomeUsuarioRequest,
-        acao_validada: "pulada"
+        $or: [
+          { acao_validada: "pulada" },
+          { status: "pulada" }
+        ]
       });
       if (pulada) {
         console.log(`[GET_ACTION][IG] Usuário ${nomeUsuarioRequest} pulou o pedido ${id_pedido} — pulando`);
@@ -1747,7 +1759,10 @@ if (url.startsWith("/api/instagram/get_action") && method === "GET") {
       const jaFez = await ActionHistory.findOne({
         $or: [{ id_pedido }, { id_action: idPedidoStr }],
         nome_usuario: nomeUsuarioRequest,
-        acao_validada: { $in: ["pendente", "valida"] }
+        $or: [
+          { acao_validada: { $in: ["pendente", "valida"] } },
+          { status: { $in: ["pendente", "valida"] } }
+        ]
       });
       if (jaFez) {
         console.log(`[GET_ACTION][IG] Usuário ${nomeUsuarioRequest} já possuí ação pendente/validada para pedido ${id_pedido} — pulando`);
