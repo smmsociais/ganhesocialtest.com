@@ -1313,8 +1313,6 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
     } else {
       usuario.contas.push({
         nome_usuario,
-        id_tiktok: null,
-        id_fake: null,
         status: "ativa"
       });
     }
@@ -1323,7 +1321,6 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
 
     return res.status(200).json({
       status: "success",
-      message: "Conta TikTok vinculada com sucesso.",
       nome_usuario
     });
 
