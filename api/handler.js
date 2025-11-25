@@ -1393,68 +1393,46 @@ if (!contaVinculada) {
       return res.status(200).json({ debug: true, totalMatching, sampleQuery: query, pedidosSample: pedidos.slice(0, 6) });
     }
 
-    for (const pedido of pedidos) {
-      const id_pedido = pedido._id;
-      const idPedidoStr = String(id_pedido);
+for (const pedido of pedidos) {
+  const id_pedido = pedido._id;
+  const idPedidoStr = String(id_pedido);
 
-      console.log("🔍 Verificando pedido:", { id_pedido, tipo: pedido.tipo, quantidade: pedido.quantidade, link: pedido.link });
+  // garantir que quantidade é número válido
+  const quantidadePedido = Number(pedido.quantidade || 0);
+  if (isNaN(quantidadePedido) || quantidadePedido <= 0) continue;
 
-      // garantir que quantidade é número válido
-      const quantidadePedido = Number(pedido.quantidade || 0);
-      if (isNaN(quantidadePedido) || quantidadePedido <= 0) {
-        console.log(`⚠ Ignorando pedido ${id_pedido} por quantidade inválida:`, pedido.quantidade);
-        continue;
-      }
+  // 0) Se já houver N confirmações (valida) igual ou maior que quantidade, fecha
+  const validadas = await ActionHistory.countDocuments({
+    $or: [{ id_pedido }, { id_action: idPedidoStr }],
+    acao_validada: "valida"
+  });
+  if (validadas >= quantidadePedido) continue;
 
-      // 0) Se já houver N confirmações (valida) igual ou maior que quantidade, fecha
-      const validadas = await ActionHistory.countDocuments({
-        $or: [{ id_pedido }, { id_action: idPedidoStr }],
-        acao_validada: "valida"
-      });
-      if (validadas >= quantidadePedido) {
-        console.log(`⛔ Pedido ${id_pedido} fechado — já tem ${validadas} validações.`);
-        continue;
-      }
+  // 1) Total feitas (pendente + valida)
+  const feitas = await ActionHistory.countDocuments({
+    $or: [{ id_pedido }, { id_action: idPedidoStr }],
+    acao_validada: { $in: ["pendente", "valida"] }
+  });
+  if (feitas >= quantidadePedido) continue;
 
-      // 1) Total feitas (pendente + valida) — se já atingiu quantidade, pula
-      const feitas = await ActionHistory.countDocuments({
-        $or: [{ id_pedido }, { id_action: idPedidoStr }],
-        acao_validada: { $in: ["pendente", "valida"] }
-      });
-      console.log(`📊 Ação ${id_pedido}: feitas=${feitas}, limite=${quantidadePedido}`);
-      if (feitas >= quantidadePedido) {
-        console.log(`⏩ Pedido ${id_pedido} atingiu limite — pulando`);
-        continue;
-      }
+  // 2) Verificar se ESTE NOME_DE_CONTA pulou => bloqueia só esta conta
+  const pulada = await ActionHistory.findOne({
+    $or: [{ id_pedido }, { id_action: idPedidoStr }],
+    nome_usuario: nome_usuario,
+    acao_validada: "pulada"
+  });
+  if (pulada) continue;
 
-      // 2) Verificar se este usuário PULOU este pedido (apenas esse usuário)
-      const pulada = await ActionHistory.findOne({
-        $or: [{ id_pedido }, { id_action: idPedidoStr }],
-        $or: [
-          { nome_usuario },
-          { user: usuario._id }
-        ],
-        acao_validada: "pulada"
-      });
-      if (pulada) {
-        console.log(`🚫 Usuário ${nome_usuario} pulou o pedido ${id_pedido} — pulando`);
-        continue;
-      }
-
-      // 3) Verificar se este usuário JÁ FEZ essa ação (pendente OU valida) — se sim, ELE não pode pegar novamente
-      const jaFez = await ActionHistory.findOne({
-        $or: [{ id_pedido }, { id_action: idPedidoStr }],
-        $or: [
-          { nome_usuario },
-          { user: usuario._id }
-        ],
-        acao_validada: { $in: ["pendente", "valida"] }
-      });
-      if (jaFez) {
-        console.log(`🚫 Usuário ${nome_usuario} já possuí ação pendente/validada para pedido ${id_pedido} — pulando`);
-        continue;
-      }
-
+  // 3) Verificar se ESTE NOME_DE_CONTA já possui pendente/valida => bloqueia só esta conta
+  const jaFez = await ActionHistory.findOne({
+    $or: [{ id_pedido }, { id_action: idPedidoStr }],
+    nome_usuario: nome_usuario,
+    acao_validada: { $in: ["pendente", "valida"] }
+  });
+  if (jaFez) {
+    console.log(`Usuário ${nome_usuario} já possuí ação pendente/validada para pedido ${id_pedido} — pulando`);
+    continue;
+  }
       // Se chegou aqui: feitas < quantidade AND este usuário ainda NÃO fez => pode pegar
       // extrair nome do perfil alvo (tiktok tolerant)
       let nomeUsuarioAlvo = "";
