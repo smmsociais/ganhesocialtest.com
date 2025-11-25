@@ -1814,18 +1814,31 @@ if (url.startsWith("/api/instagram/get_action") && method === "GET") {
 
       console.log(`[GET_ACTION][IG] Ação disponível para ${nomeUsuarioRequest}: ${nomeUsuarioAlvo || '<sem-usuario>'} (pedido ${id_pedido}) — feitas=${feitas}/${quantidadePedido}`);
 
-      const valorFinal = typeof pedido.valor !== "undefined" && pedido.valor !== null
+      const valorFinal = pedido.valor
         ? String(pedido.valor)
         : (pedido.tipo === "curtir" ? "0.001" : "0.006");
 
-      return res.status(200).json({
-        status: "success",
-        id_action: idPedidoStr,
-        url: pedido.link,
-        usuario: nomeUsuarioAlvo,
-        tipo_acao: pedido.tipo,
-        valor: valorFinal
-      });
+      const tipoAcao = pedido.tipo;
+
+      // 🔥 DIFERENCIAÇÃO SEGUIR vs CURTIR
+      if (tipoAcao === "seguir") {
+        return res.status(200).json({
+          status: "success",
+          id_action: idPedidoStr,
+          url: pedido.link,
+          usuario: nomeUsuarioAlvo, // ← só para seguir
+          tipo_acao: tipoAcao,
+          valor: valorFinal
+        });
+      } else {
+        return res.status(200).json({
+          status: "success",
+          id_action: idPedidoStr,
+          url: pedido.link,
+          tipo_acao: tipoAcao,
+          valor: valorFinal
+        });
+      }
     }
 
     console.log("[GET_ACTION][IG] Nenhuma ação disponível");
