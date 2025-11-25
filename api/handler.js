@@ -1453,15 +1453,31 @@ for (const pedido of pedidos) {
         ? String(pedido.valor)
         : (pedido.tipo === "curtir" ? "0.001" : "0.006");
 
-      return res.status(200).json({
-        status: "success",
-        id_action: idPedidoStr,
-        url: pedido.link,
-        usuario: nomeUsuarioAlvo,
-        tipo_acao: pedido.tipo,
-        valor: valorFinal
-      });
-    }
+// 🔄 Resposta diferente para seguir e curtir
+if (tipo_acao === "seguir") {
+
+  return res.status(200).json({
+    status: "success",
+
+    id_action: idPedidoStr,
+    url: pedido.link,
+    usuario: nomeUsuarioAlvo,   // ← só aparece em SEGUIR
+    tipo_acao: pedido.tipo,
+    valor: valorFinal
+  });
+
+} else {  // curtir
+
+  return res.status(200).json({
+    status: "success",
+
+    id_action: idPedidoStr,
+    url: pedido.link,
+    tipo_acao: pedido.tipo,
+    valor: valorFinal
+  });
+
+}}
 
     console.log("[GET_ACTION] Nenhuma ação disponível");
     return res.status(200).json({ status: "fail", message: "nenhuma ação disponível no momento" });
