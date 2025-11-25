@@ -1309,11 +1309,15 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
     );
 
     if (contaIndex !== -1) {
+      // Conta já existe → reativar e garantir rede="TikTok"
       usuario.contas[contaIndex].status = "ativa";
+      usuario.contas[contaIndex].rede = "TikTok";
     } else {
+      // Criar nova conta com rede TikTok
       usuario.contas.push({
         nome_usuario,
-        status: "ativa"
+        status: "ativa",
+        rede: "TikTok"
       });
     }
 
