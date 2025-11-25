@@ -1404,14 +1404,14 @@ for (const pedido of pedidos) {
   // 0) Se já houver N confirmações (valida) igual ou maior que quantidade, fecha
   const validadas = await ActionHistory.countDocuments({
     $or: [{ id_pedido }, { id_action: idPedidoStr }],
-    acao_validada: "valida"
+    status: "valida"
   });
   if (validadas >= quantidadePedido) continue;
 
   // 1) Total feitas (pendente + valida)
   const feitas = await ActionHistory.countDocuments({
     $or: [{ id_pedido }, { id_action: idPedidoStr }],
-    acao_validada: { $in: ["pendente", "valida"] }
+    status: { $in: ["pendente", "valida"] }
   });
   if (feitas >= quantidadePedido) continue;
 
@@ -1419,7 +1419,7 @@ for (const pedido of pedidos) {
   const pulada = await ActionHistory.findOne({
     $or: [{ id_pedido }, { id_action: idPedidoStr }],
     nome_usuario: nome_usuario,
-    acao_validada: "pulada"
+    status: "pulada"
   });
   if (pulada) continue;
 
@@ -1427,7 +1427,7 @@ for (const pedido of pedidos) {
   const jaFez = await ActionHistory.findOne({
     $or: [{ id_pedido }, { id_action: idPedidoStr }],
     nome_usuario: nome_usuario,
-    acao_validada: { $in: ["pendente", "valida"] }
+    status: { $in: ["pendente", "valida"] }
   });
   if (jaFez) {
     console.log(`Usuário ${nome_usuario} já possuí ação pendente/validada para pedido ${id_pedido} — pulando`);
