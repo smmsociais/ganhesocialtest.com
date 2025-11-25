@@ -1304,9 +1304,9 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
       });
     }
 
-    // Verifica se o usuário já possui essa conta cadastrada
+    // PROCURAR conta IGUAL pelo nome_usuario E PELA REDE "TikTok"
     const contaIndex = usuario.contas.findIndex(
-      c => c.nome_usuario === nome_usuario
+      c => c.nome_usuario === nome_usuario && c.rede === "TikTok"
     );
 
     if (contaIndex !== -1) {
