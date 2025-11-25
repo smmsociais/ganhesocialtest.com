@@ -1455,10 +1455,9 @@ for (const pedido of pedidos) {
 
       return res.status(200).json({
         status: "success",
-        nome_usuario,
         id_action: idPedidoStr,
         url: pedido.link,
-        nome_usuario_perfil: nomeUsuarioAlvo,
+        usuario: nomeUsuarioAlvo,
         tipo_acao: pedido.tipo,
         valor: valorFinal
       });
