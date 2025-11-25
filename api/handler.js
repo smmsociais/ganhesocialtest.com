@@ -1273,6 +1273,7 @@ await acaoComissao.save();
   }
 }
 
+// Rota: /api/tiktok/get_user
 if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
   await connectDB();
   let { token, nome_usuario } = req.query;
@@ -1566,6 +1567,66 @@ if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
 
   } catch (error) {
     console.error("💥 Erro ao processar requisição:", error.message);
+    return res.status(500).json({ error: "Erro interno ao processar requisição." });
+  }
+}
+
+// Rota: /api/instagram/get_user
+if (url.startsWith("/api/instagram/get_user") && method === "GET") {
+  await connectDB();
+  let { token, nome_usuario } = req.query;
+
+  if (!token || !nome_usuario) {
+    return res.status(400).json({ error: "Os parâmetros 'token' e 'nome_usuario' são obrigatórios." });
+  }
+
+  nome_usuario = nome_usuario.trim().toLowerCase();
+
+  try {
+    // Verifica usuário pelo token
+    const usuario = await User.findOne({ token });
+    if (!usuario) {
+      return res.status(403).json({ error: "Acesso negado. Token inválido." });
+    }
+
+    // Verifica se essa conta já está vinculada a outro usuário
+    const contaJaRegistrada = await User.findOne({
+      "contas.nome_usuario": nome_usuario,
+      token: { $ne: token }
+    });
+
+    if (contaJaRegistrada) {
+      return res.status(200).json({
+        status: "fail",
+        message: "Essa conta Instagram já está vinculada a outro usuário."
+      });
+    }
+
+    // Verifica se o usuário já possui essa conta cadastrada
+    const contaIndex = usuario.contas.findIndex(
+      c => c.nome_usuario === nome_usuario
+    );
+
+    if (contaIndex !== -1) {
+      usuario.contas[contaIndex].status = "ativa";
+      usuario.contas[contaIndex].rede = "Instagram";
+    } else {
+      usuario.contas.push({
+        nome_usuario,
+        status: "ativa",
+        rede: "Instagram"
+      });
+    }
+
+    await usuario.save();
+
+    return res.status(200).json({
+      status: "success",
+      nome_usuario
+    });
+
+  } catch (error) {
+    console.error("Erro ao processar requisição:", error);
     return res.status(500).json({ error: "Erro interno ao processar requisição." });
   }
 }
