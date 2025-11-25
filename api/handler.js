@@ -1333,7 +1333,7 @@ if (url.startsWith("/api/tiktok/get_user") && method === "GET") {
   }
 }
 
-// Rota: /api/tiktok/get_action (GET) — comportamento: permite N contas até quantidade, exceto a mesma conta
+// ROTA: /api/tiktok/get_action (GET)
 if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
   const { nome_usuario, token, tipo, debug } = req.query;
 
@@ -1351,37 +1351,42 @@ if (url.startsWith("/api/tiktok/get_action") && method === "GET") {
       debug: !!debug
     });
 
-// valida usuário pelo token (encontra o usuário dono do token)
-const usuario = await User.findOne({ token });
-if (!usuario) {
-  console.log("[GET_ACTION] Token inválido");
-  return res.status(401).json({ error: "Token inválido" });
-}
+    // validar usuário via token
+    const usuario = await User.findOne({ token });
+    if (!usuario) {
+      console.log("[GET_ACTION] Token inválido");
+      return res.status(401).json({ error: "Token inválido" });
+    }
 
-// garante que o token corresponde à conta nome_usuario enviada
-const contaVinculada = Array.isArray(usuario.contas) &&
-  usuario.contas.some(c => c.nome_usuario === nome_usuario);
+    // garantir que o token corresponde à conta vinculada
+    const contaVinculada = Array.isArray(usuario.contas) &&
+      usuario.contas.some(c => c.nome_usuario === nome_usuario);
 
-if (!contaVinculada) {
-  console.log("[GET_ACTION] Token não pertence à conta solicitada:", nome_usuario);
-  return res.status(401).json({ error: "Token não pertence à conta solicitada" });
-}
+    if (!contaVinculada) {
+      console.log("[GET_ACTION] Token não pertence à conta solicitada:", nome_usuario);
+      return res.status(401).json({ error: "Token não pertence à conta solicitada" });
+    }
+
     // normalizar tipo
     const tipoNormalized = typeof tipo === 'string' ? String(tipo).trim().toLowerCase() : null;
     let tipoBanco;
-    if (tipo === "2" || tipoNormalized === "2" || tipoNormalized === "curtir") tipoBanco = "curtir";
-    else if (tipo === "3" || tipoNormalized === "3" || tipoNormalized === "seguir_curtir")
-      tipoBanco = { $in: ["seguir", "curtir"] };
-    else tipoBanco = "seguir";
 
-    // query base — tiktok, status e quantidade disponível
+    if (tipo === "2" || tipoNormalized === "2" || tipoNormalized === "curtir") {
+      tipoBanco = "curtir";
+    } else if (tipo === "3" || tipoNormalized === "3" || tipoNormalized === "seguir_curtir") {
+      tipoBanco = { $in: ["seguir", "curtir"] };
+    } else {
+      tipoBanco = "seguir";
+    }
+
+    // query base
     const query = {
       quantidade: { $gt: 0 },
       status: { $in: ["pendente", "reservada"] },
-      rede: { $regex: new RegExp(`^tiktok$`, "i") }
+      rede: { $regex: /^tiktok$/i }
     };
-    if (typeof tipoBanco === "string") query.tipo = tipoBanco;
-    else query.tipo = tipoBanco;
+
+    query.tipo = tipoBanco;
 
     const totalMatching = await Pedido.countDocuments(query);
     console.log(`[GET_ACTION] Pedidos que batem com query inicial: ${totalMatching}`);
@@ -1390,94 +1395,95 @@ if (!contaVinculada) {
     console.log(`[GET_ACTION] ${pedidos.length} pedidos encontrados (após find)`);
 
     if (debug === "1") {
-      return res.status(200).json({ debug: true, totalMatching, sampleQuery: query, pedidosSample: pedidos.slice(0, 6) });
+      return res.status(200).json({
+        debug: true,
+        totalMatching,
+        sampleQuery: query,
+        pedidosSample: pedidos.slice(0, 6)
+      });
     }
 
-for (const pedido of pedidos) {
-  const id_pedido = pedido._id;
-  const idPedidoStr = String(id_pedido);
+    // varrer pedidos
+    for (const pedido of pedidos) {
+      const id_pedido = pedido._id;
+      const idPedidoStr = String(id_pedido);
 
-  // garantir que quantidade é número válido
-  const quantidadePedido = Number(pedido.quantidade || 0);
-  if (isNaN(quantidadePedido) || quantidadePedido <= 0) continue;
+      const quantidadePedido = Number(pedido.quantidade || 0);
+      if (isNaN(quantidadePedido) || quantidadePedido <= 0) continue;
 
-  // 0) Se já houver N confirmações (valida) igual ou maior que quantidade, fecha
-  const validadas = await ActionHistory.countDocuments({
-    $or: [{ id_pedido }, { id_action: idPedidoStr }],
-    status: "valida"
-  });
-  if (validadas >= quantidadePedido) continue;
+      // total validadas
+      const validadas = await ActionHistory.countDocuments({
+        $or: [{ id_pedido }, { id_action: idPedidoStr }],
+        status: "valida"
+      });
 
-  // 1) Total feitas (pendente + valida)
-  const feitas = await ActionHistory.countDocuments({
-    $or: [{ id_pedido }, { id_action: idPedidoStr }],
-    status: { $in: ["pendente", "valida"] }
-  });
-  if (feitas >= quantidadePedido) continue;
+      if (validadas >= quantidadePedido) continue;
 
-  // 2) Verificar se ESTE NOME_DE_CONTA pulou => bloqueia só esta conta
-  const pulada = await ActionHistory.findOne({
-    $or: [{ id_pedido }, { id_action: idPedidoStr }],
-    nome_usuario: nome_usuario,
-    status: "pulada"
-  });
-  if (pulada) continue;
+      // total feitas (pendente + valida)
+      const feitas = await ActionHistory.countDocuments({
+        $or: [{ id_pedido }, { id_action: idPedidoStr }],
+        status: { $in: ["pendente", "valida"] }
+      });
 
-  // 3) Verificar se ESTE NOME_DE_CONTA já possui pendente/valida => bloqueia só esta conta
-  const jaFez = await ActionHistory.findOne({
-    $or: [{ id_pedido }, { id_action: idPedidoStr }],
-    nome_usuario: nome_usuario,
-    status: { $in: ["pendente", "valida"] }
-  });
-  if (jaFez) {
-    console.log(`Usuário ${nome_usuario} já possuí ação pendente/validada para pedido ${id_pedido} — pulando`);
-    continue;
-  }
-      // Se chegou aqui: feitas < quantidade AND este usuário ainda NÃO fez => pode pegar
-      // extrair nome do perfil alvo (tiktok tolerant)
+      if (feitas >= quantidadePedido) continue;
+
+      // verificar se esta conta pulou
+      const pulada = await ActionHistory.findOne({
+        $or: [{ id_pedido }, { id_action: idPedidoStr }],
+        nome_usuario,
+        status: "pulada"
+      });
+
+      if (pulada) continue;
+
+      // verificar se esta conta já fez
+      const jaFez = await ActionHistory.findOne({
+        $or: [{ id_pedido }, { id_action: idPedidoStr }],
+        nome_usuario,
+        status: { $in: ["pendente", "valida"] }
+      });
+
+      if (jaFez) continue;
+
+      // extrair nome do perfil alvo
       let nomeUsuarioAlvo = "";
       if (typeof pedido.link === "string") {
         if (pedido.link.includes("@")) {
           nomeUsuarioAlvo = pedido.link.split("@")[1].split(/[/?#]/)[0];
         } else {
-          try {
-            const m = pedido.link.match(/tiktok\.com\/@?([^\/?#&]+)/i);
-            if (m && m[1]) nomeUsuarioAlvo = m[1].replace(/\/$/, "");
-          } catch (e) { /* ignore */ }
+          const m = pedido.link.match(/tiktok\.com\/@?([^\/?#&]+)/i);
+          if (m && m[1]) nomeUsuarioAlvo = m[1].replace(/\/$/, "");
         }
       }
 
-      console.log(`✅ Ação disponível para ${nome_usuario}: ${nomeUsuarioAlvo || '<sem-usuario>'} (pedido ${id_pedido}) — feitas=${feitas}/${quantidadePedido}`);
+      console.log(`✅ Ação disponível para ${nome_usuario}: ${nomeUsuarioAlvo || '<sem-usuario>'}`);
 
-      const valorFinal = typeof pedido.valor !== "undefined" && pedido.valor !== null
+      const valorFinal = pedido.valor
         ? String(pedido.valor)
         : (pedido.tipo === "curtir" ? "0.001" : "0.006");
 
-// 🔄 Resposta diferente para seguir e curtir
-if (tipo_acao === "seguir") {
+      const tipoAcao = pedido.tipo;
 
-  return res.status(200).json({
-    status: "success",
-
-    id_action: idPedidoStr,
-    url: pedido.link,
-    usuario: nomeUsuarioAlvo,   // ← só aparece em SEGUIR
-    tipo_acao: pedido.tipo,
-    valor: valorFinal
-  });
-
-} else {  // curtir
-
-  return res.status(200).json({
-    status: "success",
-
-    id_action: idPedidoStr,
-    url: pedido.link,
-    tipo_acao: pedido.tipo,
-    valor: valorFinal
-  });
-
-}}
+      // 🔥 DIFERENCIAÇÃO SEGUIR vs CURTIR
+      if (tipoAcao === "seguir") {
+        return res.status(200).json({
+          status: "success",
+          id_action: idPedidoStr,
+          url: pedido.link,
+          usuario: nomeUsuarioAlvo, // ← só para seguir
+          tipo_acao: tipoAcao,
+          valor: valorFinal
+        });
+      } else {
+        return res.status(200).json({
+          status: "success",
+          id_action: idPedidoStr,
+          url: pedido.link,
+          tipo_acao: tipoAcao,
+          valor: valorFinal
+        });
+      }
+    }
 
     console.log("[GET_ACTION] Nenhuma ação disponível");
     return res.status(200).json({ status: "fail", message: "nenhuma ação disponível no momento" });
