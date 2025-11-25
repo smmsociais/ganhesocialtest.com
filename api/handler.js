@@ -1550,26 +1550,18 @@ if (url.startsWith("/api/tiktok/confirm_action") && method === "POST") {
     // URL do perfil alvo
     const url_dir = pedidoLocal.link;
 
-    // Extrair nome de usuário do perfil alvo
-    let nomeDoPerfil = "";
-    if (url_dir.includes("@")) {
-      nomeDoPerfil = url_dir.split("@")[1].split(/[/?#]/)[0];
-    }
-
     // Criar registro no histórico
     const newAction = new ActionHistory({
       user: usuario._id,
       token,
       nome_usuario,
-      nome_usuario_perfil: nomeDoPerfil,
       tipo_acao,
       tipo: tipo_acao,
       quantidade_pontos: valorFinal,
-      valor_confirmacao: valorFinal,
       rede_social: "TikTok",
       url: url_dir,            // ✔ CORRIGIDO
       id_action,
-      acao_validada: "pendente",
+      status: "pendente",
       data: new Date(),
     });
 
