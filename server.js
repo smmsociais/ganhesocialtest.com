@@ -1,38 +1,35 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import router from "./handler.js";
 
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 3000;
 
-// dirname raiz
+// Corrigir path base (porque estamos dentro de /app/api/)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// importar rotas
-import handler from "./api/handler.js";
-app.use("/api", handler);
+// Caminho da raiz do projeto
+const ROOT = path.join(__dirname, "..");   // volta de /api para /app
 
-// servir arquivos estáticos
-app.use(express.static(__dirname));
+// Servir arquivos estáticos da raiz
+app.use(express.static(ROOT));
 
-// logs.html
+// Rotas da API
+app.use("/api", router);
+
+// Página de logs
 app.get("/logs", (req, res) => {
-  res.sendFile(path.join(__dirname, "logs.html"));
+  res.sendFile(path.join(ROOT, "logs.html"));
 });
 
-// página inicial
+// Página inicial (corrige o erro ENOENT)
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(ROOT, "index.html"));
 });
 
-// fallback
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-// iniciar
-const PORT = process.env.PORT || 3000;
+// Inicia servidor
 app.listen(PORT, () =>
-  console.log("🔥 Servidor rodando na porta " + PORT)
+  console.log(`🚀 Servidor rodando na porta ${PORT}`)
 );
