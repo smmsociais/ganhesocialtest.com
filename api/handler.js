@@ -7,8 +7,24 @@ import { sendRecoveryEmail } from "./mailer.js";
 import crypto from "crypto";
 import { logToFile } from ".logger.js";
 import { User, ActionHistory, DailyEarning, Pedido, DailyRanking } from "./schema.js";
+import express from "express";
+import fs from "fs";
 
 const router = express.Router();
+
+router.get("/logs", (req, res) => {
+  const file = "/app/logs.txt";
+
+  fs.readFile(file, "utf8", (err, data) => {
+    if (err) {
+      console.error("Erro ao ler logs:", err);
+      return res.status(500).send("Erro ao ler logs.");
+    }
+
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.send(data);
+  });
+});
 
 // ROTA: /api/get_saldo (GET)
 router.get("/get_saldo", async (req, res) => {
