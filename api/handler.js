@@ -24,6 +24,160 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+router.route("/contas_tiktok")
+
+  // POST -> adicionar / reativar conta TikTok (aceita nome_usuario ou nomeConta)
+  .post(async (req, res) => {
+    try {
+      await connectDB();
+
+      const token = getTokenFromHeader(req);
+      if (!token) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
+
+      const user = await User.findOne({ token });
+      if (!user) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
+
+      // aceita nome_usuario (novo) ou nomeConta (frontend antigo)
+      const rawName = req.body?.nome_usuario ?? req.body?.nomeConta ?? req.body?.username;
+      if (!rawName || String(rawName).trim() === "") {
+        return res.status(400).json({ error: "Nome da conta é obrigatório." });
+      }
+
+      const nomeNormalized = String(rawName).trim();
+      const nomeLower = nomeNormalized.toLowerCase();
+
+      // Procura conta já existente no próprio usuário (compatível com nome_usuario e nomeConta)
+      const contaExistenteIndex = (user.contas || []).findIndex(
+        c => String((c.nome_usuario ?? c.nomeConta ?? "")).toLowerCase() === nomeLower
+      );
+
+      if (contaExistenteIndex !== -1) {
+        const contaExistente = user.contas[contaExistenteIndex];
+
+        if (String(contaExistente.status ?? "").toLowerCase() === "ativa") {
+          return res.status(400).json({ error: "Esta conta já está ativa." });
+        }
+
+        // Reativar conta existente e garantir ambos os campos preenchidos
+        contaExistente.status = "ativa";
+        contaExistente.rede = "TikTok";
+        contaExistente.dataDesativacao = undefined;
+
+        // garantir nome_usuario e nomeConta
+        contaExistente.nome_usuario = nomeNormalized;
+
+        await user.save();
+        return res.status(200).json({ message: "Conta reativada com sucesso!", nomeConta: nomeNormalized });
+      }
+
+      // Verifica se outro usuário já possui essa mesma conta (case-insensitive) — checa ambos campos
+      const regex = new RegExp(`^${escapeRegExp(nomeNormalized)}$`, "i");
+      const contaDeOutroUsuario = await User.findOne({
+        _id: { $ne: user._id },
+        $or: [
+          { "contas.nome_usuario": regex }
+        ]
+      });
+
+      if (contaDeOutroUsuario) {
+        return res.status(400).json({ error: "Já existe uma conta com este nome de usuário." });
+      }
+
+      // Adicionar nova conta — preencher nome_usuario (canônico) E nomeConta (compat)
+      user.contas = user.contas || [];
+      user.contas.push({
+        nome_usuario: nomeNormalized,
+        rede: "TikTok",
+        status: "ativa",
+        dataCriacao: new Date()
+      });
+
+      await user.save();
+
+      return res.status(201).json({
+        message: "Conta TikTok adicionada com sucesso!",
+        nomeConta: nomeNormalized
+      });
+    } catch (err) {
+      console.error("❌ Erro em POST /contas_tiktok", err);
+      return res.status(500).json({ error: "Erro interno no servidor." });
+    }
+  })
+
+  // GET -> listar contas Instagram ativas do usuário
+  .get(async (req, res) => {
+    try {
+      await connectDB();
+
+      const token = getTokenFromHeader(req);
+      if (!token) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
+
+      const user = await User.findOne({ token });
+      if (!user) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
+
+      const contasInstagram = (user.contas || [])
+        .filter(conta => {
+          const rede = String(conta.rede ?? "").trim().toLowerCase();
+          const status = String(conta.status ?? "").trim().toLowerCase();
+          return rede === "tiktok" && status === "ativa";
+        })
+        .map(conta => {
+          const contaObj = conta && typeof conta.toObject === "function"
+            ? conta.toObject()
+            : JSON.parse(JSON.stringify(conta));
+
+          return {
+            ...contaObj,
+            usuario: {
+              _id: user._id,
+              nome: user.nome || ""
+            }
+          };
+        });
+
+      return res.status(200).json(contasInstagram);
+    } catch (err) {
+      console.error("❌ Erro em GET /contas_tiktok:", err);
+      return res.status(500).json({ error: "Erro interno no servidor." });
+    }
+  })
+
+// DELETE -> desativar conta Instagram (accept nome_usuario OR nomeConta)
+.delete(async (req, res) => {
+  try {
+    await connectDB();
+
+    const token = getTokenFromHeader(req);
+    if (!token) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
+
+    const user = await User.findOne({ token });
+    if (!user) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
+
+    // aceita nome_usuario (DB atual) OU nomeConta (rotas antigas)
+    const nomeRaw = req.query.nome_usuario ?? req.body?.nome_usuario;
+    if (!nomeRaw) return res.status(400).json({ error: "Nome da conta não fornecido." });
+
+    const nomeLower = String(nomeRaw).trim().toLowerCase();
+
+    const contaIndex = (user.contas || []).findIndex(c =>
+      String(c.nome_usuario ?? c.nomeConta ?? "").toLowerCase() === nomeLower
+    );
+
+    if (contaIndex === -1) return res.status(404).json({ error: "Conta não encontrada." });
+
+    user.contas[contaIndex].status = "inativa";
+    user.contas[contaIndex].dataDesativacao = new Date();
+
+    await user.save();
+
+    return res.status(200).json({ message: `Conta ${user.contas[contaIndex].nome_usuario || user.contas[contaIndex].nomeConta} desativada com sucesso.` });
+
+  } catch (err) {
+    console.error("❌ Erro em DELETE /contas_tiktok:", err);
+    return res.status(500).json({ error: "Erro interno no servidor." });
+  }
+});
+
 router.route("/contas_instagram")
 
   // POST -> adicionar / reativar conta Instagram (aceita nome_usuario ou nomeConta)
