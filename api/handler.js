@@ -12,7 +12,9 @@ import fs from "fs";
 
 const router = express.Router();
 
+// ROTA: /api/logs
 router.get("/logs", (req, res) => {
+
   const file = "/app/logs.txt";
 
   fs.readFile(file, "utf8", (err, data) => {
