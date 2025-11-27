@@ -1,7 +1,25 @@
+//server.js
+
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import apiRoutes from "./api/handler.js";   // ✔ IMPORTANTE
+
+const router = express.Router();
+
+// ROTAS SMM – INSTAGRAM E TIKTOK
+router.get("/buscar_acao_smm_instagram", buscarInstagram);
+router.get("/buscar_acao_smm_tiktok", buscarTikTok);
+
+// ROTAS GET USER
+router.get("/get-instagram-user", getInstagramUser);
+router.get("/get-user-tiktok", getTikTokUser);
+
+// ROTA PARA CONFIRMAR AÇÃO SMM
+router.post("/smm_acao", smmAcao);
+
+// ROTA PARA VERIFICAR SE SEGUE UM PERFIL
+router.get("/user-following", verificarFollowing);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,3 +82,6 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT, () =>
   console.log("Servidor rodando na porta " + PORT)
 );
+
+export default router;
+
