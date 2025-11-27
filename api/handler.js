@@ -352,7 +352,7 @@ router.get("/tiktok/get_action", async (req, res) => {
 });
 
 // ROTA: /api/tiktok/confirm_action (POST)
-router.get("/tiktok/confirm_action", async (req, res) => {
+router.post("/tiktok/confirm_action", async (req, res) => {
   await connectDB();
 
   const { token, id_action, nome_usuario } = req.body;
