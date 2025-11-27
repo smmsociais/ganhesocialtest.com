@@ -5,7 +5,7 @@ import connectDB from "./db.js";
 import nodemailer from 'nodemailer';
 import { sendRecoveryEmail } from "./mailer.js";
 import crypto from "crypto";
-import { logToFile } from ".logger.js";
+import logger from "./logger.js";
 import { User, ActionHistory, DailyEarning, Pedido, DailyRanking } from "./schema.js";
 import express from "express";
 import fs from "fs";
