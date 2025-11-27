@@ -69,7 +69,7 @@ router.get("/contas_instagram", async (req, res) => {
         // ===========================
         // 📌 POST → Adicionar conta Instagram
         // ===========================
-        if (method === "POST") {
+        if (req.method !== "POST") {
             const { nomeConta, id_conta, id_instagram } = req.body;
 
             if (!nomeConta)
@@ -126,7 +126,7 @@ router.get("/contas_instagram", async (req, res) => {
         // ===========================
         // 📌 GET → Listar contas Instagram ATIVAS
         // ===========================
-        if (method === "GET") {
+        if (req.method !== "GET") {
             console.log("▶ GET /api/contas_instagram - iniciando");
             console.log(`▶ Usuário: ${user._id}`);
 
@@ -165,7 +165,7 @@ router.get("/contas_instagram", async (req, res) => {
         // ===========================
         // 📌 DELETE → Desativar conta Instagram
         // ===========================
-        if (method === "DELETE") {
+        if (req.method !== "DELETE") {
             const { nomeConta } = req.query;
 
             if (!nomeConta) {
