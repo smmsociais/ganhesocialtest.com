@@ -20,18 +20,11 @@ import verificarFollowing from "./user-following.js";
 
 const router = express.Router();
 
-// ROTAS SMM – INSTAGRAM E TIKTOK
 router.get("/buscar_acao_smm_instagram", buscarInstagram);
 router.get("/buscar_acao_smm_tiktok", buscarTikTok);
-
-// ROTAS GET USER
 router.get("/get-instagram-user", getInstagramUser);
 router.get("/get-user-tiktok", getTikTokUser);
-
-// ROTA PARA CONFIRMAR AÇÃO SMM
 router.post("/smm_acao", smmAcao);
-
-// ROTA PARA VERIFICAR SE SEGUE UM PERFIL
 router.get("/user-following", verificarFollowing);
 
 // Rota: /api/contas_tiktok (POST, GET, DELETE)
@@ -1980,16 +1973,13 @@ router.post("/registrar_acao_pendente", async (req, res) => {
   }
 
   const {
-    id_conta,
-    id_pedido,
     nome_usuario,
     url,
     tipo_acao,
     quantidade_pontos,
-    unique_id
   } = req.body;
 
-  if (!id_pedido || !id_conta || !nome_usuario || !tipo_acao || quantidade_pontos == null) {
+  if (!nome_usuario || !tipo_acao || quantidade_pontos == null) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes." });
   }
 
@@ -2020,17 +2010,13 @@ router.post("/registrar_acao_pendente", async (req, res) => {
       user: usuario._id,
       token: usuario.token,
       nome_usuario,
-      id_pedido: idPedidoStr,
       id_action: idPedidoStr,
-      id_conta,
       url,
-      unique_id,
       tipo_acao,
       quantidade_pontos,
       tipo: tipoAcaoFinal,
       rede_social: redeFinal,     // <---- AQUI AGORA ESTÁ CORRETO
-      valor_confirmacao: valorConfirmacaoFinal,
-      acao_validada: "pendente",
+      status: "pendente",
       data: new Date()
     });
 
