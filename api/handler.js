@@ -26,7 +26,7 @@ function escapeRegExp(string) {
 
 router.route("/contas_instagram")
 
-  // POST -> adicionar / reativar conta Instagram
+  // POST -> adicionar / reativar conta Instagram (aceita nome_usuario ou nomeConta)
   .post(async (req, res) => {
     try {
       await connectDB();
@@ -37,18 +37,18 @@ router.route("/contas_instagram")
       const user = await User.findOne({ token });
       if (!user) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
 
-      const { nomeConta, id_conta, id_instagram } = req.body;
-
-      if (!nomeConta || String(nomeConta).trim() === "") {
+      // aceita nome_usuario (novo) ou nomeConta (frontend antigo)
+      const rawName = req.body?.nome_usuario ?? req.body?.nomeConta ?? req.body?.username;
+      if (!rawName || String(rawName).trim() === "") {
         return res.status(400).json({ error: "Nome da conta é obrigatório." });
       }
 
-      const nomeNormalized = String(nomeConta).trim();
+      const nomeNormalized = String(rawName).trim();
       const nomeLower = nomeNormalized.toLowerCase();
 
-      // Procura conta já existente no próprio usuário (case-insensitive)
+      // Procura conta já existente no próprio usuário (compatível com nome_usuario e nomeConta)
       const contaExistenteIndex = (user.contas || []).findIndex(
-        c => String(c.nomeConta ?? "").toLowerCase() === nomeLower
+        c => String((c.nome_usuario ?? c.nomeConta ?? "")).toLowerCase() === nomeLower
       );
 
       if (contaExistenteIndex !== -1) {
@@ -58,34 +58,42 @@ router.route("/contas_instagram")
           return res.status(400).json({ error: "Esta conta já está ativa." });
         }
 
-        // Reativar conta existente
+        // Reativar conta existente e garantir ambos os campos preenchidos
         contaExistente.status = "ativa";
         contaExistente.rede = "Instagram";
-        contaExistente.id_conta = id_conta ?? contaExistente.id_conta;
-        contaExistente.id_instagram = id_instagram ?? contaExistente.id_instagram;
+        contaExistente.id_conta = req.body.id_conta ?? contaExistente.id_conta;
+        contaExistente.id_instagram = req.body.id_instagram ?? contaExistente.id_instagram;
         contaExistente.dataDesativacao = undefined;
+
+        // garantir nome_usuario e nomeConta
+        contaExistente.nome_usuario = nomeNormalized;
+        contaExistente.nomeConta = nomeNormalized;
 
         await user.save();
         return res.status(200).json({ message: "Conta reativada com sucesso!", nomeConta: nomeNormalized });
       }
 
-      // Verifica se outro usuário já possui essa mesma conta (case-insensitive)
+      // Verifica se outro usuário já possui essa mesma conta (case-insensitive) — checa ambos campos
       const regex = new RegExp(`^${escapeRegExp(nomeNormalized)}$`, "i");
       const contaDeOutroUsuario = await User.findOne({
         _id: { $ne: user._id },
-        "contas.nomeConta": regex
+        $or: [
+          { "contas.nome_usuario": regex },
+          { "contas.nomeConta": regex }
+        ]
       });
 
       if (contaDeOutroUsuario) {
         return res.status(400).json({ error: "Já existe uma conta com este nome de usuário." });
       }
 
-      // Adicionar nova conta Instagram
+      // Adicionar nova conta — preencher nome_usuario (canônico) E nomeConta (compat)
       user.contas = user.contas || [];
       user.contas.push({
+        nome_usuario: nomeNormalized,
         nomeConta: nomeNormalized,
-        id_conta,
-        id_instagram,
+        id_conta: req.body.id_conta,
+        id_instagram: req.body.id_instagram,
         rede: "Instagram",
         status: "ativa",
         dataCriacao: new Date()
