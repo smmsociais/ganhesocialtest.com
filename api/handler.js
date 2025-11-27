@@ -20,7 +20,21 @@ import verificarFollowing from "./user-following.js";
 
 const router = express.Router();
 
-// Rota: /api/contas_instagram (POST, GET, DELETE)
+// ROTAS SMM – INSTAGRAM E TIKTOK
+router.get("/buscar_acao_smm_instagram", buscarInstagram);
+router.get("/buscar_acao_smm_tiktok", buscarTikTok);
+
+// ROTAS GET USER
+router.get("/get-instagram-user", getInstagramUser);
+router.get("/get-user-tiktok", getTikTokUser);
+
+// ROTA PARA CONFIRMAR AÇÃO SMM
+router.post("/smm_acao", smmAcao);
+
+// ROTA PARA VERIFICAR SE SEGUE UM PERFIL
+router.get("/user-following", verificarFollowing);
+
+// Rota: /api/contas_tiktok (POST, GET, DELETE)
 function getTokenFromHeader(req) {
   const authHeader = req.headers.authorization || req.headers.Authorization;
   if (!authHeader) return null;
