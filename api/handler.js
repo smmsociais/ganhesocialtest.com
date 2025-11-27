@@ -5,12 +5,14 @@ import connectDB from "./db.js";
 import nodemailer from 'nodemailer';
 import { sendRecoveryEmail } from "./mailer.js";
 import crypto from "crypto";
+import { logToFile } from ".logger.js";
 import { User, ActionHistory, DailyEarning, Pedido, DailyRanking } from "./schema.js";
 
 const router = express.Router();
 
 // ROTA: /api/get_saldo (GET)
 router.get("/get_saldo", async (req, res) => {
+    logToFile("➡️ /get_saldo chamado com token: " + req.query.token);
   try {
     await connectDB();
 
