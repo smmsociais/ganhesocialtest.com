@@ -1336,61 +1336,61 @@
             } catch (error) {
             }
         }
-async function loadAccounts() {
-    try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            throw new Error("Token não encontrado. Faça login novamente.");
-        }
+        async function loadAccounts() {
+            try {
+                const token = localStorage.getItem("token");
+                if (!token) {
+                    throw new Error("Token não encontrado. Faça login novamente.");
+                }
 
-        const response = await fetch("https://ganhesocialtest.com/api/contas_tiktok", {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${token}`
+                const response = await fetch("https://ganhesocialtest.com/api/contas_tiktok", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error("Erro ao carregar contas: " + response.status);
+                }
+
+                const accounts = await response.json();
+
+                console.log("contas retornadas da API:", accounts); // útil para debug
+
+                if (!Array.isArray(accounts)) {
+                    throw new Error("Formato de dados inválido");
+                }
+
+                const accountSelect = document.getElementById("accountSelect");
+                accountSelect.innerHTML = '<option value="" disabled selected hidden>Selecione uma conta</option>';
+                accountSelect.disabled = false;
+
+                if (accounts.length === 0) {
+                    // opção informativa quando não há contas
+                    const option = document.createElement("option");
+                    option.value = "";
+                    option.textContent = "Nenhuma conta TikTok ativa encontrada";
+                    option.disabled = true;
+                    accountSelect.appendChild(option);
+                    return;
+                }
+
+                accounts.forEach((account) => {
+                    // suporta ambos os formatos: nome_usuario (DB novo) ou nomeConta (compatibilidade)
+                    const nome = account.nome_usuario ?? account.nomeConta ?? account.usuario?.nome ?? "";
+
+                    if (!nome) return; // ignora entradas inválidas
+
+                    const option = document.createElement("option");
+                    option.value = nome;
+                    option.textContent = nome;
+                    accountSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Erro ao carregar contas:", error);
             }
-        });
-
-        if (!response.ok) {
-            throw new Error("Erro ao carregar contas: " + response.status);
         }
-
-        const accounts = await response.json();
-
-        console.log("contas retornadas da API:", accounts); // útil para debug
-
-        if (!Array.isArray(accounts)) {
-            throw new Error("Formato de dados inválido");
-        }
-
-        const accountSelect = document.getElementById("accountSelect");
-        accountSelect.innerHTML = '<option value="" disabled selected hidden>Selecione uma conta</option>';
-        accountSelect.disabled = false;
-
-        if (accounts.length === 0) {
-            // opção informativa quando não há contas
-            const option = document.createElement("option");
-            option.value = "";
-            option.textContent = "Nenhuma conta TikTok ativa encontrada";
-            option.disabled = true;
-            accountSelect.appendChild(option);
-            return;
-        }
-
-        accounts.forEach((account) => {
-            // suporta ambos os formatos: nome_usuario (DB novo) ou nomeConta (compatibilidade)
-            const nome = account.nome_usuario ?? account.nomeConta ?? account.usuario?.nome ?? "";
-
-            if (!nome) return; // ignora entradas inválidas
-
-            const option = document.createElement("option");
-            option.value = nome;
-            option.textContent = nome;
-            accountSelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error("Erro ao carregar contas:", error);
-    }
-}
 
         async function salvarAcaoNoBanco({
             nome_usuario,
@@ -1409,35 +1409,47 @@ async function loadAccounts() {
             }
         }
 
-        async function registrarAcaoPendente(acao) {
-            try {
-                // Validação básica
-                if (!acao.nome_usuario || !acao.id_pedido || !acao.id_conta || !acao.url_dir || !acao.tipo_acao) {
-                    return;
-                }
+async function registrarAcaoPendente(acao) {
+    try {
+        const payload = {
+            id_conta: acao.id_conta,
+            id_pedido: acao.id_pedido,
+            nome_usuario: acao.nome_usuario,
+            url: acao.url_dir,         // ← renomeado correto
+            tipo_acao: acao.tipo_acao,
+            quantidade_pontos: acao.quantidade_pontos,
+            unique_id: acao.unique_id  // ← obrigatório!
+        };
 
-                const response = await fetch("/api/registrar_acao_pendente", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify(acao)
-                });
+        console.log("➡ Enviando payload:", payload);
 
-                const respJson = await response.json();
-
-                if (!response.ok || respJson.status !== "success") {
-                    throw new Error("Falha ao registrar ação pendente.");
-                }
-
-                // opcional: retornar respJson se precisar usar depois
-                return respJson;
-
-            } catch (error) {
-                console.error("Erro ao registrar ação pendente:", error);
-            }
+        if (!payload.id_conta || !payload.id_pedido || !payload.nome_usuario || !payload.url || !payload.tipo_acao) {
+            console.error("❌ Campos obrigatórios ausentes:", payload);
+            return;
         }
+
+        const response = await fetch("/api/registrar_acao_pendente", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const respJson = await response.json();
+
+        if (!response.ok) {
+            console.log("❌ Erro do servidor:", respJson);
+            throw new Error("Falha ao registrar ação pendente.");
+        }
+
+        return respJson;
+
+    } catch (error) {
+        console.error("Erro ao registrar ação pendente:", error);
+    }
+}
 
         function logout() {
             localStorage.removeItem("token");
