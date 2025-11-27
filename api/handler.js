@@ -141,41 +141,41 @@ router.route("/contas_instagram")
     }
   })
 
-  // DELETE -> desativar conta Instagram (passar nomeConta via query ou body)
-  .delete(async (req, res) => {
-    try {
-      await connectDB();
+// DELETE -> desativar conta Instagram (accept nome_usuario OR nomeConta)
+.delete(async (req, res) => {
+  try {
+    await connectDB();
 
-      const token = getTokenFromHeader(req);
-      if (!token) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
+    const token = getTokenFromHeader(req);
+    if (!token) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
 
-      const user = await User.findOne({ token });
-      if (!user) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
+    const user = await User.findOne({ token });
+    if (!user) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
 
-      const nomeContaRaw = req.query.nomeConta ?? req.body?.nomeConta;
-      if (!nomeContaRaw) {
-        return res.status(400).json({ error: "Nome da conta não fornecido." });
-      }
+    // aceita nome_usuario (DB atual) OU nomeConta (rotas antigas)
+    const nomeRaw = req.query.nome_usuario ?? req.query.nomeConta ?? req.body?.nome_usuario ?? req.body?.nomeConta;
+    if (!nomeRaw) return res.status(400).json({ error: "Nome da conta não fornecido." });
 
-      const nomeLower = String(nomeContaRaw).trim().toLowerCase();
+    const nomeLower = String(nomeRaw).trim().toLowerCase();
 
-      const contaIndex = (user.contas || []).findIndex(c => String(c.nomeConta ?? "").toLowerCase() === nomeLower);
+    const contaIndex = (user.contas || []).findIndex(c =>
+      String(c.nome_usuario ?? c.nomeConta ?? "").toLowerCase() === nomeLower
+    );
 
-      if (contaIndex === -1) {
-        return res.status(404).json({ error: "Conta não encontrada." });
-      }
+    if (contaIndex === -1) return res.status(404).json({ error: "Conta não encontrada." });
 
-      user.contas[contaIndex].status = "inativa";
-      user.contas[contaIndex].dataDesativacao = new Date();
+    user.contas[contaIndex].status = "inativa";
+    user.contas[contaIndex].dataDesativacao = new Date();
 
-      await user.save();
+    await user.save();
 
-      return res.status(200).json({ message: `Conta ${user.contas[contaIndex].nomeConta} desativada com sucesso.` });
-    } catch (err) {
-      console.error("❌ Erro em DELETE /contas_instagram:", err);
-      return res.status(500).json({ error: "Erro interno no servidor." });
-    }
-  });
+    return res.status(200).json({ message: `Conta ${user.contas[contaIndex].nome_usuario || user.contas[contaIndex].nomeConta} desativada com sucesso.` });
+
+  } catch (err) {
+    console.error("❌ Erro em DELETE /contas_instagram:", err);
+    return res.status(500).json({ error: "Erro interno no servidor." });
+  }
+});
 
 // Rota: /api/login
 router.post("/login", async (req, res) => {
