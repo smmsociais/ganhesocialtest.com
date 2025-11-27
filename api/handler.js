@@ -194,4 +194,81 @@ router.get("/contas_instagram", async (req, res) => {
   }
 });
 
+// Rota: /api/historico_acoes (GET)
+router.get("/historico_acoes", async (req, res) => {
+if (req.method !== "GET") {
+    return res.status(405).json({ error: "Método não permitido." });
+  }
+
+  await connectDB();
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Token não fornecido ou inválido." });
+  }
+
+  const token = authHeader.split(" ")[1];
+  const usuario = await User.findOne({ token });
+
+  if (!usuario) {
+    return res.status(401).json({ error: "Usuário não autenticado." });
+  }
+
+  const nomeUsuarioParam = req.query.usuario;
+
+  if (nomeUsuarioParam) {
+    // Busca diretamente pelo nome de usuário, ignorando o token
+    const historico = await ActionHistory
+      .find({ nome_usuario: nomeUsuarioParam, acao_validada: { $ne: "pulada" } })
+      .sort({ data: -1 });
+  
+    const formattedData = historico.map(action => {
+      let status;
+      if (action.acao_validada === "valida") status = "Válida";
+      else if (action.acao_validada === "invalida") status = "Inválida";
+      else status = "Pendente";
+  
+      return {
+        nome_usuario: action.nome_usuario,
+        quantidade_pontos: action.quantidade_pontos,
+        data: action.data,
+        rede_social: action.rede_social,
+        tipo: action.tipo,
+        url: action.url,
+        status
+      };
+    });
+  
+    return res.status(200).json(formattedData);
+  }  
+
+  try {
+    const historico = await ActionHistory
+      .find({ user: usuario._id, acao_validada: { $ne: "pulada" } })
+      .sort({ data: -1 });
+
+    const formattedData = historico.map(action => {
+      let status;
+      if (action.acao_validada === "valida") status = "Válida";
+      else if (action.acao_validada === "invalida") status = "Inválida";
+      else status = "Pendente";
+
+      return {
+        nome_usuario: action.nome_usuario,
+        quantidade_pontos: action.quantidade_pontos,
+        data: action.data,
+        rede_social: action.rede_social,
+        tipo: action.tipo,
+        url: action.url,
+        status
+      };
+    });
+    
+    return res.status(200).json(formattedData);
+  } catch (error) {
+    console.error("💥 Erro em /historico_acoes:", error);
+    return res.status(500).json({ error: "Erro ao buscar histórico de ações." });
+  }
+});
+
 export default router;
