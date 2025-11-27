@@ -1,35 +1,44 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import router from "./handler.js";
+import { logToFile } from "./logger.js";
+
+// Corrige caminhos dos arquivos
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(express.json());
 
-// Corrigir path base (porque estamos dentro de /app/api/)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Caminho da raiz do projeto
-const ROOT = path.join(__dirname, "..");   // volta de /api para /app
-
-// Servir arquivos estáticos da raiz
-app.use(express.static(ROOT));
-
-// Rotas da API
-app.use("/api", router);
-
-// Página de logs
-app.get("/logs", (req, res) => {
-  res.sendFile(path.join(ROOT, "logs.html"));
-});
-
-// Página inicial (corrige o erro ENOENT)
+// Serve index.html
 app.get("/", (req, res) => {
-  res.sendFile(path.join(ROOT, "index.html"));
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// Inicia servidor
-app.listen(PORT, () =>
-  console.log(`🚀 Servidor rodando na porta ${PORT}`)
-);
+// Serve logs.html
+app.get("/logs", (req, res) => {
+  res.sendFile(path.join(__dirname, "logs.html"));
+});
+
+// Endpoint que retorna os logs
+app.get("/api/logs", (req, res) => {
+  const logPath = path.join(__dirname, "logs.txt");
+
+  // Garante que o arquivo exista
+  fs.access(logPath, fs.constants.F_OK, (err) => {
+    if (err) {
+      return res.json([]);
+    }
+    const logs = fs.readFileSync(logPath, "utf8").trim().split("\n");
+    res.json(logs.reverse());
+  });
+});
+
+// Qualquer outra rota passa para handler.js (se usar)
+app.use("/api", async (req, res) => {
+  const { default: handler } = await import("./handler.js");
+  return handler(req, res);
+});
+
+// Porta Railway / fallback local
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Servidor rodando na porta " + PORT));
