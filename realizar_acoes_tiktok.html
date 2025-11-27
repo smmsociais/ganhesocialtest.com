@@ -777,7 +777,6 @@
     <!-- Menu Overlay para Mobile -->
     <div class="menu-overlay" id="menuOverlay"></div>
 
-    <select id="accountSelect"></select>
 
     <script>
         // O restante do JavaScript permanece exatamente igual
@@ -862,67 +861,6 @@
                 actionContent.style.display = "none";
             }
         }
-
-async function loadAccountsIntoSelector() {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    console.warn("Token ausente — não será possível carregar contas");
-    return;
-  }
-
-  try {
-    // Ajuste a URL se sua rota for diferente (ex: /api/user-info, /api/me, etc.)
-    const res = await fetch(`/api/user-info?token=${encodeURIComponent(token)}`);
-    if (!res.ok) throw new Error("Erro ao buscar usuário: " + res.status);
-    const user = await res.json();
-
-    const contas = user.contas || [];
-    const select = document.getElementById("accountSelect");
-    select.innerHTML = "";
-
-    // Filtra contas ativas e da rede TikTok (case-insensitive)
-    const contasTikTok = contas.filter(c => {
-      const rede = (c.rede || "").toString().toLowerCase();
-      const status = (c.status || "").toString().toLowerCase();
-      return rede === "tiktok" && status === "ativa";
-    });
-
-    if (contasTikTok.length === 0) {
-      const opt = document.createElement("option");
-      opt.value = "";
-      opt.textContent = "Nenhuma conta TikTok disponível";
-      select.appendChild(opt);
-      return;
-    }
-
-    contasTikTok.forEach(c => {
-      // compatibilidade com _id que pode vir { $oid: '...' } ou string
-      let id = c._id;
-      if (id && typeof id === "object" && id.$oid) id = id.$oid;
-      if (!id) id = c.id || "";
-
-      const opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = c.nome_usuario ? `${c.nome_usuario}` : id;
-      select.appendChild(opt);
-    });
-
-    // seleciona valor salvo anteriormente (se existir)
-    const saved = localStorage.getItem("id_conta");
-    if (saved) select.value = saved;
-
-    // quando usuário muda conta, salva no localStorage
-    select.addEventListener("change", (e) => {
-      localStorage.setItem("id_conta", e.target.value);
-    });
-
-  } catch (err) {
-    console.error("Falha ao carregar contas:", err);
-  }
-}
-
-// chama ao carregar a página
-loadAccountsIntoSelector();
 
         async function bindAccount() {
             const selectedAccount = document.getElementById("accountSelect").value?.trim();
@@ -1398,43 +1336,61 @@ loadAccountsIntoSelector();
             } catch (error) {
             }
         }
-        async function loadAccounts() {
-            try {
-                const token = localStorage.getItem("token");
-                if (!token) {
-                    throw new Error("Token não encontrado. Faça login novamente.");
-                }
-
-                const response = await fetch("https://ganhesocialtest.com/api/contas_tiktok", {
-                    method: "GET",
-                    headers: {
-                        "Authorization": `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error("Erro ao carregar contas");
-                }
-
-                const accounts = await response.json();
-
-                if (!Array.isArray(accounts)) {
-                    throw new Error("Formato de dados inválido");
-                }
-
-                const accountSelect = document.getElementById("accountSelect");
-                accountSelect.innerHTML = '<option value="" disabled selected hidden>Selecione uma conta</option>';
-
-                accounts.forEach((account) => {
-                    const option = document.createElement("option");
-                    option.value = account.nomeConta;
-                    option.textContent = account.nomeConta;
-                    accountSelect.appendChild(option);
-                });
-            } catch (error) {
-                console.error("Erro ao carregar contas:", error);
-            }
+async function loadAccounts() {
+    try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            throw new Error("Token não encontrado. Faça login novamente.");
         }
+
+        const response = await fetch("https://ganhesocialtest.com/api/contas_tiktok", {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error("Erro ao carregar contas: " + response.status);
+        }
+
+        const accounts = await response.json();
+
+        console.log("contas retornadas da API:", accounts); // útil para debug
+
+        if (!Array.isArray(accounts)) {
+            throw new Error("Formato de dados inválido");
+        }
+
+        const accountSelect = document.getElementById("accountSelect");
+        accountSelect.innerHTML = '<option value="" disabled selected hidden>Selecione uma conta</option>';
+        accountSelect.disabled = false;
+
+        if (accounts.length === 0) {
+            // opção informativa quando não há contas
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "Nenhuma conta TikTok ativa encontrada";
+            option.disabled = true;
+            accountSelect.appendChild(option);
+            return;
+        }
+
+        accounts.forEach((account) => {
+            // suporta ambos os formatos: nome_usuario (DB novo) ou nomeConta (compatibilidade)
+            const nome = account.nome_usuario ?? account.nomeConta ?? account.usuario?.nome ?? "";
+
+            if (!nome) return; // ignora entradas inválidas
+
+            const option = document.createElement("option");
+            option.value = nome;
+            option.textContent = nome;
+            accountSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Erro ao carregar contas:", error);
+    }
+}
 
         async function salvarAcaoNoBanco({
             nome_usuario,
