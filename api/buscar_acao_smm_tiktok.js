@@ -37,11 +37,12 @@ const handler = async (req, res) => {
     // ---------------------------------------------------------
     // 🔍 BUSCAR APENAS PEDIDOS DO TIKTOK
     // ---------------------------------------------------------
-    const query = {
-      quantidade: { $gt: 0 },
-      status: { $in: ["pendente", "reservada"] },
-      rede: "tiktok"  // 🔥 AQUI filtrando somente TikTok
-    };
+const query = {
+  quantidade: { $gt: 0 },
+  status: { $in: ["pendente", "reservada"] },
+  // case-insensitive match para rede (tiktok, TikTok, TIKTOK, etc.)
+  rede: { $regex: /^tiktok$/i }
+};
 
     if (tipo === "seguir_curtir") {
       query.tipo = { $in: ["seguir", "curtir"] };
