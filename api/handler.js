@@ -271,4 +271,65 @@ if (req.method !== "GET") {
   }
 });
 
+// Rota: /api/tiktok/get_user
+router.get("/tiktok/get_user", async (req, res) => {
+  await connectDB();
+  let { token, nome_usuario } = req.query;
+
+  if (!token || !nome_usuario) {
+    return res.status(400).json({ error: "Os parâmetros 'token' e 'nome_usuario' são obrigatórios." });
+  }
+
+  nome_usuario = nome_usuario.trim().toLowerCase();
+
+  try {
+    // Verifica usuário pelo token
+    const usuario = await User.findOne({ token });
+    if (!usuario) {
+      return res.status(403).json({ error: "Acesso negado. Token inválido." });
+    }
+
+    // Verifica se essa conta já está vinculada a outro usuário
+    const contaJaRegistrada = await User.findOne({
+      "contas.nome_usuario": nome_usuario,
+      token: { $ne: token }
+    });
+
+    if (contaJaRegistrada) {
+      return res.status(200).json({
+        status: "fail",
+        message: "Essa conta TikTok já está vinculada a outro usuário."
+      });
+    }
+
+    // PROCURAR conta IGUAL pelo nome_usuario E PELA REDE "TikTok"
+    const contaIndex = usuario.contas.findIndex(
+      c => c.nome_usuario === nome_usuario && c.rede === "TikTok"
+    );
+
+    if (contaIndex !== -1) {
+      // Conta já existe → reativar e garantir rede="TikTok"
+      usuario.contas[contaIndex].status = "ativa";
+      usuario.contas[contaIndex].rede = "TikTok";
+    } else {
+      // Criar nova conta com rede TikTok
+      usuario.contas.push({
+        nome_usuario,
+        status: "ativa",
+        rede: "TikTok"
+      });
+    }
+
+    await usuario.save();
+
+    return res.status(200).json({
+      status: "success",
+      nome_usuario
+    });
+
+  } catch (error) {
+    console.error("Erro ao processar requisição:", error);
+    return res.status(500).json({ error: "Erro interno ao processar requisição." });
+  }
+});
 export default router;
