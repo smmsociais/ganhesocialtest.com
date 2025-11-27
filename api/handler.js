@@ -52,7 +52,7 @@ router.get("/get_saldo", async (req, res) => {
 });
 
 // Rota: /api/contas_instagram (GET, POST, DELETE)
-router.get("/api/contas_instagram", async (req, res) => {
+router.get("/contas_instagram", async (req, res) => {
     try {
         await connectDB();
 
