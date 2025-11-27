@@ -15,7 +15,6 @@ const router = express.Router();
 
 // ROTA: /api/get_saldo (GET)
 router.get("/get_saldo", async (req, res) => {
-    logToFile("➡️ /get_saldo chamado com token: " + req.query.token);
   try {
     await connectDB();
 
