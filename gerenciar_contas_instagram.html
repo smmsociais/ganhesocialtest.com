@@ -548,108 +548,103 @@
             }, 5000);
         }
 
-        async function loadAccounts() {
-            const token = localStorage.getItem("token");
-            const messageBox = document.getElementById('messageBox');
-            const accountList = document.getElementById("accountList");
-            const noAccounts = document.getElementById("no-accounts");
-            const loadingItem = document.getElementById('loading-item');
+async function loadAccounts() {
+    const token = localStorage.getItem("token");
+    const accountList = document.getElementById("accountList");
+    const noAccounts = document.getElementById("no-accounts");
+    const loadingItem = document.getElementById('loading-item');
 
-            if (messageBox) messageBox.style.display = 'none';
-            if (loadingItem) loadingItem.style.display = 'flex';
-            if (noAccounts) noAccounts.style.display = 'none';
+    if (loadingItem) loadingItem.style.display = 'flex';
+    if (noAccounts) noAccounts.style.display = 'none';
 
-            if (!token) {
-                showMessage("Você precisa estar logado para gerenciar contas.", true);
-                return;
-            }
+    if (!token) {
+        showMessage("Você precisa estar logado para gerenciar contas.", true);
+        return;
+    }
 
-            try {
-                const response = await fetch("https://ganhesocialtest.com/api/contas_instagram", {
-                    method: "GET",
-                    headers: {
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    }
-                });
+    try {
+        const response = await fetch("/api/contas_instagram", {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
 
-                const accounts = await response.json();
+        const accounts = await response.json();
 
-                if (!response.ok) {
-                    throw new Error(accounts.error || "Erro ao carregar contas");
-                }
+        if (!response.ok) {
+            throw new Error(accounts.error || "Erro ao carregar contas");
+        }
 
-                if (accountList) accountList.innerHTML = "";
+        accountList.innerHTML = "";
 
-                if (!Array.isArray(accounts)) {
-                    throw new Error("Dados retornados não são uma lista de contas.");
-                }
+        if (!Array.isArray(accounts) || accounts.length === 0) {
+            if (noAccounts) noAccounts.style.display = 'flex';
+            return;
+        }
 
-                if (accounts.length === 0) {
-                    if (noAccounts) noAccounts.style.display = 'flex';
-                    return;
-                }
-
-                accounts.forEach((account) => {
-                    const li = document.createElement("li");
-                    li.className = "account-item fade-in";
-                    li.innerHTML = `
-                <span class="account-name">${account.nonome_usuario}</span>
-                <button class="btn btn-danger" onclick="disableAccount('${account.nonome_usuario}', this)">
+        accounts.forEach((account) => {
+            const displayName = account.nome_usuario || account.nomeConta || account.nomeUsuario || "";
+            const safeName = (displayName || "").replace(/'/g, "\\'");
+            const li = document.createElement("li");
+            li.className = "account-item fade-in";
+            li.innerHTML = `
+                <span class="account-name">${displayName}</span>
+                <button class="btn btn-danger" data-account="${displayName}" onclick="disableAccount('${safeName}', this)">
                     <i class="fas fa-ban"></i> Desativar
                 </button>
             `;
-                    if (accountList) accountList.appendChild(li);
-                });
+            accountList.appendChild(li);
+        });
 
-            } catch (error) {
-                console.error("Erro ao carregar contas:", error);
-                showMessage(error.message || "Erro ao carregar contas. Tente novamente.", true);
-            } finally {
-                if (loadingItem) loadingItem.style.display = 'none';
-            }
+    } catch (error) {
+        console.error("Erro ao carregar contas:", error);
+        showMessage(error.message || "Erro ao carregar contas. Tente novamente.", true);
+    } finally {
+        if (loadingItem) loadingItem.style.display = 'none';
+    }
+}
+
+async function disableAccount(accountName, button) {
+    const token = localStorage.getItem("token");
+    if (!token) { window.location.href = "/login"; return; }
+
+    button.disabled = true;
+    const originalHtml = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando';
+
+    try {
+        // Tenta primeiro nome_usuario (compat com DB atual)
+        const url = `/api/contas_instagram?nome_usuario=${encodeURIComponent(accountName)}`;
+        const response = await fetch(url, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            // se falhar, tenta com nomeConta (compat com rotas antigas)
+            const fallbackUrl = `/api/contas_instagram?nomeConta=${encodeURIComponent(accountName)}`;
+            const resp2 = await fetch(fallbackUrl, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }
+            });
+            const result2 = await resp2.json();
+            if (!resp2.ok) throw new Error(result2.error || "Erro ao desativar conta.");
         }
-        async function disableAccount(accountName, button) {
-            const token = localStorage.getItem("token");
 
-            if (!token) {
-                window.location.href = "login";
-                return;
-            }
+        showMessage(`Conta "${accountName}" desativada. Para reativar, adicione novamente.`);
 
-            button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando';
+        const listItem = button.parentElement;
+        listItem.classList.add('fade-out');
+        setTimeout(() => listItem.remove(), 300);
 
-            try {
-                const url = `https://ganhesocialtest.com/api/contas_instagram?nomeConta=${encodeURIComponent(accountName)}`;
-
-                const response = await fetch(url, {
-                    method: "DELETE",
-                    headers: {
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    }
-                });
-
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.error || "Erro ao desativar conta.");
-                }
-                showMessage(`Conta "${accountName}" desativada. Para reativar, adicione novamente.`);
-
-                // Remove a conta da interface
-                const listItem = button.parentElement;
-                listItem.classList.add('fade-out');
-                setTimeout(() => listItem.remove(), 300);
-
-            } catch (error) {
-                console.error("❌ Erro ao desativar conta:", error);
-                showMessage(error.message || "Erro ao desativar conta. Tente novamente.", true);
-                button.disabled = false;
-                button.innerHTML = '<i class="fas fa-ban"></i> Desativar';
-            }
-        }
+    } catch (error) {
+        console.error("❌ Erro ao desativar conta:", error);
+        showMessage(error.message || "Erro ao desativar conta. Tente novamente.", true);
+        button.disabled = false;
+        button.innerHTML = originalHtml;
+    }
+}
 
         function logout() {
             localStorage.removeItem("token");
