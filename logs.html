@@ -107,7 +107,7 @@
 <div id="container">Carregando logs...</div>
 
 <footer>
-    Atualiza automaticamente a cada 10 segundos
+    Atualização automática a cada 10s
 </footer>
 
 <script>
@@ -118,8 +118,8 @@ async function carregarLogs() {
 
         const container = document.getElementById("container");
         const filtro = document.getElementById("searchInput").value.toLowerCase();
-        
-        const linhas = texto.split("\n").reverse(); // logs mais novos primeiro
+
+        const linhas = texto.split("\n").reverse();
         container.innerHTML = "";
 
         linhas.forEach(linha => {
@@ -148,12 +148,9 @@ async function carregarLogs() {
 document.getElementById("refreshBtn").onclick = carregarLogs;
 document.getElementById("searchInput").oninput = carregarLogs;
 
-// Atualiza a cada 10s
 setInterval(carregarLogs, 10000);
 
-// Primeira carga
 carregarLogs();
 </script>
-
 </body>
 </html>
