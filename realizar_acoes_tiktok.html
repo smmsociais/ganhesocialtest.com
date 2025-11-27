@@ -1244,8 +1244,6 @@
                             "Authorization": `Bearer ${localStorage.getItem('token')}`
                         },
                         body: JSON.stringify({
-                            id_conta: localStorage.getItem("id_conta"),
-                            id_pedido: currentActionData.id_pedido,
                         })
                     });
 
@@ -1260,12 +1258,9 @@
 
                 await registrarAcaoPendente({
                     nome_usuario: selectedAccount,
-                    id_pedido: currentActionData.id_pedido,
-                    id_conta: localStorage.getItem("id_conta"),
                     url_dir: currentActionData.url_dir,
                     tipo_acao: currentActionData.tipo_acao,
-                    quantidade_pontos: Number(currentActionData.quantidade_pontos),
-                    valor_confirmacao: parseFloat(confirmData.valor),
+                    quantidade_pontos: Number(currentActionData.quantidade_pontos)
                 });
 
                 tentativasSemAcoes = 0;
@@ -1315,8 +1310,6 @@
                     },
                     body: JSON.stringify({
                         token,
-                        id_pedido: currentActionData?.id_pedido,
-                        id_conta,
                         nome_usuario,
                         url_dir,
                         quantidade_pontos,
@@ -1394,11 +1387,8 @@
 
         async function salvarAcaoNoBanco({
             nome_usuario,
-            id_pedido,
-            id_conta,
             url_dir,
-            acao_validada,
-            valor_confirmacao,
+            status,
             quantidade_pontos,
             tipo_acao
         }) {
@@ -1412,13 +1402,10 @@
 async function registrarAcaoPendente(acao) {
     try {
         const payload = {
-            id_conta: acao.id_conta,
-            id_pedido: acao.id_pedido,
             nome_usuario: acao.nome_usuario,
             url: acao.url_dir,         // ← renomeado correto
             tipo_acao: acao.tipo_acao,
             quantidade_pontos: acao.quantidade_pontos,
-            unique_id: acao.unique_id  // ← obrigatório!
         };
 
         console.log("➡ Enviando payload:", payload);
