@@ -777,6 +777,7 @@
     <!-- Menu Overlay para Mobile -->
     <div class="menu-overlay" id="menuOverlay"></div>
 
+    <select id="accountSelect"></select>
 
     <script>
         // O restante do JavaScript permanece exatamente igual
@@ -861,6 +862,67 @@
                 actionContent.style.display = "none";
             }
         }
+
+async function loadAccountsIntoSelector() {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    console.warn("Token ausente — não será possível carregar contas");
+    return;
+  }
+
+  try {
+    // Ajuste a URL se sua rota for diferente (ex: /api/user-info, /api/me, etc.)
+    const res = await fetch(`/api/user-info?token=${encodeURIComponent(token)}`);
+    if (!res.ok) throw new Error("Erro ao buscar usuário: " + res.status);
+    const user = await res.json();
+
+    const contas = user.contas || [];
+    const select = document.getElementById("accountSelect");
+    select.innerHTML = "";
+
+    // Filtra contas ativas e da rede TikTok (case-insensitive)
+    const contasTikTok = contas.filter(c => {
+      const rede = (c.rede || "").toString().toLowerCase();
+      const status = (c.status || "").toString().toLowerCase();
+      return rede === "tiktok" && status === "ativa";
+    });
+
+    if (contasTikTok.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "Nenhuma conta TikTok disponível";
+      select.appendChild(opt);
+      return;
+    }
+
+    contasTikTok.forEach(c => {
+      // compatibilidade com _id que pode vir { $oid: '...' } ou string
+      let id = c._id;
+      if (id && typeof id === "object" && id.$oid) id = id.$oid;
+      if (!id) id = c.id || "";
+
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = c.nome_usuario ? `${c.nome_usuario}` : id;
+      select.appendChild(opt);
+    });
+
+    // seleciona valor salvo anteriormente (se existir)
+    const saved = localStorage.getItem("id_conta");
+    if (saved) select.value = saved;
+
+    // quando usuário muda conta, salva no localStorage
+    select.addEventListener("change", (e) => {
+      localStorage.setItem("id_conta", e.target.value);
+    });
+
+  } catch (err) {
+    console.error("Falha ao carregar contas:", err);
+  }
+}
+
+// chama ao carregar a página
+loadAccountsIntoSelector();
 
         async function bindAccount() {
             const selectedAccount = document.getElementById("accountSelect").value?.trim();
