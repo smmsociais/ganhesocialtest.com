@@ -3,36 +3,44 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 
-// Diretório atual
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
 app.use(express.json());
 
-// Função para logar em arquivo
-export function logToFile(msg) {
-  const line = `[${new Date().toISOString()}] ${msg}\n`;
-  fs.appendFile("/app/logs.txt", line, () => {});
+function logToFile(msg) {
+    const data = `[${new Date().toISOString()}] ${msg}\n`;
+    fs.appendFile("/app/logs.txt", data, () => {});
 }
 
-// Rotas da API
+// Caminhos
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// ⬇️ 1) ROTA /logs **ANTES DE TUDO**
+app.get("/logs", (req, res) => {
+    res.sendFile(path.join(__dirname, "logs.html"));
+});
+
+// ⬇️ 2) ROTA /api/logs (para o painel ler os logs)
+app.get("/api/logs", (req, res) => {
+    fs.readFile("/app/logs.txt", "utf8", (err, data) => {
+        if (err) return res.json({ logs: "Nenhum log encontrado ainda." });
+        res.json({ logs: data.split("\n").filter(l => l.trim() !== "") });
+    });
+});
+
+// ⬇️ 3) IMPORTANDO SUAS ROTAS DA API
 import handler from "./api/handler.js";
 app.use("/api", handler);
 
-// SERVIR ARQUIVOS HTML
+// ⬇️ 4) SERVIR FRONTEND
 app.use(express.static(__dirname));
 
-// 🔥 SERVIR PÁGINA DE LOGS (PRECISA VIR ANTES DO app.get("*"))
-app.get("/logs", (req, res) => {
-  res.sendFile(path.join(__dirname, "logs.html"));
-});
-
-// FALLBACK — qualquer rota que não seja /api/... ou arquivo real → index.html
+// ⬇️ 5) CATCH-ALL (DEVE SER O ÚLTIMO!)
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+    res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// Subir servidor
+// INICIAR SERVIDOR
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("🔥 Servidor rodando na porta " + PORT));
+app.listen(PORT, () =>
+  console.log("🔥 Servidor rodando na porta " + PORT)
+);
