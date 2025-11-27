@@ -51,7 +51,6 @@ router.get("/get_saldo", async (req, res) => {
   }
 });
 
-
 // Rota: /api/historico_acoes (GET)
 router.get("/historico_acoes", async (req, res) => {
 if (req.method !== "GET") {
@@ -190,4 +189,254 @@ router.get("/tiktok/get_user", async (req, res) => {
     return res.status(500).json({ error: "Erro interno ao processar requisição." });
   }
 });
+
+// ROTA: /api/tiktok/get_action (GET)
+router.get("/tiktok/get_action", async (req, res) => {
+  const { nome_usuario, token, tipo, debug } = req.query;
+
+  if (!nome_usuario || !token) {
+    return res.status(400).json({ error: "Parâmetros 'nome_usuario' e 'token' são obrigatórios" });
+  }
+
+  try {
+    await connectDB();
+
+    console.log("[GET_ACTION] Requisição:", {
+      nome_usuario,
+      token: token ? "***" + token.slice(-6) : null,
+      tipo,
+      debug: !!debug
+    });
+
+    // validar usuário via token
+    const usuario = await User.findOne({ token });
+    if (!usuario) {
+      console.log("[GET_ACTION] Token inválido");
+      return res.status(401).json({ error: "Token inválido" });
+    }
+
+    // garantir que o token corresponde à conta vinculada
+    const contaVinculada = Array.isArray(usuario.contas) &&
+      usuario.contas.some(c => c.nome_usuario === nome_usuario);
+
+    if (!contaVinculada) {
+      console.log("[GET_ACTION] Token não pertence à conta solicitada:", nome_usuario);
+      return res.status(401).json({ error: "Token não pertence à conta solicitada" });
+    }
+
+    // normalizar tipo
+    const tipoNormalized = typeof tipo === 'string' ? String(tipo).trim().toLowerCase() : null;
+    let tipoBanco;
+
+    if (tipo === "2" || tipoNormalized === "2" || tipoNormalized === "curtir") {
+      tipoBanco = "curtir";
+    } else if (tipo === "3" || tipoNormalized === "3" || tipoNormalized === "seguir_curtir") {
+      tipoBanco = { $in: ["seguir", "curtir"] };
+    } else {
+      tipoBanco = "seguir";
+    }
+
+    // query base
+    const query = {
+      quantidade: { $gt: 0 },
+      status: { $in: ["pendente", "reservada"] },
+      rede: { $regex: /^tiktok$/i }
+    };
+
+    query.tipo = tipoBanco;
+
+    const totalMatching = await Pedido.countDocuments(query);
+    console.log(`[GET_ACTION] Pedidos que batem com query inicial: ${totalMatching}`);
+
+    const pedidos = await Pedido.find(query).sort({ dataCriacao: -1 }).lean();
+    console.log(`[GET_ACTION] ${pedidos.length} pedidos encontrados (após find)`);
+
+    if (debug === "1") {
+      return res.status(200).json({
+        debug: true,
+        totalMatching,
+        sampleQuery: query,
+        pedidosSample: pedidos.slice(0, 6)
+      });
+    }
+
+    // varrer pedidos
+    for (const pedido of pedidos) {
+      const id_pedido = pedido._id;
+      const idPedidoStr = String(id_pedido);
+
+      const quantidadePedido = Number(pedido.quantidade || 0);
+      if (isNaN(quantidadePedido) || quantidadePedido <= 0) continue;
+
+      // total validadas
+      const validadas = await ActionHistory.countDocuments({
+        $or: [{ id_pedido }, { id_action: idPedidoStr }],
+        status: "valida"
+      });
+
+      if (validadas >= quantidadePedido) continue;
+
+      // total feitas (pendente + valida)
+      const feitas = await ActionHistory.countDocuments({
+        $or: [{ id_pedido }, { id_action: idPedidoStr }],
+        status: { $in: ["pendente", "valida"] }
+      });
+
+      if (feitas >= quantidadePedido) continue;
+
+      // verificar se esta conta pulou
+      const pulada = await ActionHistory.findOne({
+        $or: [{ id_pedido }, { id_action: idPedidoStr }],
+        nome_usuario,
+        status: "pulada"
+      });
+
+      if (pulada) continue;
+
+      // verificar se esta conta já fez
+      const jaFez = await ActionHistory.findOne({
+        $or: [{ id_pedido }, { id_action: idPedidoStr }],
+        nome_usuario,
+        status: { $in: ["pendente", "valida"] }
+      });
+
+      if (jaFez) continue;
+
+      // extrair nome do perfil alvo
+      let nomeUsuarioAlvo = "";
+      if (typeof pedido.link === "string") {
+        if (pedido.link.includes("@")) {
+          nomeUsuarioAlvo = pedido.link.split("@")[1].split(/[/?#]/)[0];
+        } else {
+          const m = pedido.link.match(/tiktok\.com\/@?([^\/?#&]+)/i);
+          if (m && m[1]) nomeUsuarioAlvo = m[1].replace(/\/$/, "");
+        }
+      }
+
+      console.log(`✅ Ação disponível para ${nome_usuario}: ${nomeUsuarioAlvo || '<sem-usuario>'}`);
+
+      const valorFinal = pedido.valor
+        ? String(pedido.valor)
+        : (pedido.tipo === "curtir" ? "0.001" : "0.006");
+
+      const tipoAcao = pedido.tipo;
+
+      // 🔥 DIFERENCIAÇÃO SEGUIR vs CURTIR
+      if (tipoAcao === "seguir") {
+        return res.status(200).json({
+          status: "success",
+          id_action: idPedidoStr,
+          url: pedido.link,
+          usuario: nomeUsuarioAlvo, // ← só para seguir
+          tipo_acao: tipoAcao,
+          valor: valorFinal
+        });
+      } else {
+        return res.status(200).json({
+          status: "success",
+          id_action: idPedidoStr,
+          url: pedido.link,
+          tipo_acao: tipoAcao,
+          valor: valorFinal
+        });
+      }
+    }
+
+    console.log("[GET_ACTION] Nenhuma ação disponível");
+    return res.status(200).json({ status: "fail", message: "nenhuma ação disponível no momento" });
+
+  } catch (err) {
+    console.error("[GET_ACTION] Erro ao buscar ação:", err);
+    return res.status(500).json({ error: "Erro interno ao buscar ação" });
+  }
+});
+
+// ROTA: /api/tiktok/confirm_action (POST)
+router.get("/tiktok/confirm_action", async (req, res) => {
+  await connectDB();
+
+  const { token, id_action, nome_usuario } = req.body;
+
+  if (!token || !id_action || !nome_usuario) {
+    return res.status(400).json({
+      error: "Parâmetros 'token', 'id_action' e 'nome_usuario' são obrigatórios."
+    });
+  }
+
+  try {
+    // 🔐 Validar token
+    const usuario = await User.findOne({ token });
+    if (!usuario) {
+      return res.status(403).json({ error: "Acesso negado. Token inválido." });
+    }
+
+    console.log("🧩 id_action recebido:", id_action);
+
+    // Normalizar tipo
+    function normalizarTipo(tipo) {
+      const mapa = {
+        seguir: "seguir",
+        seguiram: "seguir",
+        Seguir: "seguir",
+        curtidas: "curtir",
+        curtir: "curtir",
+        Curtir: "curtir",
+      };
+      return mapa[tipo?.toLowerCase?.()] || "seguir";
+    }
+
+    // 🔍 Buscar pedido local
+    const pedidoLocal = await Pedido.findById(id_action);
+
+    if (!pedidoLocal) {
+      console.log("❌ Pedido local não encontrado:", id_action);
+      return res.status(404).json({ error: "Ação não encontrada." });
+    }
+
+    console.log("📦 Confirmando ação local:", id_action);
+
+    // Definir tipo da ação
+    const tipo_acao = normalizarTipo(
+      pedidoLocal.tipo_acao ||
+      pedidoLocal.tipo
+    );
+
+    // Valor da ação
+    const valorFinal = tipo_acao === "curtir" ? 0.001 : 0.006;
+
+    // URL do perfil alvo
+    const url_dir = pedidoLocal.link;
+
+    // Criar registro no histórico
+    const newAction = new ActionHistory({
+      user: usuario._id,
+      token,
+      nome_usuario,
+      tipo_acao,
+      tipo: tipo_acao,
+      quantidade_pontos: valorFinal,
+      rede_social: "TikTok",
+      url: url_dir,            // ✔ CORRIGIDO
+      id_action,
+      status: "pendente",
+      data: new Date(),
+    });
+
+    const saved = await newAction.save();
+
+    usuario.historico_acoes.push(saved._id);
+    await usuario.save();
+
+    return res.status(200).json({
+      status: "success",
+      message: "Ação confirmada com sucesso.",
+      valor: valorFinal,
+    });
+
+  } catch (error) {
+    console.error("💥 Erro ao processar requisição:", error.message);
+    return res.status(500).json({ error: "Erro interno ao processar requisição." });
+  }
+});
+
 export default router;
