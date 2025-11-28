@@ -1247,10 +1247,10 @@ async function skipAction() {
         const url = document.getElementById("actionUrl").href;
         const token = localStorage.getItem("token");
 
-        // ✔ Corrigido: mesmo esquema do confirmAction
         const id_pedido =
             currentActionData?.id_pedido ??
             currentActionData?.id_action ??
+            currentActionData?.valor ??
             null;
 
         const tipo_acao =
@@ -1287,6 +1287,7 @@ async function skipAction() {
         console.error("Erro ao pular ação:", error);
     }
 }
+
     async function loadAccounts() {
             try {
                 const token = localStorage.getItem("token");
