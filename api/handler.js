@@ -1976,15 +1976,15 @@ router.post("/registrar_acao_pendente", async (req, res) => {
     nome_usuario,
     url,
     tipo_acao,
-    quantidade_pontos,
+    valor,
   } = req.body;
 
-  if (!nome_usuario || !tipo_acao || quantidade_pontos == null) {
+  if (!nome_usuario || !tipo_acao || valor == null) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes." });
   }
 
   try {
-    const idPedidoStr = id_pedido.toString();
+    const idPedidoStr = id_action.toString();
 
     // === Detectar Rede Social ===
     let redeFinal = "TikTok";
@@ -1999,7 +1999,7 @@ router.post("/registrar_acao_pendente", async (req, res) => {
     }
 
     // === Cálculo de valores ===
-    const pontos = parseFloat(quantidade_pontos);
+    const pontos = parseFloat(valor);
     const valorBruto = pontos / 1000;
     const valorDescontado = (valorBruto > 0.003) ? valorBruto - 0.001 : valorBruto;
     const valorFinalCalculado = Math.min(Math.max(valorDescontado, 0.003), 0.006).toFixed(3);
@@ -2013,9 +2013,9 @@ router.post("/registrar_acao_pendente", async (req, res) => {
       id_action: idPedidoStr,
       url,
       tipo_acao,
-      quantidade_pontos,
+      valor,
       tipo: tipoAcaoFinal,
-      rede_social: redeFinal,     // <---- AQUI AGORA ESTÁ CORRETO
+      rede_social: redeFinal,
       status: "pendente",
       data: new Date()
     });
