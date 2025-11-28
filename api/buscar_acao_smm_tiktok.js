@@ -1,4 +1,4 @@
-// api/buscar_acao_smm_tiktok.js (corrigido)
+// api/buscar_acao_smm_tiktok.js (corrigido v2)
 import connectDB from './db.js';
 import mongoose from 'mongoose';
 import { User, ActionHistory, Pedido } from "./schema.js";
@@ -30,6 +30,7 @@ const handler = async (req, res) => {
     }
 
     // Se foi passado nome_usuario, validar que pertence ao usuário (token)
+    // Caso não seja passado, tentamos inferir quando o usuário tem apenas 1 conta vinculada.
     let contaSolicitante = null;
     if (nome_usuario) {
       const nomeLower = String(nome_usuario).trim().toLowerCase();
@@ -41,6 +42,15 @@ const handler = async (req, res) => {
         return res.status(401).json({ error: "Conta não vinculada ao token" });
       }
       contaSolicitante = String(nome_usuario).trim();
+    } else {
+      // inferir se o usuário tem exatamente 1 conta vinculada
+      if (Array.isArray(usuario.contas) && usuario.contas.length === 1) {
+        contaSolicitante = String(usuario.contas[0].nome_usuario ?? usuario.contas[0].nomeConta ?? '').trim();
+        console.log(`ℹ Inferido nome_usuario = ${contaSolicitante} (1 conta encontrada)`);
+      } else {
+        // se não podemos inferir com segurança, pedir que o cliente passe o nome
+        return res.status(400).json({ error: "nome_usuario é obrigatório quando o usuário tem múltiplas contas" });
+      }
     }
 
     // Mapeamento dos tipos
@@ -64,8 +74,8 @@ const handler = async (req, res) => {
     console.log(`📦 ${pedidos.length} pedidos encontrados (TikTok)`);
 
     for (const pedido of pedidos) {
-      const id_pedido = pedido._id;
-      const idPedidoStr = String(id_pedido);
+      // NORMALIZAR o id do pedido para string — evita problemas de tipo (Number vs ObjectId vs String)
+      const idPedidoStr = String(pedido._id);
       console.log("🔍 Verificando pedido:", {
         id_pedido: idPedidoStr,
         tipo: pedido.tipo,
@@ -79,7 +89,7 @@ const handler = async (req, res) => {
       // 1) Total validadas (somente 'valida')
       const validadas = await ActionHistory.countDocuments({
         $and: [
-          { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
+          { $or: [{ id_pedido: idPedidoStr }, { id_action: idPedidoStr }] },
           { $or: [{ status: "valida" }, { acao_validada: "valida" }] }
         ]
       });
@@ -91,7 +101,7 @@ const handler = async (req, res) => {
       // 2) Total feitas (pendente + reservada + valida)
       const feitas = await ActionHistory.countDocuments({
         $and: [
-          { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
+          { $or: [{ id_pedido: idPedidoStr }, { id_action: idPedidoStr }] },
           { $or: [
               { status: { $in: ["pendente", "reservada", "valida"] } },
               { acao_validada: { $in: ["pendente", "reservada", "valida"] } }
@@ -106,46 +116,39 @@ const handler = async (req, res) => {
       }
 
       // 3) Verificar se a conta solicitante pulou/ja fez/reservou essa ação (quando fornecida)
-      if (contaSolicitante) {
-        const nome = contaSolicitante;
+      const nome = contaSolicitante;
 
-        // pulada?
-        const pulada = await ActionHistory.findOne({
-          $and: [
-            { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
-            { nome_usuario: nome },
-            { $or: [{ status: "pulada" }, { acao_validada: "pulada" }] }
-          ]
-        });
-        if (pulada) {
-          console.log(`🚫 Conta ${nome} pulou o pedido ${idPedidoStr}`);
-          continue;
-        }
-
-        // já fez / pendente / reservada?
-        const jaFez = await ActionHistory.findOne({
-          $and: [
-            { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
-            { nome_usuario: nome },
-            { $or: [
-                { status: { $in: ["pendente", "reservada", "valida"] } },
-                { acao_validada: { $in: ["pendente", "reservada", "valida"] } }
-              ]
-            }
-          ]
-        });
-        if (jaFez) {
-          console.log(`🚫 Conta ${nome} já fez/reservou o pedido ${idPedidoStr}`);
-          continue;
-        }
+      // pulada? (qualquer registro 'pulada' para esse pedido + conta)
+      const pulada = await ActionHistory.findOne({
+        $and: [
+          { $or: [{ id_pedido: idPedidoStr }, { id_action: idPedidoStr }] },
+          { nome_usuario: nome },
+          { $or: [{ status: "pulada" }, { acao_validada: "pulada" }] }
+        ]
+      });
+      if (pulada) {
+        console.log(`🚫 Conta ${nome} pulou o pedido ${idPedidoStr}`);
+        continue;
       }
 
-      // 4) Também verificar se o pedido foi pulado por qualquer conta? (opcional)
-      // (Já temos pulada global? Se quiser manter global, descomente abaixo)
-      // const puladaGlobal = await ActionHistory.findOne({ id_pedido, status: "pulada" });
-      // if (puladaGlobal) continue;
+      // já fez / pendente / reservada? — se existir qualquer doc para essa conta+pedido com status pendente/reservada/valida, pulamos
+      const jaFez = await ActionHistory.findOne({
+        $and: [
+          { $or: [{ id_pedido: idPedidoStr }, { id_action: idPedidoStr }] },
+          { nome_usuario: nome },
+          { $or: [
+              { status: { $in: ["pendente", "reservada", "valida"] } },
+              { acao_validada: { $in: ["pendente", "reservada", "valida"] } }
+            ]
+          }
+        ]
+      });
+      if (jaFez) {
+        console.log(`🚫 Conta ${nome} já fez/reservou o pedido ${idPedidoStr}`);
+        continue;
+      }
 
-      // 5) Extrair nome do usuário alvo do pedido
+      // 4) Extrair nome do usuário alvo do pedido
       let nomeUsuario = "";
       if (typeof pedido.link === "string") {
         if (pedido.link.includes("@")) {
@@ -174,72 +177,50 @@ const handler = async (req, res) => {
       }
       valorParaEnviar = Number(valorParaEnviar.toFixed(3));
 
-      // 6) Criar reserva para a conta solicitante (se fornecida). Se não houver conta solicitante,
-      //    apenas retorna a ação sem criar reserva (comportamento antigo).
-      if (contaSolicitante) {
-        const nome = contaSolicitante;
+      // 5) Criar reserva atômica para a conta solicitante — com filtro que normaliza id como string
+      try {
+        const filterExistente = {
+          $and: [
+            { $or: [{ id_pedido: idPedidoStr }, { id_action: idPedidoStr }] },
+            { nome_usuario: nome },
+            { $or: [
+              { status: { $in: ["reservada", "pendente", "valida"] } },
+              { acao_validada: { $in: ["reservada", "pendente", "valida"] } }
+            ] }
+          ]
+        };
 
-        // checar se já existe reserva (por segurança) — operação atômica via findOneAndUpdate+upsert
-        try {
-          const filterExistente = {
-            $and: [
-              { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
-              { nome_usuario: nome },
-              { $or: [
-                { status: { $in: ["reservada", "pendente", "valida"] } },
-                { acao_validada: { $in: ["reservada", "pendente", "valida"] } }
-              ] }
-            ]
-          };
+        const setOnInsert = {
+          user: usuario._id,
+          token: usuario.token,
+          nome_usuario: nome,
+          id_pedido: idPedidoStr,
+          id_action: idPedidoStr,
+          url: pedido.link,
+          tipo_acao: pedido.tipo,
+          quantidade_pontos: pedido.valor ?? null,
+          valor: valorParaEnviar,
+          tipo: pedido.tipo,
+          rede_social: pedido.rede,
+          status: "reservada",
+          acao_validada: "reservada",
+          data: new Date()
+        };
 
-          // Se existir um doc com status relevante, findOneAndUpdate retornará esse doc.
-          const setOnInsert = {
-            user: usuario._id,
-            token: usuario.token,
-            nome_usuario: nome,
-            id_pedido: pedido._id,
-            id_action: idPedidoStr,
-            url: pedido.link,
-            tipo_acao: pedido.tipo,
-            quantidade_pontos: pedido.valor ?? null,
-            valor: valorParaEnviar,
-            tipo: pedido.tipo,
-            rede_social: pedido.rede,
-            status: "reservada",
-            acao_validada: "reservada",
-            data: new Date()
-          };
+        // Operação atômica: se já existe um doc com a combinação (pedido X conta) e status relevante, retornará esse doc
+        const existente = await ActionHistory.findOneAndUpdate(
+          filterExistente,
+          { $setOnInsert: setOnInsert },
+          { upsert: true, new: false, setDefaultsOnInsert: true }
+        );
 
-          const existente = await ActionHistory.findOneAndUpdate(
-            filterExistente,
-            { $setOnInsert: setOnInsert },
-            { upsert: true, new: false } // new:false => retorna documento antigo se encontrado, ou null se inserido agora
-          );
-
-          if (existente) {
-            console.log(`⚠ Conta ${nome} já tem registro ativo para pedido ${idPedidoStr} — pulando.`);
-            continue;
-          }
-
-          console.log(`🔒 Reserva criada (atômica) para conta ${nome} no pedido ${idPedidoStr}`);
-
-          // retorna a ação já reservada
-          return res.json({
-            status: "ENCONTRADA",
-            nome_usuario: nomeUsuario,
-            valor: valorParaEnviar,
-            url: pedido.link,
-            tipo_acao: pedido.tipo,
-            id_pedido: pedido._id
-          });
-
-        } catch (err) {
-          console.warn("Falha ao criar reserva atômica (ignorar e tentar próximo pedido):", err);
+        if (existente) {
+          console.log(`⚠ Conta ${nome} já tem registro ativo para pedido ${idPedidoStr} — pulando.`);
           continue;
         }
 
-      } else {
-        // Sem conta solicitante: retorna sem criar reserva (compatibilidade com fluxo antigo)
+        console.log(`🔒 Reserva criada (atômica) para conta ${nome} no pedido ${idPedidoStr}`);
+
         return res.json({
           status: "ENCONTRADA",
           nome_usuario: nomeUsuario,
@@ -248,7 +229,17 @@ const handler = async (req, res) => {
           tipo_acao: pedido.tipo,
           id_pedido: pedido._id
         });
+
+      } catch (err) {
+        // Defesa em profundidade: se der erro de duplicidade no banco (E11000), interpretar como já existente
+        if (err && err.code === 11000) {
+          console.log(`⚠ Duplicate key ao criar reserva para ${nome} no pedido ${idPedidoStr} — pulando.`);
+          continue;
+        }
+        console.warn("Falha ao criar reserva atômica (ignorar e tentar próximo pedido):", err);
+        continue;
       }
+
     } // end for
 
     console.log("📭 Nenhuma ação disponível");
@@ -261,3 +252,39 @@ const handler = async (req, res) => {
 };
 
 export default handler;
+
+/*
+  NOTAS IMPORTANTES (aplique no schema):
+
+  1) Normalize sempre id_action / id_pedido como STRING ao salvar no ActionHistory — evita problemas de tipo
+     (Number vs ObjectId vs String). No trecho acima eu salvo id_pedido/id_action como string.
+
+  2) Adicione índices parciais no seu schema ActionHistory para reforçar unicidade (defesa em profundidade):
+
+     ActionHistorySchema.index(
+       { id_action: 1, nome_usuario: 1 },
+       { unique: true, partialFilterExpression: {
+           $or: [
+             { status: { $in: ["reservada","pendente","valida"] } },
+             { acao_validada: { $in: ["reservada","pendente","valida"] } }
+           ]
+         }
+       }
+     );
+
+     ActionHistorySchema.index(
+       { id_pedido: 1, nome_usuario: 1 },
+       { unique: true, partialFilterExpression: {
+           $or: [
+             { status: { $in: ["reservada","pendente","valida"] } },
+             { acao_validada: { $in: ["reservada","pendente","valida"] } }
+           ]
+         }
+       }
+     );
+
+  3) Recomendação de fluxo: exigir `nome_usuario` no cliente quando o usuário tiver mais de 1 conta vinculada.
+
+  Essas três mudanças (normalizar ids como string, usar filtro atômico + upsert, adicionar índices únicos parciais)
+  devem garantir que UMA conta não consiga reservar a mesma ação mais de uma vez, mesmo quando `pedido.quantidade` > 1.
+*/
