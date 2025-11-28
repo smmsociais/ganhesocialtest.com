@@ -863,6 +863,92 @@
 
 // === bindAccount() — grava nome_usuario no localStorage e dispara fetch ===
 async function bindAccount() {
+                const selectedAccount = document.getElementById("accountSelect").value?.trim();
+            if (!selectedAccount) return;
+
+            // Gera um id_conta estável derivado do nome do usuário
+            const generatedId = "local_" + selectedAccount;
+
+            localStorage.setItem("id_conta", generatedId);
+            localStorage.setItem("conta_invalida", "false");
+
+            limparUI();
+            ativarSelecaoTipoAcao();
+            fetchAction();
+        }
+
+        // variáveis globais
+        let contagemEmAndamento = false;
+        let fetchTimeout;
+        let contagemTimeout;
+        let pausaTimeout;
+        let buscando = false;
+
+        function fetchActionDebounced() {
+            clearTimeout(fetchTimeout);
+            fetchTimeout = setTimeout(() => {
+                fetchAction();
+            }, 200);
+        }
+
+        let inicializou = false;
+
+        function ativarSelecaoTipoAcao() {
+            const id_conta = localStorage.getItem("id_conta");
+            const token = localStorage.getItem("token");
+
+            if (id_conta && token && id_conta !== "null") {
+                const select = document.getElementById("actionType");
+                select.disabled = false;
+
+                if (!select.dataset.listenerAdded) {
+                    select.addEventListener("change", () => {
+                        const actionType = select.value;
+                        const id_conta = localStorage.getItem("id_conta");
+
+                        if (id_conta && id_conta !== "null" && actionType !== "") {
+                            document.getElementById("actionText").textContent =
+                                actionType === "curtir" ? "Curtir" :
+                                    actionType === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
+
+                            fetchActionDebounced();
+                        }
+                    });
+
+                    select.dataset.listenerAdded = "true";
+                }
+
+                if (!inicializou) {
+                    inicializou = true;
+                    const preSelectedAction = select.value;
+
+                    if (preSelectedAction && preSelectedAction !== "") {
+                        document.getElementById("actionText").textContent =
+                            preSelectedAction === "curtir" ? "Curtir" :
+                                preSelectedAction === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
+
+                        fetchActionDebounced();
+                    }
+                }
+            }
+        }
+
+        let tentativasSemAcoes = 0;
+        const maxTentativas = 1;
+        const pausaLongaMs = 0;
+
+        function fetchActionDebounced() {
+            // evita agendar se já estamos em pausa longa
+            if (tentativasSemAcoes >= maxTentativas) {
+                return;
+            }
+
+            clearTimeout(fetchTimeout);
+            fetchTimeout = setTimeout(() => {
+                fetchAction();
+            }, 200);
+        }
+
     const selectedAccount = document.getElementById("accountSelect").value?.trim();
     if (!selectedAccount) return;
 
@@ -876,7 +962,6 @@ async function bindAccount() {
     localStorage.setItem("conta_invalida", "false");
 
     limparUI();
-}
 
 // === fetchAction() — inclui nome_usuario na requisição para /api/buscar_acao_smm_tiktok ===
 async function fetchAction() {
