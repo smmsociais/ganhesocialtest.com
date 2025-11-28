@@ -467,9 +467,9 @@
             border-radius: 50%;
             border: 4px solid transparent;
             /* deixa a base transparente */
-            border-top-color: #ffffff;
+            border-top-color: #007bff;
             /* azul estilo Google */
-            border-left-color: #ffffff;
+            border-left-color: #007bff;
             /* um lado extra visível para criar um arco maior */
             animation: spin 1s linear infinite;
             box-sizing: border-box;
@@ -944,7 +944,7 @@
             const statusElement = document.getElementById("statusMessage");
             if (!statusElement) return;
 
-            let seconds = 1; // ajuste o tempo conforme necessário
+            let seconds = 3; // ajuste o tempo conforme necessário
 
             statusElement.dataset.contagem = "true";
 
@@ -952,9 +952,12 @@
                 if (seconds > 0) {
                     statusElement.innerHTML = `
                         <div class="loading-message">Nenhuma ação encontrada. Buscando novamente em ${seconds} segundos...</div>
+                        <div class="loading-circle-container">
+                            <div class="loading-circle"></div>
+                        </div>
                     `;
                     seconds--;
-                    setTimeout(updateCountdown, 1000);
+                    contagemTimeout = setTimeout(updateCountdown, 1000);
                 } else {
                     statusElement.removeAttribute("data-contagem");
                     fetchActionDebounced();
