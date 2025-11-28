@@ -1987,9 +1987,9 @@ router.post("/confirmar_acao", async (req, res) => {
     return res.status(401).json({ error: "Token inválido." });
   }
 
-  const { nome_usuario, url, tipo_acao, valor, id_pedido } = req.body;
+  const { nome_usuario, url, tipo_acao, id_pedido } = req.body;
 
-  if (!nome_usuario || !tipo_acao || valor == null || !id_pedido) {
+  if (!nome_usuario || !tipo_acao || !id_pedido) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes." });
   }
 
@@ -2006,28 +2006,25 @@ router.post("/confirmar_acao", async (req, res) => {
       tipoAcaoFinal = "curtir";
     }
 
-    // === Cálculo de valores ===
-    const pontos = parseFloat(valor);
-    const valorBruto = pontos / 1000;
-    const valorDescontado = valorBruto > 0.003 ? valorBruto - 0.001 : valorBruto;
-    const valorFinalCalculado = Math.min(Math.max(valorDescontado, 0.003), 0.006).toFixed(3);
-    const valorConfirmacaoFinal = tipoAcaoFinal === "curtir" ? "0.001" : valorFinalCalculado;
+    // === DEFINIÇÃO FINAL DOS VALORES ===
+    const valorConfirmacaoFinal =
+      tipoAcaoFinal === "seguir" ? 0.006 : 0.001;
 
     // === Criar Ação ===
-const novaAcao = new ActionHistory({
-  user: usuario._id,
-  token: usuario.token,
-  nome_usuario,
-  id_action: String(id_pedido),   // AGORA É O ÚNICO CAMPO ID
-  url,
-  tipo_acao,
-  valor: valorConfirmacaoFinal,
-  tipo: tipoAcaoFinal,
-  rede_social: redeFinal,
-  status: "pendente",
-  acao_validada: false,
-  data: new Date()
-});
+    const novaAcao = new ActionHistory({
+      user: usuario._id,
+      token: usuario.token,
+      nome_usuario,
+      id_action: String(id_pedido),
+      url,
+      tipo_acao,
+      valor: valorConfirmacaoFinal,
+      tipo: tipoAcaoFinal,
+      rede_social: redeFinal,
+      status: "pendente",
+      acao_validada: false,
+      data: new Date()
+    });
 
     await salvarAcaoComLimitePorUsuario(novaAcao);
 
