@@ -769,6 +769,7 @@
 
                     <button id="confirmButton" class="confirm-button" onclick="confirmAction()" style="display: none;">
                         <i class="fas fa-check"></i> Confirmar Ação
+                    </button>
                 </div>
             </div>
         </div>
@@ -778,7 +779,6 @@
     <div class="menu-overlay" id="menuOverlay"></div>
 
     <script>
-        // O restante do JavaScript permanece exatamente igual
         document.addEventListener("DOMContentLoaded", async function () {
             const token = localStorage.getItem("token");
 
@@ -832,7 +832,18 @@
 
             document.body.classList.add('loaded');
         });
+
+        // Variáveis globais
         let currentActionData = null;
+        let contagemEmAndamento = false;
+        let fetchTimeout;
+        let contagemTimeout;
+        let pausaTimeout;
+        let buscando = false;
+        let tentativasSemAcoes = 0;
+        const maxTentativas = 1;
+        const pausaLongaMs = 0;
+        let inicializou = false;
 
         function limparUI() {
             currentActionData = null;
@@ -861,37 +872,33 @@
             }
         }
 
-// === bindAccount() — grava nome_usuario no localStorage e dispara fetch ===
-async function bindAccount() {
-    const selectedAccount = document.getElementById("accountSelect").value?.trim();
-    if (!selectedAccount) return;
+        async function bindAccount() {
+            const selectedAccount = document.getElementById("accountSelect").value?.trim();
+            if (!selectedAccount) return;
 
-    // Gera um id_conta estável derivado do nome do usuário
-    const generatedId = "local_" + selectedAccount;
+            // Gera um id_conta estável derivado do nome do usuário
+            const generatedId = "local_" + selectedAccount;
 
-    localStorage.setItem("id_conta", generatedId);
-    localStorage.setItem("conta_invalida", "false");
+            localStorage.setItem("id_conta", generatedId);
+            localStorage.setItem("nome_usuario", selectedAccount);
+            localStorage.setItem("conta_invalida", "false");
 
-    limparUI();
-    ativarSelecaoTipoAcao();
-    fetchAction();
-    // REMOVI O RETURN ISOLADO QUE ESTAVA AQUI
-}
-        // variáveis globais
-        let contagemEmAndamento = false;
-        let fetchTimeout;
-        let contagemTimeout;
-        let pausaTimeout;
-        let buscando = false;
+            limparUI();
+            ativarSelecaoTipoAcao();
+            fetchAction();
+        }
 
         function fetchActionDebounced() {
+            // evita agendar se já estamos em pausa longa
+            if (tentativasSemAcoes >= maxTentativas) {
+                return;
+            }
+
             clearTimeout(fetchTimeout);
             fetchTimeout = setTimeout(() => {
                 fetchAction();
             }, 200);
         }
-
-        let inicializou = false;
 
         function ativarSelecaoTipoAcao() {
             const id_conta = localStorage.getItem("id_conta");
@@ -933,120 +940,104 @@ async function bindAccount() {
             }
         }
 
-        let tentativasSemAcoes = 0;
-        const maxTentativas = 1;
-        const pausaLongaMs = 0;
+        function exibirContagemRegressiva() {
+            const statusElement = document.getElementById("statusMessage");
+            if (!statusElement) return;
 
-        function fetchActionDebounced() {
-            // evita agendar se já estamos em pausa longa
-            if (tentativasSemAcoes >= maxTentativas) {
-                return;
-            }
-
-            clearTimeout(fetchTimeout);
-            fetchTimeout = setTimeout(() => {
-                fetchAction();
-            }, 200);
-        }
-
-    const selectedAccount = document.getElementById("accountSelect").value?.trim();
-    if (!selectedAccount) return;
-
-    // Gera um id_conta estável derivado do nome do usuário (se você usa isso)
-    const generatedId = "local_" + selectedAccount;
-    // Salva o nome da conta para enviar ao backend
-    localStorage.setItem("nome_usuario", selectedAccount);
-    // se você quiser manter o generatedId também:
-    localStorage.setItem("id_conta_local", generatedId);
-
-    localStorage.setItem("conta_invalida", "false");
-
-    limparUI();
-
-// === fetchAction() — inclui nome_usuario na requisição para /api/buscar_acao_smm_tiktok ===
-async function fetchAction() {
-    if (buscando) return;
-    buscando = true;
-
-    try {
-        const token = localStorage.getItem("token");
-        const actionType = document.getElementById("actionType").value;
-        const statusElement = document.getElementById("statusMessage");
-        const contaInvalida = localStorage.getItem("conta_invalida") === "true";
-        const nomeUsuario = localStorage.getItem("nome_usuario"); // <- pega daqui
-
-        // Validações iniciais (mesma lógica)
-        if (!token || !actionType || actionType === "") {
-            document.getElementById("warningMessage").style.display = "block";
-            document.getElementById("actionContent").style.opacity = "1";
-            return;
-        }
-
-        // Se tiver múltiplas contas no servidor, nome_usuario é obrigatório — valide no front
-        if (!nomeUsuario) {
-            // mostra aviso e encerra a busca — evita 400 do backend
-            if (statusElement) statusElement.textContent = "Selecione a conta (nome_usuario) antes de buscar ações.";
-            return;
-        }
-
-        if (!["seguir", "curtir", "seguir_curtir"].includes(actionType)) {
-            if (statusElement) statusElement.textContent = "Tipo de ação inválido.";
-            return;
-        }
-
-        if (document.getElementById("actionType").disabled) return;
-        document.getElementById("warningMessage").style.display = "none";
-
-        if (statusElement && !statusElement.dataset.contagem) {
-            statusElement.innerHTML = `
-                <div class="loading-message">Buscando ações, aguarde...</div>
-                <div class="loading-circle-container">
-                  <div class="loading-circle"></div>
-                </div>
-            `;
-        }
-
-        document.getElementById("actionContent").style.opacity = "0";
-
-        // Função única: tentar buscar no SMM (agora incluindo nome_usuario)
-        async function tentarBuscarSMM() {
-            try {
-                const url = `/api/buscar_acao_smm_tiktok?token=${encodeURIComponent(token)}&tipo=${encodeURIComponent(actionType)}&nome_usuario=${encodeURIComponent(nomeUsuario)}`;
-                const response = await fetch(url);
-                if (!response.ok) throw new Error("Resposta não OK: " + response.status);
-                const data = await response.json();
-
-                if (data.status === "ENCONTRADA") {
-                    tentativasSemAcoes = 0;
-                    if (statusElement) statusElement.removeAttribute("data-contagem");
-                    await processarAcao(data, "smm");
-                    return true;
+            let seconds = 10; // ajuste o tempo conforme necessário
+            
+            statusElement.dataset.contagem = "true";
+            
+            function updateCountdown() {
+                if (seconds > 0) {
+                    statusElement.innerHTML = `
+                        <div class="loading-message">Nenhuma ação encontrada. Buscando novamente em ${seconds} segundos...</div>
+                    `;
+                    seconds--;
+                    setTimeout(updateCountdown, 1000);
+                } else {
+                    statusElement.removeAttribute("data-contagem");
+                    fetchActionDebounced();
                 }
-            } catch (e) {
-                console.error("Erro ao buscar ação SMM:", e);
             }
-            return false;
+            
+            updateCountdown();
         }
 
-        const encontrouSMM = await tentarBuscarSMM();
+        async function fetchAction() {
+            if (buscando) return;
+            buscando = true;
 
-        if (!encontrouSMM) {
-            tentativasSemAcoes++;
-            // se não encontrou em SMM, exibe contagem/regressiva (backoff)
-            exibirContagemRegressiva();
+            try {
+                const token = localStorage.getItem("token");
+                const actionType = document.getElementById("actionType").value;
+                const statusElement = document.getElementById("statusMessage");
+                const contaInvalida = localStorage.getItem("conta_invalida") === "true";
+                const nomeUsuario = localStorage.getItem("nome_usuario");
+
+                // Validações iniciais
+                if (!token || !actionType || actionType === "") {
+                    document.getElementById("warningMessage").style.display = "block";
+                    document.getElementById("actionContent").style.opacity = "1";
+                    return;
+                }
+
+                if (!nomeUsuario) {
+                    if (statusElement) statusElement.textContent = "Selecione a conta antes de buscar ações.";
+                    return;
+                }
+
+                if (!["seguir", "curtir", "seguir_curtir"].includes(actionType)) {
+                    if (statusElement) statusElement.textContent = "Tipo de ação inválido.";
+                    return;
+                }
+
+                if (document.getElementById("actionType").disabled) return;
+                document.getElementById("warningMessage").style.display = "none";
+
+                if (statusElement && !statusElement.dataset.contagem) {
+                    statusElement.innerHTML = `
+                        <div class="loading-message">Buscando ações, aguarde...</div>
+                        <div class="loading-circle-container">
+                          <div class="loading-circle"></div>
+                        </div>
+                    `;
+                }
+
+                document.getElementById("actionContent").style.opacity = "0";
+
+                // Função única: tentar buscar no SMM
+                async function tentarBuscarSMM() {
+                    try {
+                        const url = `/api/buscar_acao_smm_tiktok?token=${encodeURIComponent(token)}&tipo=${encodeURIComponent(actionType)}&nome_usuario=${encodeURIComponent(nomeUsuario)}`;
+                        const response = await fetch(url);
+                        if (!response.ok) throw new Error("Resposta não OK: " + response.status);
+                        const data = await response.json();
+
+                        if (data.status === "ENCONTRADA") {
+                            tentativasSemAcoes = 0;
+                            if (statusElement) statusElement.removeAttribute("data-contagem");
+                            await processarAcao(data, "smm");
+                            return true;
+                        }
+                    } catch (e) {
+                        console.error("Erro ao buscar ação SMM:", e);
+                    }
+                    return false;
+                }
+
+                const encontrouSMM = await tentarBuscarSMM();
+
+                if (!encontrouSMM) {
+                    tentativasSemAcoes++;
+                    exibirContagemRegressiva();
+                }
+
+            } finally {
+                buscando = false;
+            }
         }
 
-    } finally {
-        buscando = false;
-    }
-}
-
-// Adicione a função exibirContagemRegressiva que está faltando
-function exibirContagemRegressiva() {
-    // Implemente a lógica de contagem regressiva aqui
-    console.log("Exibindo contagem regressiva...");
-    // Sua implementação da contagem regressiva
-}
         // Recomenda: resetar tentativas se o usuário trocar tipo de ação ou conta
         document.getElementById("actionType")?.addEventListener("change", () => {
             tentativasSemAcoes = 0;
@@ -1055,7 +1046,6 @@ function exibirContagemRegressiva() {
             if (e.key === "id_conta") tentativasSemAcoes = 0;
         });
 
-        // ===== Substitua processarAcao por esta versão =====
         async function processarAcao(data, origem) {
             document.getElementById("skipButton").style.display = "inline-block";
             document.getElementById("statusMessage").textContent = "";
@@ -1161,7 +1151,6 @@ function exibirContagemRegressiva() {
             document.getElementById("confirmButton").style.display = "block";
         }
 
-        // ===== Substitua confirmAction pela versão que usa apenas currentActionData.valor =====
         async function confirmAction() {
             const selectedAccount = document.getElementById("accountSelect").value;
             if (!selectedAccount || !currentActionData) return;
@@ -1173,14 +1162,13 @@ function exibirContagemRegressiva() {
 
             // mostra loading
             statusElement.innerHTML = `
-      <div class="loading-message">Processando confirmação...</div>
-      <div class="loading-circle-container"><div class="loading-circle"></div></div>
-    `;
+                <div class="loading-message">Processando confirmação...</div>
+                <div class="loading-circle-container"><div class="loading-circle"></div></div>
+            `;
 
             actionContent.style.opacity = "0";
             confirmButton.style.display = "none";
             profileImage.style.display = "none";
-
 
             // monta payload usando apenas o valor retornado pela rota
             const payload = {
@@ -1217,11 +1205,11 @@ function exibirContagemRegressiva() {
 
             // Mostra o carregamento
             statusElement.innerHTML = `
-        <div class="loading-message">Buscando ações, aguarde...</div>
-        <div class="loading-circle-container">
-            <div class="loading-circle"></div>
-        </div>
-    `;
+                <div class="loading-message">Buscando ações, aguarde...</div>
+                <div class="loading-circle-container">
+                    <div class="loading-circle"></div>
+                </div>
+            `;
             actionContent.style.opacity = "0";
             confirmButton.style.display = "none";
             profileImage.style.display = "none";
@@ -1231,7 +1219,10 @@ function exibirContagemRegressiva() {
                 const url = document.getElementById("actionUrl").href;
                 const valor_text = document.getElementById("points").textContent;
                 const valor = parseFloat(valor_text.replace('R$ ', ''));
-                const tipo_acao = tipo;
+                
+                // CORREÇÃO: Obter o tipo_acao do currentActionData ou do select
+                const tipo_acao = currentActionData?.tipo_acao || document.getElementById("actionType").value;
+                
                 const token = localStorage.getItem("token");
 
                 const response = await fetch("/api/pular_acao", {
@@ -1255,11 +1246,13 @@ function exibirContagemRegressiva() {
                 const statusElement = document.getElementById("statusMessage");
                 statusElement?.removeAttribute("data-contagem");
 
-                // Buscar próxima ação (agende imediatamente)
+                // Buscar próxima ação
                 fetchActionDebounced();
             } catch (error) {
+                console.error("Erro ao pular ação:", error);
             }
         }
+
         async function loadAccounts() {
             try {
                 const token = localStorage.getItem("token");
@@ -1330,7 +1323,6 @@ function exibirContagemRegressiva() {
             }
         }
 
-        // ===== registrarAcaoPendente - mantém envio do campo valor que vem da rota =====
         async function registrarAcaoPendente(acao) {
             try {
                 console.log("➡ registrarAcaoPendente payload:", acao);
