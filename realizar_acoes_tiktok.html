@@ -861,26 +861,32 @@
             }
         }
 
-        async function bindAccount() {
-            const selectedAccount = document.getElementById("accountSelect").value?.trim();
-            if (!selectedAccount) return;
+async function bindAccount() {
+    const accountSelect = document.getElementById("accountSelect");
+    const selectedAccount = accountSelect?.value?.trim();
+    if (!selectedAccount) return;
 
-            // Gera um id_conta estável derivado do nome do usuário
-            const generatedId = "local_" + selectedAccount;
+    // Id da conta local usado pelo restante do sistema (se você precisa dele)
+    const generatedId = "local_" + selectedAccount;
 
-            localStorage.setItem("conta_invalida", "false");
+    // Salva nome da conta e id_conta no localStorage — isso é o que a fetchAction espera.
+    localStorage.setItem("nome_usuario", selectedAccount);
+    localStorage.setItem("id_conta", generatedId);
+    localStorage.setItem("conta_invalida", "false");
 
-            limparUI();
-            ativarSelecaoTipoAcao();
-            fetchAction();
-        }
+    // atualiza o select visual (opcional)
+    accountSelect.value = selectedAccount;
 
-        // variáveis globais
-        let contagemEmAndamento = false;
-        let fetchTimeout;
-        let contagemTimeout;
-        let pausaTimeout;
-        let buscando = false;
+    limparUI();
+    ativarSelecaoTipoAcao();
+
+    // Se actionType estiver vazio, podemos escolher um padrão (seguir) para disparar busca
+    const actionSelect = document.getElementById("actionType");
+    if (!actionSelect.value) actionSelect.value = "seguir";
+
+    // Dispara a busca imediatamente
+    fetchActionDebounced();
+}
 
         function fetchActionDebounced() {
             clearTimeout(fetchTimeout);
@@ -891,44 +897,37 @@
 
         let inicializou = false;
 
-        function ativarSelecaoTipoAcao() {
-            const token = localStorage.getItem("token");
+function ativarSelecaoTipoAcao() {
+    const token = localStorage.getItem("token");
+    if (!token) return; // token ausente -> não habilita
 
-            if (token !== "null") {
-                const select = document.getElementById("actionType");
-                select.disabled = false;
+    const select = document.getElementById("actionType");
+    select.disabled = false;
 
-                if (!select.dataset.listenerAdded) {
-                    select.addEventListener("change", () => {
-                        const actionType = select.value;
-
-                        if (actionType !== "") {
-                            document.getElementById("actionText").textContent =
-                                actionType === "curtir" ? "Curtir" :
-                                    actionType === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
-
-                            fetchActionDebounced();
-                        }
-                    });
-
-                    select.dataset.listenerAdded = "true";
-                }
-
-                if (!inicializou) {
-                    inicializou = true;
-                    const preSelectedAction = select.value;
-
-                    if (preSelectedAction && preSelectedAction !== "") {
-                        document.getElementById("actionText").textContent =
-                            preSelectedAction === "curtir" ? "Curtir" :
-                                preSelectedAction === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
-
-                        fetchActionDebounced();
-                    }
-                }
+    if (!select.dataset.listenerAdded) {
+        select.addEventListener("change", () => {
+            const actionType = select.value;
+            if (actionType) {
+                document.getElementById("actionText").textContent =
+                    actionType === "curtir" ? "Curtir" :
+                    actionType === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
+                fetchActionDebounced();
             }
-        }
+        });
+        select.dataset.listenerAdded = "true";
+    }
 
+    if (!inicializou) {
+        inicializou = true;
+        const preSelectedAction = select.value;
+        if (preSelectedAction) {
+            document.getElementById("actionText").textContent =
+                preSelectedAction === "curtir" ? "Curtir" :
+                preSelectedAction === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
+            fetchActionDebounced();
+        }
+    }
+}
         let tentativasSemAcoes = 0;
         const maxTentativas = 1;
         const pausaLongaMs = 0;
@@ -1067,7 +1066,7 @@ if (!token || !actionType || !nome_usuario) {
             tentativasSemAcoes = 0;
         });
         window.addEventListener("storage", (e) => {
-            if (e.key === "id_conta") tentativasSemAcoes = 0;
+            if (e.key === "nome_usuario") tentativasSemAcoes = 0;
         });
 
         // ===== Substitua processarAcao por esta versão =====
