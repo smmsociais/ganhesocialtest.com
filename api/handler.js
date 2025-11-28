@@ -1838,46 +1838,53 @@ router.post("/instagram/confirm_action", async (req, res) => {
 });
 
 // ROTA: /api/pular_acao
-router.post("/instagram/pular_acao", async (req, res) => {
+router.post("/pular_acao", async (req, res) => {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método não permitido" });
   }
 
+  await connectDB();
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ error: "Token não fornecido." });
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+
   const {
-    token,
     id_pedido,
     id_conta,
-    nome_usuario,        // ✔ agora este nome será salvo corretamente
-    url_dir,
-    quantidade_pontos,
-    tipo_acao,
-    tipo
+    nome_usuario,
+    url,
+    tipo_acao
   } = req.body;
 
-  if (
-    !token ||
-    !id_pedido ||
-    !id_conta ||
-    !nome_usuario ||
-    !url_dir ||
-    !quantidade_pontos ||
-    !tipo_acao ||
-    !tipo
-  ) {
-    return res.status(400).json({ error: "Campos obrigatórios ausentes" });
+  // ===== VALIDAÇÃO DE CAMPOS =====
+  if (!id_pedido || !id_conta || !nome_usuario || !url || !tipo_acao) {
+    return res.status(400).json({ error: "Campos obrigatórios ausentes." });
+  }
+
+  // ===== VALIDAR TOKEN =====
+  const usuario = await User.findOne({ token });
+  if (!usuario) {
+    return res.status(401).json({ error: "Token inválido." });
   }
 
   try {
-    await connectDB();
+    // ===== DETECTAR REDE SOCIAL =====
+    let redeFinal = "TikTok";
+    if (url.includes("instagram.com")) redeFinal = "Instagram";
 
-    const user = await User.findOne({ token });
-    if (!user) {
-      return res.status(401).json({ error: "Token inválido" });
+    // ===== DETECTAR TIPO DE AÇÃO =====
+    let tipoAcaoFinal = "seguir";
+    if (url.includes("/video/") || url.includes("/p/") || url.includes("/reel/") || url.includes("watch?v=")) {
+      tipoAcaoFinal = "curtir";
     }
 
-    // Verificar se já existe ação pulada deste pedido + conta
+    // ===== IMPEDIR DUPLICAÇÃO DO PULO =====
     const existente = await ActionHistory.findOne({
-      id_pedido,
+      id_action: String(id_pedido),
       id_conta,
       acao_validada: "pulada",
     });
@@ -1886,21 +1893,20 @@ router.post("/instagram/pular_acao", async (req, res) => {
       return res.status(200).json({ status: "JA_PULADA" });
     }
 
-    // Registrar ação pulada
+    // ===== REGISTRAR AÇÃO PULADA =====
     const novaAcao = new ActionHistory({
-      user: user._id,
+      user: usuario._id,
       token,
-      nome_usuario,         // ✔ salvo corretamente
-      id_action: crypto.randomUUID(),
-      id_pedido,
+      nome_usuario,
+      id_action: String(id_pedido),
       id_conta,
-      url_dir,
-      quantidade_pontos,
-      tipo_acao,
-      tipo,
+      url,
+      tipo_acao: tipo_acao.toLowerCase(),
+      tipo: tipoAcaoFinal,
+      rede_social: redeFinal,
       acao_validada: "pulada",
-      rede_social: "TikTok",
-      createdAt: new Date(),
+      status: "pulada",
+      data: new Date()
     });
 
     await novaAcao.save();
@@ -1909,7 +1915,7 @@ router.post("/instagram/pular_acao", async (req, res) => {
 
   } catch (error) {
     console.error("Erro ao registrar ação pulada:", error);
-    return res.status(500).json({ error: "Erro interno" });
+    return res.status(500).json({ error: "Erro interno." });
   }
 });
 
