@@ -17,15 +17,12 @@ const ActionHistorySchema = new mongoose.Schema({
   token: { type: String },
   nome_usuario: { type: String },
   id_action: { type: String, required: true },
-  unique_id: { type: String },
   url: { type: String, required: true },
   status: { type: String, enum: ['valida', 'pendente', 'pulada', 'invalida'], default: 'pendente' },
-  quantidade_pontos: { type: Number, required: true },
+  valor: { type: Number, required: true },
   tipo_acao: { type: String, required: true },
   rede_social: { type: String},
-  tipo: { type: String, required: true }, // exemplo: "seguimento", "curtida", "comissao"
   afiliado: { type: String },             // 🔹 código do afiliado responsável pela comissão
-  valor: { type: Number, default: 0 },    // 🔹 valor da comissão, quando tipo = "comissao"
   data: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 30 },
 });
