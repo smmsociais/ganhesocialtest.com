@@ -1062,7 +1062,7 @@
 
                 if (!encontrouSMM) {
                     tentativasSemAcoes++;
-                    
+
                     if (tentativasSemAcoes < maxTentativas) {
                         exibirContagemRegressiva(3); // Sempre 3 segundos entre tentativas
                     } else {
@@ -1226,62 +1226,65 @@
             await fetchAction();
         }
 
-        async function skipAction() {
-            const statusElement = document.getElementById("statusMessage");
-            const actionContent = document.getElementById("actionContent");
-            const confirmButton = document.getElementById("confirmButton");
-            const profileImage = document.getElementById("profileImage");
+async function skipAction() {
+    const statusElement = document.getElementById("statusMessage");
+    const actionContent = document.getElementById("actionContent");
+    const confirmButton = document.getElementById("confirmButton");
+    const profileImage = document.getElementById("profileImage");
 
-            // Mostra o carregamento
-            statusElement.innerHTML = `
-                <div class="loading-message">Buscando ações, aguarde...</div>
-                <div class="loading-circle-container">
-                    <div class="loading-circle"></div>
-                </div>
-            `;
-            actionContent.style.opacity = "0";
-            confirmButton.style.display = "none";
-            profileImage.style.display = "none";
+    statusElement.innerHTML = `
+        <div class="loading-message">Buscando ações, aguarde...</div>
+        <div class="loading-circle-container">
+            <div class="loading-circle"></div>
+        </div>
+    `;
+    actionContent.style.opacity = "0";
+    confirmButton.style.display = "none";
+    profileImage.style.display = "none";
 
-            try {
-                const nome_usuario = document.getElementById("username").textContent;
-                const url = document.getElementById("actionUrl").href;
-                const valor_text = document.getElementById("points").textContent;
-                const valor = parseFloat(valor_text.replace('R$ ', ''));
+    try {
+        const nome_usuario = document.getElementById("username").textContent;
+        const url = document.getElementById("actionUrl").href;
 
-                // CORREÇÃO: Obter o tipo_acao do currentActionData ou do select
-                const tipo_acao = currentActionData?.tipo_acao || document.getElementById("actionType").value;
+        const token = localStorage.getItem("token");
 
-                const token = localStorage.getItem("token");
+        // 🔥 CAMPOS ESSENCIAIS
+        const id_pedido = currentActionData?.id_action;
+        const id_conta = currentActionData?.id_conta;
+        const tipo_acao = currentActionData?.tipo_acao;
 
-                const response = await fetch("/api/pular_acao", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        token,
-                        nome_usuario,
-                        url,
-                        valor,
-                        tipo_acao,
-                    })
-                });
-
-                tentativasSemAcoes = 0;
-                clearTimeout(contagemTimeout);
-                clearTimeout(pausaTimeout);
-                const statusElement = document.getElementById("statusMessage");
-                statusElement?.removeAttribute("data-contagem");
-
-                // Buscar próxima ação
-                fetchAction();
-            } catch (error) {
-                console.error("Erro ao pular ação:", error);
-            }
+        if (!id_pedido || !id_conta) {
+            console.error("ERRO: id_pedido ou id_conta está ausente.");
+            return;
         }
 
+        await fetch("/api/pular_acao", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                id_pedido,
+                id_conta,
+                nome_usuario,
+                url,
+                tipo_acao
+            })
+        });
+
+        tentativasSemAcoes = 0;
+        clearTimeout(contagemTimeout);
+        clearTimeout(pausaTimeout);
+        statusElement?.removeAttribute("data-contagem");
+
+        // Próxima ação
+        fetchAction();
+
+    } catch (error) {
+        console.error("Erro ao pular ação:", error);
+    }
+}
         async function loadAccounts() {
             try {
                 const token = localStorage.getItem("token");
