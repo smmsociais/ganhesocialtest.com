@@ -732,7 +732,7 @@
                     <td>${new Date(action.data).toLocaleString()}</td>
                     <td>${action.rede_social}</td>    
                     <td><a class="action-link" href="detail_account?usuario=${encodeURIComponent(action.nome_usuario)}">${action.nome_usuario}</a></td>  
-                    <td>${action.tipo ? action.tipo.charAt(0).toUpperCase() + action.tipo_acao.slice(1) : "Desconhecido"}</td>       
+                    <td>${action.tipo_acao ? action.tipo_acao.charAt(0).toUpperCase() + action.tipo_acao.slice(1) : "Desconhecido"}</td>       
                     <td>R$ ${(action.valor)}</td>
                     <td>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
