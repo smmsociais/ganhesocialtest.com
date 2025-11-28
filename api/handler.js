@@ -2014,20 +2014,20 @@ router.post("/confirmar_acao", async (req, res) => {
     const valorConfirmacaoFinal = tipoAcaoFinal === "curtir" ? "0.001" : valorFinalCalculado;
 
     // === Criar Ação ===
-    const novaAcao = new ActionHistory({
-      user: usuario._id,
-      token: usuario.token,
-      nome_usuario,
-      id_pedido,                    // ✅ campo correto
-      url,
-      tipo_acao,
-      valor: valorConfirmacaoFinal, // valor que realmente será pago
-      tipo: tipoAcaoFinal,
-      rede_social: redeFinal,
-      status: "pendente",
-      acao_validada: false,         // ✅ obrigatório no schema
-      data: new Date()
-    });
+const novaAcao = new ActionHistory({
+  user: usuario._id,
+  token: usuario.token,
+  nome_usuario,
+  id_action: id_pedido,      // ✔ campo correto para o schema
+  url,
+  tipo_acao,
+  valor: valorConfirmacaoFinal,
+  tipo: tipoAcaoFinal,
+  rede_social: redeFinal,
+  status: "pendente",
+  acao_validada: false,
+  data: new Date()
+});
 
     await salvarAcaoComLimitePorUsuario(novaAcao);
 
