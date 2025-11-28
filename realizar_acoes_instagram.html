@@ -1061,8 +1061,6 @@
 
                 if (!encontrouSMM) {
                     tentativasSemAcoes++;
-                    console.log(`Tentativa ${tentativasSemAcoes} sem ações encontradas`);
-                    
                     if (tentativasSemAcoes < maxTentativas) {
                         exibirContagemRegressiva(3);
                     } else {
@@ -1185,7 +1183,7 @@
 
             // mostra loading
             statusElement.innerHTML = `
-                <div class="loading-message">Processando confirmação...</div>
+                <div class="loading-message">Buscando ações, aguarde...</div>
                 <div class="loading-circle-container"><div class="loading-circle"></div></div>
             `;
 
@@ -1201,8 +1199,6 @@
                 valor: Number(currentActionData.valor ?? 0),
                 id_pedido: currentActionData.id_pedido ?? currentActionData.id_action ?? null
             };
-
-            console.log("➡ Enviando payload para registrar ação:", payload);
 
             // validação: exige valor > 0 (evita salvar 0)
             if (!payload.nome_usuario || !payload.url || !payload.tipo_acao || !Number.isFinite(payload.valor) || payload.valor <= 0) {
@@ -1296,8 +1292,6 @@
 
                 const accounts = await response.json();
 
-                console.log("contas retornadas da API:", accounts);
-
                 if (!Array.isArray(accounts)) {
                     throw new Error("Formato de dados inválido");
                 }
@@ -1344,41 +1338,72 @@
             }
         }
 
-        async function confirmarAcao(acao) {
-            try {
-                console.log("➡ confirmarAcao payload:", acao);
+        async function skipAction() {
+            const statusElement = document.getElementById("statusMessage");
+            const actionContent = document.getElementById("actionContent");
+            const confirmButton = document.getElementById("confirmButton");
+            const profileImage = document.getElementById("profileImage");
 
-                if (!acao.nome_usuario || !acao.url || !acao.tipo_acao || !Number.isFinite(Number(acao.valor))) {
-                    console.error("❌ Campos obrigatórios ausentes ou inválidos:", acao);
+            statusElement.innerHTML = `
+        <div class="loading-message">Buscando ações, aguarde...</div>
+        <div class="loading-circle-container">
+            <div class="loading-circle"></div>
+        </div>
+    `;
+            actionContent.style.opacity = "0";
+            confirmButton.style.display = "none";
+            profileImage.style.display = "none";
+
+            try {
+                // ✔ PEGAR A CONTA SELECIONADA (o correto!)
+                const nome_usuario = document.getElementById("accountSelect").value;
+
+                const url = document.getElementById("actionUrl").href;
+                const token = localStorage.getItem("token");
+
+                // PEGAR VALOR CERTO DA AÇÃO
+                const valor_text = document.getElementById("points").textContent;
+                const valor = parseFloat(valor_text.replace("R$ ", ""));
+
+                // PEGAR ID CERTO
+                const id_pedido =
+                    currentActionData?.id_pedido ??
+                    currentActionData?.id_action ??
+                    null;
+
+                const tipo_acao =
+                    currentActionData?.tipo_acao ??
+                    (url.includes("/video/") ? "curtir" : "seguir");
+
+                if (!id_pedido) {
+                    console.error("ERRO: id_pedido está ausente.", currentActionData);
                     return;
                 }
 
-                const response = await fetch("/api/confirmar_acao", {
+                await fetch("/api/pular_acao", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": `Bearer ${localStorage.getItem('token')}`
+                        "Authorization": `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        nome_usuario: acao.nome_usuario,
-                        url: acao.url,
-                        tipo_acao: acao.tipo_acao,
-                        valor: Number(acao.valor),
-                        id_pedido: acao.id_pedido ?? acao.id_action ?? null
+                        id_pedido,
+                        nome_usuario,
+                        url,
+                        tipo_acao,
+                        valor
                     })
                 });
 
-                const respJson = await response.json();
+                tentativasSemAcoes = 0;
+                clearTimeout(contagemTimeout);
+                clearTimeout(pausaTimeout);
+                statusElement?.removeAttribute("data-contagem");
 
-                if (!response.ok) {
-                    console.log("❌ Erro do servidor:", respJson);
-                    throw new Error("Falha ao registrar ação pendente.");
-                }
-
-                return respJson;
+                fetchAction();
 
             } catch (error) {
-                console.error("Erro ao registrar ação pendente:", error);
+                console.error("Erro ao pular ação:", error);
             }
         }
 
