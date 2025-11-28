@@ -467,9 +467,9 @@
             border-radius: 50%;
             border: 4px solid transparent;
             /* deixa a base transparente */
-            border-top-color: #ffffff;
+            border-top-color: #007bff;
             /* azul estilo Google */
-            border-left-color: #ffffff;
+            border-left-color: #007bff;
             /* um lado extra visível para criar um arco maior */
             animation: spin 1s linear infinite;
             box-sizing: border-box;
@@ -749,12 +749,12 @@
                 <div id="actionContent" class="action-content">
                     <div class="action-details">
                         <p><strong>Ação:</strong> <span id="actionText">Seguir</span></p>
-                        <p id="userInfo" style="display: none;"><strong>Usuário:</strong> <span id="username"></span></p>
+                        <p id="userInfo"><strong>Usuário:</strong> <span id="username"></span></p>
                         <p><strong>Valor:</strong> <span id="points"></span></p>
                     </div>
 
                     <div class="profile-image-container">
-                        <img id="profileImage" src="" alt="Avatar do TikTok" class="profile-image">
+                        <img id="profileImage" src="" alt="Avatar do Instagram" class="profile-image">
                     </div>
 
                     <div class="btn-group">
@@ -769,6 +769,7 @@
 
                     <button id="confirmButton" class="confirm-button" onclick="confirmAction()" style="display: none;">
                         <i class="fas fa-check"></i> Confirmar Ação
+                    </button>
                 </div>
             </div>
         </div>
@@ -777,9 +778,7 @@
     <!-- Menu Overlay para Mobile -->
     <div class="menu-overlay" id="menuOverlay"></div>
 
-
     <script>
-        // O restante do JavaScript permanece exatamente igual
         document.addEventListener("DOMContentLoaded", async function () {
             const token = localStorage.getItem("token");
 
@@ -833,11 +832,21 @@
 
             document.body.classList.add('loaded');
         });
+
+        // Variáveis globais
         let currentActionData = null;
+        let contagemEmAndamento = false;
+        let fetchTimeout;
+        let contagemTimeout;
+        let pausaTimeout;
+        let buscando = false;
+        let tentativasSemAcoes = 0;
+        const maxTentativas = 3;
+        const pausaLongaMs = 10000;
+        let inicializou = false;
 
         function limparUI() {
             currentActionData = null;
-            tentativasSemAcoes = 0;
 
             const username = document.getElementById("username");
             const points = document.getElementById("points");
@@ -846,7 +855,6 @@
             const actionUrl = document.getElementById("actionUrl");
             const statusMessage = document.getElementById("statusMessage");
             const actionContent = document.getElementById("actionContent");
-            const userInfo = document.getElementById("userInfo");
 
             if (username) username.textContent = "";
             if (points) points.textContent = "";
@@ -861,9 +869,6 @@
                 actionContent.style.opacity = "0";
                 actionContent.style.display = "none";
             }
-            if (userInfo) {
-                userInfo.style.display = "none";
-            }
         }
 
         async function bindAccount() {
@@ -874,19 +879,14 @@
             const generatedId = "local_" + selectedAccount;
 
             localStorage.setItem("id_conta", generatedId);
+            localStorage.setItem("nome_usuario", selectedAccount);
             localStorage.setItem("conta_invalida", "false");
 
             limparUI();
+            tentativasSemAcoes = 0;
             ativarSelecaoTipoAcao();
             fetchAction();
         }
-
-        // variáveis globais
-        let contagemEmAndamento = false;
-        let fetchTimeout;
-        let contagemTimeout;
-        let pausaTimeout;
-        let buscando = false;
 
         function fetchActionDebounced() {
             clearTimeout(fetchTimeout);
@@ -894,8 +894,6 @@
                 fetchAction();
             }, 200);
         }
-
-        let inicializou = false;
 
         function ativarSelecaoTipoAcao() {
             const id_conta = localStorage.getItem("id_conta");
@@ -915,6 +913,7 @@
                                 actionType === "curtir" ? "Curtir" :
                                     actionType === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
 
+                            tentativasSemAcoes = 0;
                             fetchActionDebounced();
                         }
                     });
@@ -937,71 +936,57 @@
             }
         }
 
-        let tentativasSemAcoes = 0;
-        const maxTentativas = 1;
-        const pausaLongaMs = 0;
-
-        function fetchActionDebounced() {
-            // evita agendar se já estamos em pausa longa
-            if (tentativasSemAcoes >= maxTentativas) {
-                return;
-            }
-
-            clearTimeout(fetchTimeout);
-            fetchTimeout = setTimeout(() => {
-                fetchAction();
-            }, 200);
-        }
-
-        function exibirContagemRegressiva(segundos = 3) {
-            if (contagemEmAndamento) return; // evita chamadas concorrentes
-            contagemEmAndamento = true;
-
-            let contador = segundos;
+        function exibirContagemRegressiva(seconds = 3) {
             const statusElement = document.getElementById("statusMessage");
-            if (!statusElement) {
-                contagemEmAndamento = false;
-                return;
-            }
+            if (!statusElement) return;
 
             statusElement.dataset.contagem = "true";
-            statusElement.innerHTML = `
-    <div class="loading-message">Nenhuma ação disponível no momento. Tentando novamente em ${contador}...</div>
-    <div class="loading-circle-container">
-      <div class="loading-circle"></div>
-    </div>
-  `;
 
-            const loadingMessage = statusElement.querySelector(".loading-message");
-            if (!loadingMessage) {
-                contagemEmAndamento = false;
-                return;
-            }
-
-            function atualizarMensagem() {
-                if (contador > 0) {
-                    loadingMessage.textContent = `Nenhuma ação disponível no momento. Tentando novamente em ${contador}...`;
-                    contador--;
-                    contagemTimeout = setTimeout(atualizarMensagem, 1000);
+            function updateCountdown() {
+                if (seconds > 0) {
+                    statusElement.innerHTML = `
+                        <div class="loading-message">Nenhuma ação encontrada. Buscando novamente em ${seconds} segundos...</div>
+                        <div class="loading-circle-container">
+                            <div class="loading-circle"></div>
+                        </div>
+                    `;
+                    seconds--;
+                    contagemTimeout = setTimeout(updateCountdown, 1000);
                 } else {
-                    contagemEmAndamento = false;
                     statusElement.removeAttribute("data-contagem");
-
-                    // Se atingimos o máximo de tentativas, fazemos pausa longa
-                    if (tentativasSemAcoes >= maxTentativas) {
-                        setTimeout(() => {
-                            tentativasSemAcoes = 0;
-                            // só dispara se não houver busca em andamento
-                            if (!buscando) fetchActionDebounced();
-                        }, pausaLongaMs);
-                    } else {
-                        // chamada única após a contagem
-                        if (!buscando) fetchActionDebounced();
-                    }
+                    fetchAction();
                 }
             }
 
-            atualizarMensagem();
+            updateCountdown();
+        }
+
+        function iniciarPausaLonga() {
+            const statusElement = document.getElementById("statusMessage");
+            if (!statusElement) return;
+
+            let seconds = 10;
+
+            statusElement.dataset.contagem = "true";
+
+            function updatePausa() {
+                if (seconds > 0) {
+                    statusElement.innerHTML = `
+                        <div class="loading-message">Muitas tentativas sem ações. Nova busca em ${seconds} segundos...</div>
+                        <div class="loading-circle-container">
+                            <div class="loading-circle"></div>
+                        </div>
+                    `;
+                    seconds--;
+                    pausaTimeout = setTimeout(updatePausa, 1000);
+                } else {
+                    statusElement.removeAttribute("data-contagem");
+                    tentativasSemAcoes = 0;
+                    fetchAction();
+                }
+            }
+
+            updatePausa();
         }
 
         async function fetchAction() {
@@ -1009,16 +994,21 @@
             buscando = true;
 
             try {
-                const id_conta = localStorage.getItem("id_conta");
                 const token = localStorage.getItem("token");
                 const actionType = document.getElementById("actionType").value;
                 const statusElement = document.getElementById("statusMessage");
                 const contaInvalida = localStorage.getItem("conta_invalida") === "true";
+                const nomeUsuario = localStorage.getItem("nome_usuario");
 
-                // Validações iniciais (mesma lógica)
-                if (!id_conta || !token || id_conta === "null" || !actionType || actionType === "") {
+                // Validações iniciais
+                if (!token || !actionType || actionType === "") {
                     document.getElementById("warningMessage").style.display = "block";
                     document.getElementById("actionContent").style.opacity = "1";
+                    return;
+                }
+
+                if (!nomeUsuario) {
+                    if (statusElement) statusElement.textContent = "Selecione a conta antes de buscar ações.";
                     return;
                 }
 
@@ -1030,13 +1020,19 @@
                 if (document.getElementById("actionType").disabled) return;
                 document.getElementById("warningMessage").style.display = "none";
 
+                // Verificar se precisa de pausa longa
+                if (tentativasSemAcoes >= maxTentativas) {
+                    iniciarPausaLonga();
+                    return;
+                }
+
                 if (statusElement && !statusElement.dataset.contagem) {
                     statusElement.innerHTML = `
-                <div class="loading-message">Buscando ações, aguarde...</div>
-                <div class="loading-circle-container">
-                  <div class="loading-circle"></div>
-                </div>
-            `;
+                        <div class="loading-message">Buscando ações, aguarde...</div>
+                        <div class="loading-circle-container">
+                          <div class="loading-circle"></div>
+                        </div>
+                    `;
                 }
 
                 document.getElementById("actionContent").style.opacity = "0";
@@ -1044,7 +1040,8 @@
                 // Função única: tentar buscar no SMM
                 async function tentarBuscarSMM() {
                     try {
-                        const response = await fetch(`/api/buscar_acao_smm_instagram?id_conta=${id_conta}&token=${token}&tipo=${actionType}`);
+                        const url = `/api/buscar_acao_smm_instagram?token=${encodeURIComponent(token)}&tipo=${encodeURIComponent(actionType)}&nome_usuario=${encodeURIComponent(nomeUsuario)}`;
+                        const response = await fetch(url);
                         if (!response.ok) throw new Error("Resposta não OK: " + response.status);
                         const data = await response.json();
 
@@ -1064,15 +1061,21 @@
 
                 if (!encontrouSMM) {
                     tentativasSemAcoes++;
-                    // se não encontrou em SMM, exibe contagem/regressiva (backoff)
-                    exibirContagemRegressiva();
+                    console.log(`Tentativa ${tentativasSemAcoes} sem ações encontradas`);
+                    
+                    if (tentativasSemAcoes < maxTentativas) {
+                        exibirContagemRegressiva(3);
+                    } else {
+                        iniciarPausaLonga();
+                    }
                 }
 
             } finally {
                 buscando = false;
             }
         }
-        // Recomenda: resetar tentativas se o usuário trocar tipo de ação ou conta
+
+        // Resetar tentativas se o usuário trocar tipo de ação ou conta
         document.getElementById("actionType")?.addEventListener("change", () => {
             tentativasSemAcoes = 0;
         });
@@ -1080,198 +1083,92 @@
             if (e.key === "id_conta") tentativasSemAcoes = 0;
         });
 
-async function processarAcao(data, origem) {
-    // garante que o botão de pular apareça e limpa mensagens
-    document.getElementById("skipButton").style.display = "inline-block";
-    const statusEl = document.getElementById("statusMessage");
-    if (statusEl) statusEl.textContent = "";
+        async function processarAcao(data, origem) {
+            document.getElementById("skipButton").style.display = "inline-block";
+            document.getElementById("statusMessage").textContent = "";
+            document.getElementById("username").textContent = data.nome_usuario || "";
 
-    // --- Normaliza e decide tipo de ação (Curtir vs Seguir) ---
-    const actionType = document.getElementById("actionType").value || "";
+            // Normaliza campos vindos da API
+            const instagramUsername = (data.nome_usuario || "").replace(/^@/, '');
+            const id_pedido = data.id_pedido ?? data._id ?? data.id_action ?? null;
+            const rawUrl = data.url ?? data.url_dir ?? `https://www.instagram.com/${instagramUsername}`;
+            const url = (typeof rawUrl === "string" && rawUrl.trim() !== "") ? rawUrl : `https://www.instagram.com/${instagramUsername}`;
 
-    // normaliza a URL para checagens (evita undefined)
-    const rawUrl = (typeof data.url_dir === 'string' ? data.url_dir.trim() : '');
-    const rawUrlLower = rawUrl.toLowerCase();
+            // Valor: usar somente o que a rota retornou
+            const valorRaw = data.valor ?? data.quantidade_pontos ?? 0;
+            const valorNumber = Number(valorRaw);
+            const valorNumSafe = Number.isFinite(valorNumber) ? valorNumber : 0;
 
-    // detecta padrões típicos de post do Instagram (post, reel, tv, video)
-    const isPostUrl = /\/(?:p|reel|tv|video)\/[A-Za-z0-9_-]*/i.test(rawUrl) ||
-                      /instagram\.com\/(?:p|reel|tv|video)\//i.test(rawUrl);
-
-    // Se o usuário explicitamente escolheu "curtir", sempre Curtir.
-    // Se escolheu "seguir", sempre Seguir.
-    // Se escolheu "seguir_curtir", decidir com base na URL: post => Curtir, senão => Seguir.
-    let isCurtir = false;
-    if (actionType === 'curtir') {
-        isCurtir = true;
-    } else if (actionType === 'seguir') {
-        isCurtir = false;
-    } else if (actionType === 'seguir_curtir') {
-        isCurtir = Boolean(isPostUrl);
-    } else {
-        isCurtir = Boolean(isPostUrl);
-    }
-
-    // Atualiza o texto de Ação exibido
-    const actionTextEl = document.getElementById("actionText");
-    if (actionTextEl) actionTextEl.textContent = isCurtir ? "Curtir" : "Seguir";
-
-    // --- Monta URL final para o link da ação ---
-    // tenta extrair username (se disponível) para montar fallback quando necessário
-    function extractInstagramUsername(data) {
-        if (data && data.nome_usuario) {
-            const n = String(data.nome_usuario).trim();
-            if (n.length) return n.replace(/^@+/, '');
-        }
-        return null;
-    }
-    const instagramusername = extractInstagramUsername(data);
-    let finalUrl = '';
-
-    if (rawUrl) {
-        finalUrl = rawUrl.match(/^https?:\/\//i) ? rawUrl : `https://${rawUrl.replace(/^\/+/, '')}`;
-    } else if (instagramusername) {
-        finalUrl = `https://instagram.com/${instagramusername}`;
-    } else {
-        finalUrl = `https://instagram.com/`; // fallback seguro
-    }
-
-    const actionLink = document.getElementById("actionUrl");
-    if (actionLink) {
-        actionLink.href = finalUrl;
-        actionLink.target = "_blank";
-        actionLink.rel = "noopener noreferrer";
-    }
-
-    // --- Carrega avatar apenas se vamos mostrar usuário (seguir) ---
-    async function loadInstagramAvatar(data) {
-        const profileImg = document.getElementById("profileImage");
-        const username = extractInstagramUsername(data);
-        if (!username) {
-            // sem username, oculta avatar
-            if (profileImg) {
-                profileImg.style.display = "none";
-                profileImg.src = "";
+            // Tipo/label da ação (apenas para exibição)
+            const actionType = document.getElementById("actionType").value;
+            let actionText = "Seguir";
+            if ((data.tipo_acao && data.tipo_acao.toLowerCase() === "curtir") || (url && (url.includes("/p/") || url.includes("/reel/")))) {
+                actionText = "Curtir";
+            } else if (actionType === "seguir_curtir") {
+                actionText = "Seguir e Curtir";
+            } else if (actionType === "curtir") {
+                actionText = "Curtir";
             }
-            return;
-        }
+            document.getElementById("actionText").textContent = actionText;
 
-        // cache TTL local
-        const cacheKey = `avatar_cache_instagram_${username}`;
-        const cacheTsKey = cacheKey + "_ts";
-        try {
-            const cached = localStorage.getItem(cacheKey);
-            const ts = Number(localStorage.getItem(cacheTsKey) || "0");
-            const now = Date.now();
-            const TTL = 30 * 60 * 1000; // 30 minutos
-            if (cached && (now - ts) < TTL) {
-                if (profileImg) {
-                    profileImg.src = cached;
-                    profileImg.style.display = "block";
-                }
-                localStorage.setItem("unique_id", username);
-                return;
-            }
-        } catch (e) { /* ignore storage errors */ }
-
-        // fetch backend que retorna profile_pic_proxy
-        try {
-            const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(username)}`);
-            if (!resUserInfo.ok) {
-                if (profileImg) {
-                    profileImg.style.display = "none";
-                    profileImg.src = "";
-                }
-                return;
-            }
-
-            const result = await resUserInfo.json();
-            const user = result.user ?? result;
-            let avatarProxyUrl = user?.profile_pic_proxy ?? null;
-
-            if (!avatarProxyUrl && typeof user?.profile_pic === "string" && /^https?:\/\//i.test(user.profile_pic)) {
-                avatarProxyUrl = `/api/get-instagram-user?image_url=${encodeURIComponent(user.profile_pic)}`;
-            }
-
-            if (avatarProxyUrl) {
-                if (profileImg) {
-                    profileImg.src = avatarProxyUrl;
-                    profileImg.style.display = "block";
-                }
-                localStorage.setItem("unique_id", username);
-                try {
-                    localStorage.setItem(cacheKey, avatarProxyUrl);
-                    localStorage.setItem(cacheTsKey, String(Date.now()));
-                } catch (e) { /* ignore storage errors */ }
-            } else {
-                if (profileImg) {
-                    profileImg.style.display = "none";
-                    profileImg.src = "";
-                }
-            }
-        } catch (e) {
-            console.warn("Erro ao obter avatar do usuário (fetch):", e);
+            // Avatar / profile image para Instagram
             const profileImg = document.getElementById("profileImage");
-            if (profileImg) {
+            document.getElementById("actionUrl").href = url;
+
+            // Carregar avatar do Instagram se disponível
+            if (instagramUsername) {
+                try {
+                    const cacheKey = `avatar_cache_instagram_${instagramUsername}`;
+                    const cached = localStorage.getItem(cacheKey);
+                    if (cached) {
+                        profileImg.src = cached;
+                        profileImg.style.display = "block";
+                    } else {
+                        // Tentar obter avatar via API do Instagram
+                        const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(instagramUsername)}`);
+                        if (resUserInfo.ok) {
+                            const userInfo = await resUserInfo.json();
+                            const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
+                            const avatarUrl = user?.profile_pic_url || user?.profile_pic || null;
+                            
+                            if (avatarUrl) {
+                                profileImg.src = avatarUrl;
+                                profileImg.style.display = "block";
+                                try {
+                                    localStorage.setItem(cacheKey, avatarUrl);
+                                    localStorage.setItem(cacheKey + "_ts", String(Date.now()));
+                                } catch (e) { }
+                            } else {
+                                profileImg.style.display = "none";
+                            }
+                        } else {
+                            profileImg.style.display = "none";
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Erro ao obter avatar do Instagram:", e);
+                    profileImg.style.display = "none";
+                }
+            } else {
                 profileImg.style.display = "none";
-                profileImg.src = "";
             }
+
+            // Exibição: usa apenas o valor vindo da rota
+            const valorFinalStr = Number(valorNumSafe).toFixed(3);
+            document.getElementById("points").textContent = `R$ ${valorFinalStr}`;
+
+            // Guarda os dados (valor numérico)
+            currentActionData = {
+                ...data,
+                origem,
+                id_pedido,
+                url,
+                valor: valorNumSafe
+            };
+
+            document.getElementById("actionContent").style.display = "block";
+            document.getElementById("actionContent").style.opacity = "1";
         }
-    }
-
-    // --- Exibir / ocultar bloco do usuário (userInfo) e preencher nome quando aplicável ---
-    const userInfo = document.getElementById("userInfo");
-    const usernameSpan = document.getElementById("username");
-    if (isCurtir) {
-        // Curtir: ocultar usuário e avatar
-        if (userInfo) userInfo.style.display = "none";
-        if (usernameSpan) usernameSpan.textContent = "";
-        const profileImg = document.getElementById("profileImage");
-        if (profileImg) {
-            profileImg.style.display = "none";
-            profileImg.src = "";
-        }
-    } else {
-        // Seguir: mostrar usuário e avatar (se houver)
-        if (userInfo) userInfo.style.display = "block";
-        const nomeUsuario = data.nome_usuario ? String(data.nome_usuario).replace(/^@+/, '') : '';
-        if (usernameSpan) usernameSpan.textContent = nomeUsuario;
-        // carregar avatar (async) — não bloqueia a UI principal
-        await loadInstagramAvatar(data);
-    }
-
-    // --- Calcular valor exibido (mesma regra que você já usava) ---
-    let valorFinal;
-    if (isCurtir) {
-        valorFinal = "0.001";
-    } else if (origem === "smm") {
-        valorFinal = "0.006";
-    } else {
-        const pontos = parseFloat(data.quantidade_pontos || 0);
-        const valorBruto = pontos / 1000;
-        let valorDescontado = (valorBruto > 0.004) ? valorBruto - 0.001 : valorBruto;
-        valorFinal = Math.min(Math.max(valorDescontado, 0.004), 0.006).toFixed(3);
-    }
-    const pointsEl = document.getElementById("points");
-    if (pointsEl) pointsEl.textContent = `R$ ${valorFinal}`;
-
-    // Esconde o botão de confirmar até o usuário visualizar (comportamento original)
-    const confirmBtn = document.getElementById("confirmButton");
-    if (confirmBtn) confirmBtn.style.display = "none";
-
-    // Guarda a action atual e mostra o container
-    currentActionData = {
-        ...data,
-        origem
-    };
-    const actionContent = document.getElementById("actionContent");
-    if (actionContent) {
-        actionContent.style.display = "block";
-        actionContent.style.opacity = "1";
-    }
-
-    // Debug rápido no console (ajuda em testes)
-    console.log("processarAcao -> isCurtir:", isCurtir, "actionType:", actionType, "rawUrl:", rawUrl, "username:", instagramusername);
-}
 
         function showConfirmButton() {
             document.getElementById("confirmButton").style.display = "block";
@@ -1286,66 +1183,43 @@ async function processarAcao(data, origem) {
             const confirmButton = document.getElementById("confirmButton");
             const profileImage = document.getElementById("profileImage");
 
-            // Mostra carregamento
+            // mostra loading
             statusElement.innerHTML = `
-    <div class="loading-message">Buscando ações, aguarde...</div>
-    <div class="loading-circle-container">
-      <div class="loading-circle"></div>
-    </div>
-  `;
+                <div class="loading-message">Processando confirmação...</div>
+                <div class="loading-circle-container"><div class="loading-circle"></div></div>
+            `;
 
-            // Oculta elementos da ação atual
             actionContent.style.opacity = "0";
             confirmButton.style.display = "none";
             profileImage.style.display = "none";
 
-            try {
-                let confirmData;
+            // monta payload usando apenas o valor retornado pela rota
+            const payload = {
+                nome_usuario: selectedAccount,
+                url: currentActionData.url,
+                tipo_acao: currentActionData.tipo_acao ?? (currentActionData.url && (currentActionData.url.includes("/p/") || currentActionData.url.includes("/reel/")) ? "curtir" : "seguir"),
+                valor: Number(currentActionData.valor ?? 0),
+                id_pedido: currentActionData.id_pedido ?? currentActionData.id_action ?? null
+            };
 
-                if (currentActionData.origem !== 'smm') {
-                    const confirmResponse = await fetch("/api/confirmar_acao", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${localStorage.getItem('token')}`
-                        },
-                        body: JSON.stringify({
-                            id_conta: localStorage.getItem("id_conta"),
-                            id_pedido: currentActionData.id_pedido,
-                        })
-                    });
+            console.log("➡ Enviando payload para registrar ação:", payload);
 
-                    confirmData = await confirmResponse.json();
-
-                    if (confirmData.status !== "success" || confirmData.message !== "CONFIRMOU_SUCESSO") {
-                        throw new Error("Erro ao confirmar ação.");
-                    }
-                } else {
-                    confirmData = { valor: "0.007" };
-                }
-
-                await registrarAcaoPendente({
-                    nome_usuario: selectedAccount,
-                    id_pedido: currentActionData.id_pedido,
-                    id_conta: localStorage.getItem("id_conta"),
-                    url_dir: currentActionData.url_dir,
-                    tipo_acao: currentActionData.tipo_acao,
-                    quantidade_pontos: Number(currentActionData.quantidade_pontos),
-                    valor_confirmacao: parseFloat(confirmData.valor),
-                });
-
-                tentativasSemAcoes = 0;
-
-                await fetchAction();
-
-            } catch (error) {
-                console.error("Erro ao confirmar ação:", error);
-                statusElement.textContent = "Erro ao confirmar ação. Tente novamente.";
+            // validação: exige valor > 0 (evita salvar 0)
+            if (!payload.nome_usuario || !payload.url || !payload.tipo_acao || !Number.isFinite(payload.valor) || payload.valor <= 0) {
+                statusElement.textContent = "Valor da ação inválido — operação cancelada.";
+                // restaura UI
                 actionContent.style.opacity = "1";
                 confirmButton.style.display = "inline-block";
                 profileImage.style.display = "block";
+                return;
             }
+
+            await confirmarAcao(payload);
+
+            tentativasSemAcoes = 0;
+            await fetchAction();
         }
+
         async function skipAction() {
             const statusElement = document.getElementById("statusMessage");
             const actionContent = document.getElementById("actionContent");
@@ -1354,23 +1228,24 @@ async function processarAcao(data, origem) {
 
             // Mostra o carregamento
             statusElement.innerHTML = `
-        <div class="loading-message">Buscando ações, aguarde...</div>
-        <div class="loading-circle-container">
-            <div class="loading-circle"></div>
-        </div>
-    `;
+                <div class="loading-message">Buscando ações, aguarde...</div>
+                <div class="loading-circle-container">
+                    <div class="loading-circle"></div>
+                </div>
+            `;
             actionContent.style.opacity = "0";
             confirmButton.style.display = "none";
             profileImage.style.display = "none";
 
             try {
-                const tipo = document.getElementById("actionType").value;
                 const nome_usuario = document.getElementById("username").textContent;
-                const url_dir = document.getElementById("actionUrl").href;
-                const quantidade_pontos_text = document.getElementById("points").textContent;
-                const quantidade_pontos = parseFloat(quantidade_pontos_text.replace('R$ ', ''));
-                const tipo_acao = tipo;
-                const id_conta = localStorage.getItem("id_conta");
+                const url = document.getElementById("actionUrl").href;
+                const valor_text = document.getElementById("points").textContent;
+                const valor = parseFloat(valor_text.replace('R$ ', ''));
+
+                // Obter o tipo_acao do currentActionData ou do select
+                const tipo_acao = currentActionData?.tipo_acao || document.getElementById("actionType").value;
+
                 const token = localStorage.getItem("token");
 
                 const response = await fetch("/api/pular_acao", {
@@ -1381,13 +1256,10 @@ async function processarAcao(data, origem) {
                     },
                     body: JSON.stringify({
                         token,
-                        id_pedido: currentActionData?.id_pedido,
-                        id_conta,
                         nome_usuario,
-                        url_dir,
-                        quantidade_pontos,
+                        url,
+                        valor,
                         tipo_acao,
-                        tipo
                     })
                 });
 
@@ -1397,11 +1269,13 @@ async function processarAcao(data, origem) {
                 const statusElement = document.getElementById("statusMessage");
                 statusElement?.removeAttribute("data-contagem");
 
-                // Buscar próxima ação (agende imediatamente)
-                fetchActionDebounced();
+                // Buscar próxima ação
+                fetchAction();
             } catch (error) {
+                console.error("Erro ao pular ação:", error);
             }
         }
+
         async function loadAccounts() {
             try {
                 const token = localStorage.getItem("token");
@@ -1417,10 +1291,12 @@ async function processarAcao(data, origem) {
                 });
 
                 if (!response.ok) {
-                    throw new Error("Erro ao carregar contas");
+                    throw new Error("Erro ao carregar contas: " + response.status);
                 }
 
                 const accounts = await response.json();
+
+                console.log("contas retornadas da API:", accounts);
 
                 if (!Array.isArray(accounts)) {
                     throw new Error("Formato de dados inválido");
@@ -1428,11 +1304,25 @@ async function processarAcao(data, origem) {
 
                 const accountSelect = document.getElementById("accountSelect");
                 accountSelect.innerHTML = '<option value="" disabled selected hidden>Selecione uma conta</option>';
+                accountSelect.disabled = false;
+
+                if (accounts.length === 0) {
+                    const option = document.createElement("option");
+                    option.value = "";
+                    option.textContent = "Nenhuma conta Instagram ativa encontrada";
+                    option.disabled = true;
+                    accountSelect.appendChild(option);
+                    return;
+                }
 
                 accounts.forEach((account) => {
+                    const nome = account.nome_usuario ?? account.nomeConta ?? account.usuario?.nome ?? "";
+
+                    if (!nome) return;
+
                     const option = document.createElement("option");
-                    option.value = account.nomeConta;
-                    option.textContent = account.nomeConta;
+                    option.value = nome;
+                    option.textContent = nome;
                     accountSelect.appendChild(option);
                 });
             } catch (error) {
@@ -1442,12 +1332,9 @@ async function processarAcao(data, origem) {
 
         async function salvarAcaoNoBanco({
             nome_usuario,
-            id_pedido,
-            id_conta,
-            url_dir,
-            acao_validada,
-            valor_confirmacao,
-            quantidade_pontos,
+            url,
+            status,
+            valor,
             tipo_acao
         }) {
             const token = localStorage.getItem("token");
@@ -1457,29 +1344,37 @@ async function processarAcao(data, origem) {
             }
         }
 
-        async function registrarAcaoPendente(acao) {
+        async function confirmarAcao(acao) {
             try {
-                // Validação básica
-                if (!acao.nome_usuario || !acao.id_pedido || !acao.id_conta || !acao.url_dir || !acao.tipo_acao) {
+                console.log("➡ confirmarAcao payload:", acao);
+
+                if (!acao.nome_usuario || !acao.url || !acao.tipo_acao || !Number.isFinite(Number(acao.valor))) {
+                    console.error("❌ Campos obrigatórios ausentes ou inválidos:", acao);
                     return;
                 }
 
-                const response = await fetch("/api/registrar_acao_pendente", {
+                const response = await fetch("/api/confirmar_acao", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${localStorage.getItem('token')}`
                     },
-                    body: JSON.stringify(acao)
+                    body: JSON.stringify({
+                        nome_usuario: acao.nome_usuario,
+                        url: acao.url,
+                        tipo_acao: acao.tipo_acao,
+                        valor: Number(acao.valor),
+                        id_pedido: acao.id_pedido ?? acao.id_action ?? null
+                    })
                 });
 
                 const respJson = await response.json();
 
-                if (!response.ok || respJson.status !== "success") {
+                if (!response.ok) {
+                    console.log("❌ Erro do servidor:", respJson);
                     throw new Error("Falha ao registrar ação pendente.");
                 }
 
-                // opcional: retornar respJson se precisar usar depois
                 return respJson;
 
             } catch (error) {
