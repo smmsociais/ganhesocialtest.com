@@ -9,15 +9,14 @@ const handler = async (req, res) => {
     return res.status(405).json({ error: "Método não permitido" });
   }
 
-  const { id_conta, token, tipo } = req.query;
+  const { token, tipo } = req.query;
 
   console.log("➡️ Requisição recebida:");
-  console.log("id_conta:", id_conta);
   console.log("token:", token);
   console.log("tipo:", tipo);
 
-  if (!id_conta || !token) {
-    return res.status(400).json({ error: "id_conta e token são obrigatórios" });
+  if (!tipo || !token) {
+    return res.status(400).json({ error: "tipo e token são obrigatórios" });
   }
 
   try {
@@ -72,7 +71,7 @@ const query = {
       //
       const validadas = await ActionHistory.countDocuments({
         id_pedido,
-        acao_validada: "valida"
+        status: "valida"
       });
 
       if (validadas >= pedido.quantidade) {
@@ -85,12 +84,11 @@ const query = {
       //
       const pulada = await ActionHistory.findOne({
         id_pedido,
-        id_conta,
-        acao_validada: "pulada"
+        status: "pulada"
       });
 
       if (pulada) {
-        console.log(`🚫 Ação ${id_pedido} foi pulada por ${id_conta}`);
+        console.log(`🚫 Ação ${id_pedido} foi pulada`);
         continue;
       }
 
@@ -99,12 +97,11 @@ const query = {
       //
       const jaFez = await ActionHistory.findOne({
         id_pedido,
-        id_conta,
-        acao_validada: { $in: ["pendente", "valida"] }
+        status: { $in: ["pendente", "valida"] }
       });
 
       if (jaFez) {
-        console.log(`🚫 Conta ${id_conta} já fez o pedido ${id_pedido}`);
+        console.log(`🚫 Conta já fez o pedido ${id_pedido}`);
         continue;
       }
 
@@ -113,7 +110,7 @@ const query = {
       //
       const feitas = await ActionHistory.countDocuments({
         id_pedido,
-        acao_validada: { $in: ["pendente", "valida"] }
+        status: { $in: ["pendente", "valida"] }
       });
 
       console.log(`📊 Ação ${id_pedido}: feitas=${feitas}, limite=${pedido.quantidade}`);
@@ -135,8 +132,8 @@ const query = {
       return res.json({
         status: "ENCONTRADA",
         nome_usuario: nomeUsuario,
-        quantidade_pontos: pedido.valor,
-        url_dir: pedido.link,
+        valor: pedido.valor,
+        url: pedido.link,
         tipo_acao: pedido.tipo,
         id_pedido: pedido._id
       });
