@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Realizar Ações TikTok - GanheSocial</title>
+    <title>Realizar Ações TikTok- GanheSocial</title>
     <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1062,7 +1062,6 @@
 
                 if (!encontrouSMM) {
                     tentativasSemAcoes++;
-                    console.log(`Tentativa ${tentativasSemAcoes} sem ações encontradas`);
                     
                     if (tentativasSemAcoes < maxTentativas) {
                         exibirContagemRegressiva(3); // Sempre 3 segundos entre tentativas
@@ -1192,7 +1191,7 @@
 
             // mostra loading
             statusElement.innerHTML = `
-                <div class="loading-message">Processando confirmação...</div>
+                <div class="loading-message">Buscando ações, aguarde...</div>
                 <div class="loading-circle-container"><div class="loading-circle"></div></div>
             `;
 
@@ -1381,13 +1380,13 @@
 
                 if (!response.ok) {
                     console.log("❌ Erro do servidor:", respJson);
-                    throw new Error("Falha ao registrar ação pendente.");
+                    throw new Error("Falha ao registrar ação.");
                 }
 
                 return respJson;
 
             } catch (error) {
-                console.error("Erro ao registrar ação pendente:", error);
+                console.error("Erro ao confirmar ação:", error);
             }
         }
 
