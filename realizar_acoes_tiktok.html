@@ -863,20 +863,20 @@
 
 // === bindAccount() — grava nome_usuario no localStorage e dispara fetch ===
 async function bindAccount() {
-                const selectedAccount = document.getElementById("accountSelect").value?.trim();
-            if (!selectedAccount) return;
+    const selectedAccount = document.getElementById("accountSelect").value?.trim();
+    if (!selectedAccount) return;
 
-            // Gera um id_conta estável derivado do nome do usuário
-            const generatedId = "local_" + selectedAccount;
+    // Gera um id_conta estável derivado do nome do usuário
+    const generatedId = "local_" + selectedAccount;
 
-            localStorage.setItem("id_conta", generatedId);
-            localStorage.setItem("conta_invalida", "false");
+    localStorage.setItem("id_conta", generatedId);
+    localStorage.setItem("conta_invalida", "false");
 
-            limparUI();
-            ativarSelecaoTipoAcao();
-            fetchAction();
-        }
-
+    limparUI();
+    ativarSelecaoTipoAcao();
+    fetchAction();
+    // REMOVI O RETURN ISOLADO QUE ESTAVA AQUI
+}
         // variáveis globais
         let contagemEmAndamento = false;
         let fetchTimeout;
@@ -983,7 +983,6 @@ async function fetchAction() {
         }
 
         // Se tiver múltiplas contas no servidor, nome_usuario é obrigatório — valide no front
-        // (se seu frontend consegue saber quantas contas o usuário tem, verifique e force o envio)
         if (!nomeUsuario) {
             // mostra aviso e encerra a busca — evita 400 do backend
             if (statusElement) statusElement.textContent = "Selecione a conta (nome_usuario) antes de buscar ações.";
@@ -1040,6 +1039,13 @@ async function fetchAction() {
     } finally {
         buscando = false;
     }
+}
+
+// Adicione a função exibirContagemRegressiva que está faltando
+function exibirContagemRegressiva() {
+    // Implemente a lógica de contagem regressiva aqui
+    console.log("Exibindo contagem regressiva...");
+    // Sua implementação da contagem regressiva
 }
         // Recomenda: resetar tentativas se o usuário trocar tipo de ação ou conta
         document.getElementById("actionType")?.addEventListener("change", () => {
