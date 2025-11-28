@@ -1968,8 +1968,8 @@ router.post("/afiliados", async (req, res) => {
   }
 });
 
-// Rota: /api/registrar_acao_pendente
-router.post("/registrar_acao_pendente", async (req, res) => {
+// Rota: /api/confirmar_acao
+router.post("/confirmar_acao", async (req, res) => {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método não permitido." });
   }
