@@ -1854,14 +1854,13 @@ router.post("/pular_acao", async (req, res) => {
 
   const {
     id_pedido,
-    id_conta,
     nome_usuario,
     url,
     tipo_acao
   } = req.body;
 
   // ===== VALIDAÇÃO DE CAMPOS =====
-  if (!id_pedido || !id_conta || !nome_usuario || !url || !tipo_acao) {
+  if (!id_pedido || !nome_usuario || !url || !tipo_acao) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes." });
   }
 
@@ -1885,7 +1884,6 @@ router.post("/pular_acao", async (req, res) => {
     // ===== IMPEDIR DUPLICAÇÃO DO PULO =====
     const existente = await ActionHistory.findOne({
       id_action: String(id_pedido),
-      id_conta,
       acao_validada: "pulada",
     });
 
@@ -1899,7 +1897,6 @@ router.post("/pular_acao", async (req, res) => {
       token,
       nome_usuario,
       id_action: String(id_pedido),
-      id_conta,
       url,
       tipo_acao: tipo_acao.toLowerCase(),
       tipo: tipoAcaoFinal,
