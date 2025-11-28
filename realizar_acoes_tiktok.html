@@ -1250,11 +1250,10 @@ async function skipAction() {
 
         // 🔥 CAMPOS ESSENCIAIS
         const id_pedido = currentActionData?.id_action;
-        const id_conta = currentActionData?.id_conta;
         const tipo_acao = currentActionData?.tipo_acao;
 
         if (!id_pedido || !id_conta) {
-            console.error("ERRO: id_pedido ou id_conta está ausente.");
+            console.error("ERRO: id_pedido está ausente.");
             return;
         }
 
@@ -1266,7 +1265,6 @@ async function skipAction() {
             },
             body: JSON.stringify({
                 id_pedido,
-                id_conta,
                 nome_usuario,
                 url,
                 tipo_acao
