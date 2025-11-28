@@ -1033,7 +1033,7 @@ if (!token || !actionType || !nome_usuario) {
                 // Função única: tentar buscar no SMM
                 async function tentarBuscarSMM() {
                     try {
-                        const response = await fetch(`/api/buscar_acao_smm_tiktok?token=${token}&tipo=${actionType}&nome_usuario=${encodeURIComponent(nome_usuario)}`);
+                        const response = await fetch(`/api/buscar_acao_smm_tiktok?token=${token}&tipo=${actionType}`);
                         if (!response.ok) throw new Error("Resposta não OK: " + response.status);
                         const data = await response.json();
 
