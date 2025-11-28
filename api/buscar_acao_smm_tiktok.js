@@ -123,16 +123,41 @@ const query = {
       //
       // 6. Pedido disponível
       //
-      const nomeUsuario = pedido.link.includes("@")
+      const nomeUsuario = pedido.link && pedido.link.includes("@")
         ? pedido.link.split("@")[1].split(/[/?#]/)[0]
         : "";
 
-      console.log(`✅ Ação encontrada: ${nomeUsuario} (pedido ${id_pedido})`);
+      // determina valor padrão por tipo (seguir -> 0.006, curtir -> 0.001)
+      const tipoPedido = (pedido.tipo || "").toString().toLowerCase();
+      let valorParaEnviar = 0;
+
+      if (typeof pedido.valor === "number" && pedido.valor > 0) {
+        // se o pedido já tem um valor definido no DB, respeita
+        valorParaEnviar = Number(pedido.valor);
+      } else {
+        // senão, usa o mapeamento padrão
+        if (tipoPedido === "seguir") {
+          valorParaEnviar = 0.006;
+        } else if (tipoPedido === "curtir") {
+          valorParaEnviar = 0.001;
+        } else if (tipoPedido === "seguir_curtir") {
+          // se a ação for mista, escolha o valor de seguir como padrão
+          valorParaEnviar = 0.006;
+        } else {
+          // fallback seguro
+          valorParaEnviar = 0.006;
+        }
+      }
+
+      // garante 3 casas decimais como número
+      valorParaEnviar = Number(valorParaEnviar.toFixed(3));
+
+      console.log(`✅ Ação encontrada: ${nomeUsuario} (pedido ${id_pedido}) — tipo=${tipoPedido}, valor=${valorParaEnviar}`);
 
       return res.json({
         status: "ENCONTRADA",
         nome_usuario: nomeUsuario,
-        valor: pedido.valor,
+        valor: valorParaEnviar,
         url: pedido.link,
         tipo_acao: pedido.tipo,
         id_pedido: pedido._id
