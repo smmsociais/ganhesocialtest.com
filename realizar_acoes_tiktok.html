@@ -1007,13 +1007,11 @@
                 const statusElement = document.getElementById("statusMessage");
                 const contaInvalida = localStorage.getItem("conta_invalida") === "true";
 
-                // Validações iniciais (mesma lógica)
-                if (!token || !actionType || actionType || nome_usuario === "") {
-                    document.getElementById("warningMessage").style.display = "block";
-                    document.getElementById("actionContent").style.opacity = "1";
-                    return;
-                }
-
+if (!token || !actionType || !nome_usuario) {
+    document.getElementById("warningMessage").style.display = "block";
+    document.getElementById("actionContent").style.opacity = "1";
+    return;
+}
                 if (!["seguir", "curtir", "seguir_curtir"].includes(actionType)) {
                     if (statusElement) statusElement.textContent = "Tipo de ação inválido.";
                     return;
