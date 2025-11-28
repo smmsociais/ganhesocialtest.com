@@ -869,7 +869,6 @@
             // Gera um id_conta estável derivado do nome do usuário
             const generatedId = "local_" + selectedAccount;
 
-            localStorage.setItem("id_conta", generatedId);
             localStorage.setItem("conta_invalida", "false");
 
             limparUI();
@@ -894,19 +893,17 @@
         let inicializou = false;
 
         function ativarSelecaoTipoAcao() {
-            const id_conta = localStorage.getItem("id_conta");
             const token = localStorage.getItem("token");
 
-            if (id_conta && token && id_conta !== "null") {
+            if (token!== "null") {
                 const select = document.getElementById("actionType");
                 select.disabled = false;
 
                 if (!select.dataset.listenerAdded) {
                     select.addEventListener("change", () => {
                         const actionType = select.value;
-                        const id_conta = localStorage.getItem("id_conta");
 
-                        if (id_conta && id_conta !== "null" && actionType !== "") {
+                        if (actionType !== "") {
                             document.getElementById("actionText").textContent =
                                 actionType === "curtir" ? "Curtir" :
                                     actionType === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
@@ -1005,14 +1002,13 @@
             buscando = true;
 
             try {
-                const id_conta = localStorage.getItem("id_conta");
                 const token = localStorage.getItem("token");
                 const actionType = document.getElementById("actionType").value;
                 const statusElement = document.getElementById("statusMessage");
                 const contaInvalida = localStorage.getItem("conta_invalida") === "true";
 
                 // Validações iniciais (mesma lógica)
-                if (!id_conta || !token || id_conta === "null" || !actionType || actionType === "") {
+                if (!token || !actionType || actionType === "") {
                     document.getElementById("warningMessage").style.display = "block";
                     document.getElementById("actionContent").style.opacity = "1";
                     return;
@@ -1040,7 +1036,7 @@
                 // Função única: tentar buscar no SMM
                 async function tentarBuscarSMM() {
                     try {
-                        const response = await fetch(`/api/buscar_acao_smm_tiktok?id_conta=${id_conta}&token=${token}&tipo=${actionType}`);
+                        const response = await fetch(`/api/buscar_acao_smm_tiktok?token=${token}&tipo=${actionType}`);
                         if (!response.ok) throw new Error("Resposta não OK: " + response.status);
                         const data = await response.json();
 
@@ -1085,7 +1081,7 @@
             const actionType = document.getElementById("actionType").value;
             let actionText = "Seguir";
 
-            if (data.url_dir && data.url_dir.includes("/video/")) {
+            if (data.url && data.url.includes("/video/")) {
                 actionText = "Curtir";
             } else if (actionType === "seguir_curtir") {
                 actionText = origem === "local" ? "Seguir" : "Seguir";
@@ -1097,7 +1093,7 @@
 
             // --- começa substituição: bloco para carregar avatar via /api/get-user ---
             const tiktokUsername = data.nome_usuario.replace(/^@/, '');
-            const rawUrl = data.url_dir;
+            const rawUrl = data.url;
             const url = (typeof rawUrl === "string" && rawUrl.trim() !== "")
                 ? rawUrl
                 : `https://www.tiktok.com/@${tiktokUsername}`;
@@ -1184,14 +1180,14 @@
             }
             let valorFinal;
 
-            const isCurtir = (data.url_dir && data.url_dir.includes("/video/")) || actionType === "curtir";
+            const isCurtir = (data.url && data.url.includes("/video/")) || actionType === "curtir";
 
             if (isCurtir) {
                 valorFinal = "0.001";
             } else if (origem === "smm") {
                 valorFinal = "0.006";
             } else {
-                const pontos = parseFloat(data.quantidade_pontos || 0);
+                const pontos = parseFloat(data.valor || 0);
                 const valorBruto = pontos / 1000;
                 let valorDescontado = (valorBruto > 0.004) ? valorBruto - 0.001 : valorBruto;
                 valorFinal = Math.min(Math.max(valorDescontado, 0.004), 0.006).toFixed(3);
@@ -1258,9 +1254,9 @@
 
                 await registrarAcaoPendente({
                     nome_usuario: selectedAccount,
-                    url_dir: currentActionData.url_dir,
+                    url: currentActionData.url,
                     tipo_acao: currentActionData.tipo_acao,
-                    quantidade_pontos: Number(currentActionData.quantidade_pontos)
+                    valor: Number(currentActionData.valor)
                 });
 
                 tentativasSemAcoes = 0;
@@ -1293,13 +1289,11 @@
             profileImage.style.display = "none";
 
             try {
-                const tipo = document.getElementById("actionType").value;
                 const nome_usuario = document.getElementById("username").textContent;
-                const url_dir = document.getElementById("actionUrl").href;
-                const quantidade_pontos_text = document.getElementById("points").textContent;
-                const quantidade_pontos = parseFloat(quantidade_pontos_text.replace('R$ ', ''));
+                const url = document.getElementById("actionUrl").href;
+                const valor_text = document.getElementById("points").textContent;
+                const valor = parseFloat(valor_text.replace('R$ ', ''));
                 const tipo_acao = tipo;
-                const id_conta = localStorage.getItem("id_conta");
                 const token = localStorage.getItem("token");
 
                 const response = await fetch("/api/pular_acao", {
@@ -1311,10 +1305,9 @@
                     body: JSON.stringify({
                         token,
                         nome_usuario,
-                        url_dir,
-                        quantidade_pontos,
+                        url,
+                        valor,
                         tipo_acao,
-                        tipo
                     })
                 });
 
@@ -1387,9 +1380,9 @@
 
         async function salvarAcaoNoBanco({
             nome_usuario,
-            url_dir,
+            url,
             status,
-            quantidade_pontos,
+            valor,
             tipo_acao
         }) {
             const token = localStorage.getItem("token");
@@ -1403,14 +1396,14 @@ async function registrarAcaoPendente(acao) {
     try {
         const payload = {
             nome_usuario: acao.nome_usuario,
-            url: acao.url_dir,         // ← renomeado correto
+            url: acao.url,         // ← renomeado correto
             tipo_acao: acao.tipo_acao,
-            quantidade_pontos: acao.quantidade_pontos,
+            valor: acao.valor,
         };
 
         console.log("➡ Enviando payload:", payload);
 
-        if (!payload.id_conta || !payload.id_pedido || !payload.nome_usuario || !payload.url || !payload.tipo_acao) {
+        if (!payload.nome_usuario || !payload.url || !payload.tipo_acao || !payload.valor) {
             console.error("❌ Campos obrigatórios ausentes:", payload);
             return;
         }
@@ -1437,7 +1430,6 @@ async function registrarAcaoPendente(acao) {
         console.error("Erro ao registrar ação pendente:", error);
     }
 }
-
         function logout() {
             localStorage.removeItem("token");
             window.location.href = "https://ganhesocialtest.com";
