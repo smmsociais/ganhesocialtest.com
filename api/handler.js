@@ -75,10 +75,11 @@ router.route("/contas_tiktok")
       const nomeNormalized = String(rawName).trim();
       const nomeLower = nomeNormalized.toLowerCase();
 
-      // Procura conta já existente no próprio usuário (compatível com nome_usuario e nomeConta)
-      const contaExistenteIndex = (user.contas || []).findIndex(
-        c => String((c.nome_usuario ?? c.nomeConta ?? "")).toLowerCase() === nomeLower
-      );
+
+    // PROCURAR conta IGUAL pelo nome_usuario E PELA REDE "TikTok"
+    const contaIndex = usuario.contas.findIndex(
+      c => c.nome_usuario === nome_usuario && c.rede === "TikTok"
+    );
 
       if (contaExistenteIndex !== -1) {
         const contaExistente = user.contas[contaExistenteIndex];
