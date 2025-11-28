@@ -1003,11 +1003,12 @@
             try {
                 const token = localStorage.getItem("token");
                 const actionType = document.getElementById("actionType").value;
+                const nome_usuario = localStorage.getItem("nome_usuario");
                 const statusElement = document.getElementById("statusMessage");
                 const contaInvalida = localStorage.getItem("conta_invalida") === "true";
 
                 // Validações iniciais (mesma lógica)
-                if (!token || !actionType || actionType === "") {
+                if (!token || !actionType || actionType || nome_usuario === "") {
                     document.getElementById("warningMessage").style.display = "block";
                     document.getElementById("actionContent").style.opacity = "1";
                     return;
@@ -1035,7 +1036,7 @@
                 // Função única: tentar buscar no SMM
                 async function tentarBuscarSMM() {
                     try {
-                        const response = await fetch(`/api/buscar_acao_smm_tiktok?token=${token}&tipo=${actionType}&nome_usuario=${encodeURIComponent(nomeConta)}`);
+                        const response = await fetch(`/api/buscar_acao_smm_tiktok?token=${token}&tipo=${actionType}&nome_usuario=${encodeURIComponent(nome_usuario)}`);
                         if (!response.ok) throw new Error("Resposta não OK: " + response.status);
                         const data = await response.json();
 
