@@ -861,208 +861,103 @@
             }
         }
 
-        async function bindAccount() {
-            const selectedAccount = document.getElementById("accountSelect").value?.trim();
-            if (!selectedAccount) return;
+// === bindAccount() — grava nome_usuario no localStorage e dispara fetch ===
+async function bindAccount() {
+    const selectedAccount = document.getElementById("accountSelect").value?.trim();
+    if (!selectedAccount) return;
 
-            // Gera um id_conta estável derivado do nome do usuário
-            const generatedId = "local_" + selectedAccount;
+    // Gera um id_conta estável derivado do nome do usuário (se você usa isso)
+    const generatedId = "local_" + selectedAccount;
+    // Salva o nome da conta para enviar ao backend
+    localStorage.setItem("nome_usuario", selectedAccount);
+    // se você quiser manter o generatedId também:
+    localStorage.setItem("id_conta_local", generatedId);
 
-            localStorage.setItem("conta_invalida", "false");
+    localStorage.setItem("conta_invalida", "false");
 
-            limparUI();
-            ativarSelecaoTipoAcao();
-            fetchAction();
+    limparUI();
+    ativarSelecaoTipoAcao();
+    fetchActionDebounced();
+}
+
+// === fetchAction() — inclui nome_usuario na requisição para /api/buscar_acao_smm_tiktok ===
+async function fetchAction() {
+    if (buscando) return;
+    buscando = true;
+
+    try {
+        const token = localStorage.getItem("token");
+        const actionType = document.getElementById("actionType").value;
+        const statusElement = document.getElementById("statusMessage");
+        const contaInvalida = localStorage.getItem("conta_invalida") === "true";
+        const nomeUsuario = localStorage.getItem("nome_usuario"); // <- pega daqui
+
+        // Validações iniciais (mesma lógica)
+        if (!token || !actionType || actionType === "") {
+            document.getElementById("warningMessage").style.display = "block";
+            document.getElementById("actionContent").style.opacity = "1";
+            return;
         }
 
-        // variáveis globais
-        let contagemEmAndamento = false;
-        let fetchTimeout;
-        let contagemTimeout;
-        let pausaTimeout;
-        let buscando = false;
-
-        function fetchActionDebounced() {
-            clearTimeout(fetchTimeout);
-            fetchTimeout = setTimeout(() => {
-                fetchAction();
-            }, 200);
+        // Se tiver múltiplas contas no servidor, nome_usuario é obrigatório — valide no front
+        // (se seu frontend consegue saber quantas contas o usuário tem, verifique e force o envio)
+        if (!nomeUsuario) {
+            // mostra aviso e encerra a busca — evita 400 do backend
+            if (statusElement) statusElement.textContent = "Selecione a conta (nome_usuario) antes de buscar ações.";
+            return;
         }
 
-        let inicializou = false;
-
-        function ativarSelecaoTipoAcao() {
-            const token = localStorage.getItem("token");
-
-            if (token !== "null") {
-                const select = document.getElementById("actionType");
-                select.disabled = false;
-
-                if (!select.dataset.listenerAdded) {
-                    select.addEventListener("change", () => {
-                        const actionType = select.value;
-
-                        if (actionType !== "") {
-                            document.getElementById("actionText").textContent =
-                                actionType === "curtir" ? "Curtir" :
-                                    actionType === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
-
-                            fetchActionDebounced();
-                        }
-                    });
-
-                    select.dataset.listenerAdded = "true";
-                }
-
-                if (!inicializou) {
-                    inicializou = true;
-                    const preSelectedAction = select.value;
-
-                    if (preSelectedAction && preSelectedAction !== "") {
-                        document.getElementById("actionText").textContent =
-                            preSelectedAction === "curtir" ? "Curtir" :
-                                preSelectedAction === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
-
-                        fetchActionDebounced();
-                    }
-                }
-            }
+        if (!["seguir", "curtir", "seguir_curtir"].includes(actionType)) {
+            if (statusElement) statusElement.textContent = "Tipo de ação inválido.";
+            return;
         }
 
-        let tentativasSemAcoes = 0;
-        const maxTentativas = 1;
-        const pausaLongaMs = 0;
+        if (document.getElementById("actionType").disabled) return;
+        document.getElementById("warningMessage").style.display = "none";
 
-        function fetchActionDebounced() {
-            // evita agendar se já estamos em pausa longa
-            if (tentativasSemAcoes >= maxTentativas) {
-                return;
-            }
-
-            clearTimeout(fetchTimeout);
-            fetchTimeout = setTimeout(() => {
-                fetchAction();
-            }, 200);
-        }
-
-        function exibirContagemRegressiva(segundos = 3) {
-            if (contagemEmAndamento) return; // evita chamadas concorrentes
-            contagemEmAndamento = true;
-
-            let contador = segundos;
-            const statusElement = document.getElementById("statusMessage");
-            if (!statusElement) {
-                contagemEmAndamento = false;
-                return;
-            }
-
-            statusElement.dataset.contagem = "true";
+        if (statusElement && !statusElement.dataset.contagem) {
             statusElement.innerHTML = `
-    <div class="loading-message">Nenhuma ação disponível no momento. Tentando novamente em ${contador}...</div>
-    <div class="loading-circle-container">
-      <div class="loading-circle"></div>
-    </div>
-  `;
-
-            const loadingMessage = statusElement.querySelector(".loading-message");
-            if (!loadingMessage) {
-                contagemEmAndamento = false;
-                return;
-            }
-
-            function atualizarMensagem() {
-                if (contador > 0) {
-                    loadingMessage.textContent = `Nenhuma ação disponível no momento. Tentando novamente em ${contador}...`;
-                    contador--;
-                    contagemTimeout = setTimeout(atualizarMensagem, 1000);
-                } else {
-                    contagemEmAndamento = false;
-                    statusElement.removeAttribute("data-contagem");
-
-                    // Se atingimos o máximo de tentativas, fazemos pausa longa
-                    if (tentativasSemAcoes >= maxTentativas) {
-                        setTimeout(() => {
-                            tentativasSemAcoes = 0;
-                            // só dispara se não houver busca em andamento
-                            if (!buscando) fetchActionDebounced();
-                        }, pausaLongaMs);
-                    } else {
-                        // chamada única após a contagem
-                        if (!buscando) fetchActionDebounced();
-                    }
-                }
-            }
-
-            atualizarMensagem();
-        }
-
-        async function fetchAction() {
-            if (buscando) return;
-            buscando = true;
-
-            try {
-                const token = localStorage.getItem("token");
-                const actionType = document.getElementById("actionType").value;
-                const statusElement = document.getElementById("statusMessage");
-                const contaInvalida = localStorage.getItem("conta_invalida") === "true";
-
-                // Validações iniciais (mesma lógica)
-                if (!token || !actionType || actionType === "") {
-                    document.getElementById("warningMessage").style.display = "block";
-                    document.getElementById("actionContent").style.opacity = "1";
-                    return;
-                }
-
-                if (!["seguir", "curtir", "seguir_curtir"].includes(actionType)) {
-                    if (statusElement) statusElement.textContent = "Tipo de ação inválido.";
-                    return;
-                }
-
-                if (document.getElementById("actionType").disabled) return;
-                document.getElementById("warningMessage").style.display = "none";
-
-                if (statusElement && !statusElement.dataset.contagem) {
-                    statusElement.innerHTML = `
                 <div class="loading-message">Buscando ações, aguarde...</div>
                 <div class="loading-circle-container">
                   <div class="loading-circle"></div>
                 </div>
             `;
-                }
-
-                document.getElementById("actionContent").style.opacity = "0";
-
-                // Função única: tentar buscar no SMM
-                async function tentarBuscarSMM() {
-                    try {
-                        const response = await fetch(`/api/buscar_acao_smm_tiktok?token=${token}&tipo=${actionType}`);
-                        if (!response.ok) throw new Error("Resposta não OK: " + response.status);
-                        const data = await response.json();
-
-                        if (data.status === "ENCONTRADA") {
-                            tentativasSemAcoes = 0;
-                            if (statusElement) statusElement.removeAttribute("data-contagem");
-                            await processarAcao(data, "smm");
-                            return true;
-                        }
-                    } catch (e) {
-                        console.error("Erro ao buscar ação SMM:", e);
-                    }
-                    return false;
-                }
-
-                const encontrouSMM = await tentarBuscarSMM();
-
-                if (!encontrouSMM) {
-                    tentativasSemAcoes++;
-                    // se não encontrou em SMM, exibe contagem/regressiva (backoff)
-                    exibirContagemRegressiva();
-                }
-
-            } finally {
-                buscando = false;
-            }
         }
+
+        document.getElementById("actionContent").style.opacity = "0";
+
+        // Função única: tentar buscar no SMM (agora incluindo nome_usuario)
+        async function tentarBuscarSMM() {
+            try {
+                const url = `/api/buscar_acao_smm_tiktok?token=${encodeURIComponent(token)}&tipo=${encodeURIComponent(actionType)}&nome_usuario=${encodeURIComponent(nomeUsuario)}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Resposta não OK: " + response.status);
+                const data = await response.json();
+
+                if (data.status === "ENCONTRADA") {
+                    tentativasSemAcoes = 0;
+                    if (statusElement) statusElement.removeAttribute("data-contagem");
+                    await processarAcao(data, "smm");
+                    return true;
+                }
+            } catch (e) {
+                console.error("Erro ao buscar ação SMM:", e);
+            }
+            return false;
+        }
+
+        const encontrouSMM = await tentarBuscarSMM();
+
+        if (!encontrouSMM) {
+            tentativasSemAcoes++;
+            // se não encontrou em SMM, exibe contagem/regressiva (backoff)
+            exibirContagemRegressiva();
+        }
+
+    } finally {
+        buscando = false;
+    }
+}
         // Recomenda: resetar tentativas se o usuário trocar tipo de ação ou conta
         document.getElementById("actionType")?.addEventListener("change", () => {
             tentativasSemAcoes = 0;
