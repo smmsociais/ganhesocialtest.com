@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Realizar Ações TikTok- GanheSocial</title>
+    <title>Realizar Ações TikTok - GanheSocial</title>
     <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -841,13 +841,12 @@
         let pausaTimeout;
         let buscando = false;
         let tentativasSemAcoes = 0;
-        const maxTentativas = 1;
-        const pausaLongaMs = 0;
+        const maxTentativas = 3; // Aumentei para 3 tentativas antes da pausa
+        const pausaLongaMs = 10000; // 10 segundos de pausa após maxTentativas
         let inicializou = false;
 
         function limparUI() {
             currentActionData = null;
-            tentativasSemAcoes = 0;
 
             const username = document.getElementById("username");
             const points = document.getElementById("points");
@@ -884,16 +883,12 @@
             localStorage.setItem("conta_invalida", "false");
 
             limparUI();
+            tentativasSemAcoes = 0; // Reset das tentativas ao trocar conta
             ativarSelecaoTipoAcao();
             fetchAction();
         }
 
         function fetchActionDebounced() {
-            // evita agendar se já estamos em pausa longa
-            if (tentativasSemAcoes >= maxTentativas) {
-                return;
-            }
-
             clearTimeout(fetchTimeout);
             fetchTimeout = setTimeout(() => {
                 fetchAction();
@@ -918,6 +913,7 @@
                                 actionType === "curtir" ? "Curtir" :
                                     actionType === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
 
+                            tentativasSemAcoes = 0; // Reset das tentativas ao trocar tipo de ação
                             fetchActionDebounced();
                         }
                     });
@@ -940,11 +936,9 @@
             }
         }
 
-        function exibirContagemRegressiva() {
+        function exibirContagemRegressiva(seconds = 3) {
             const statusElement = document.getElementById("statusMessage");
             if (!statusElement) return;
-
-            let seconds = 3; // ajuste o tempo conforme necessário
 
             statusElement.dataset.contagem = "true";
 
@@ -960,11 +954,40 @@
                     contagemTimeout = setTimeout(updateCountdown, 1000);
                 } else {
                     statusElement.removeAttribute("data-contagem");
-                    fetchActionDebounced();
+                    // Buscar ação imediatamente após a contagem
+                    fetchAction();
                 }
             }
 
             updateCountdown();
+        }
+
+        function iniciarPausaLonga() {
+            const statusElement = document.getElementById("statusMessage");
+            if (!statusElement) return;
+
+            let seconds = 10; // Pausa de 10 segundos
+
+            statusElement.dataset.contagem = "true";
+
+            function updatePausa() {
+                if (seconds > 0) {
+                    statusElement.innerHTML = `
+                        <div class="loading-message">Muitas tentativas sem ações. Nova busca em ${seconds} segundos...</div>
+                        <div class="loading-circle-container">
+                            <div class="loading-circle"></div>
+                        </div>
+                    `;
+                    seconds--;
+                    pausaTimeout = setTimeout(updatePausa, 1000);
+                } else {
+                    statusElement.removeAttribute("data-contagem");
+                    tentativasSemAcoes = 0; // Reset das tentativas após pausa longa
+                    fetchAction();
+                }
+            }
+
+            updatePausa();
         }
 
         async function fetchAction() {
@@ -997,6 +1020,12 @@
 
                 if (document.getElementById("actionType").disabled) return;
                 document.getElementById("warningMessage").style.display = "none";
+
+                // Verificar se precisa de pausa longa
+                if (tentativasSemAcoes >= maxTentativas) {
+                    iniciarPausaLonga();
+                    return;
+                }
 
                 if (statusElement && !statusElement.dataset.contagem) {
                     statusElement.innerHTML = `
@@ -1033,21 +1062,19 @@
 
                 if (!encontrouSMM) {
                     tentativasSemAcoes++;
-                    exibirContagemRegressiva();
+                    console.log(`Tentativa ${tentativasSemAcoes} sem ações encontradas`);
+                    
+                    if (tentativasSemAcoes < maxTentativas) {
+                        exibirContagemRegressiva(3); // Sempre 3 segundos entre tentativas
+                    } else {
+                        iniciarPausaLonga(); // Pausa longa após maxTentativas
+                    }
                 }
 
             } finally {
                 buscando = false;
             }
         }
-
-        // Recomenda: resetar tentativas se o usuário trocar tipo de ação ou conta
-        document.getElementById("actionType")?.addEventListener("change", () => {
-            tentativasSemAcoes = 0;
-        });
-        window.addEventListener("storage", (e) => {
-            if (e.key === "id_conta") tentativasSemAcoes = 0;
-        });
 
         async function processarAcao(data, origem) {
             document.getElementById("skipButton").style.display = "inline-block";
@@ -1250,7 +1277,7 @@
                 statusElement?.removeAttribute("data-contagem");
 
                 // Buscar próxima ação
-                fetchActionDebounced();
+                fetchAction();
             } catch (error) {
                 console.error("Erro ao pular ação:", error);
             }
