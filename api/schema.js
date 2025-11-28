@@ -17,6 +17,7 @@ const ActionHistorySchema = new mongoose.Schema({
   token: { type: String },
   nome_usuario: { type: String },
   id_action: { type: String, required: true },
+  id_pedido: { type: String, required: true },
   url: { type: String, required: true },
   status: { type: String, enum: ['valida', 'pendente', 'pulada', 'invalida'], default: 'pendente' },
   valor: { type: Number, required: true },
