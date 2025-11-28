@@ -1185,6 +1185,10 @@ async function processarAcao(data, origem) {
     document.getElementById("actionContent").style.opacity = "1";
 }
 
+        function showConfirmButton() {
+            document.getElementById("confirmButton").style.display = "block";
+        }
+
 // ===== Substitua a função confirmAction pelo trecho abaixo (apenas a parte que chama registrarAcaoPendente) =====
 async function confirmAction() {
     const selectedAccount = document.getElementById("accountSelect").value;
