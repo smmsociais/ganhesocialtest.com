@@ -1856,7 +1856,8 @@ router.post("/pular_acao", async (req, res) => {
     id_pedido,
     nome_usuario,
     url,
-    tipo_acao
+    tipo_acao,
+    valor
   } = req.body;
 
   // ===== VALIDAÇÃO DE CAMPOS =====
@@ -1903,6 +1904,7 @@ router.post("/pular_acao", async (req, res) => {
       rede_social: redeFinal,
       acao_validada: "pulada",
       status: "pulada",
+      valor,
       data: new Date()
     });
 
