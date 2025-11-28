@@ -1984,7 +1984,9 @@ router.post("/registrar_acao_pendente", async (req, res) => {
   }
 
   try {
-    const idPedidoStr = id_action.toString();
+const idPedidoStr = req.body.id_pedido
+  ? req.body.id_pedido.toString()
+  : new Date().getTime().toString();  // fallback seguro
 
     // === Detectar Rede Social ===
     let redeFinal = "TikTok";
