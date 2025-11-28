@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Realizar Ações TikTok- GanheSocial</title>
+    <title>Realizar Ações TikTok - GanheSocial</title>
     <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1208,8 +1208,6 @@
                 id_pedido: currentActionData.id_pedido ?? currentActionData.id_action ?? null
             };
 
-            console.log("➡ Enviando payload para registrar ação:", payload);
-
             // validação: exige valor > 0 (evita salvar 0)
             if (!payload.nome_usuario || !payload.url || !payload.tipo_acao || !Number.isFinite(payload.valor) || payload.valor <= 0) {
                 statusElement.textContent = "Valor da ação inválido — operação cancelada.";
@@ -1315,8 +1313,6 @@ async function skipAction() {
 
                 const accounts = await response.json();
 
-                console.log("contas retornadas da API:", accounts); // útil para debug
-
                 if (!Array.isArray(accounts)) {
                     throw new Error("Formato de dados inválido");
                 }
@@ -1367,8 +1363,6 @@ async function skipAction() {
 
         async function confirmarAcao(acao) {
             try {
-                console.log("➡ confirmarAcao payload:", acao);
-
                 if (!acao.nome_usuario || !acao.url || !acao.tipo_acao || !Number.isFinite(Number(acao.valor))) {
                     console.error("❌ Campos obrigatórios ausentes ou inválidos:", acao);
                     return;
