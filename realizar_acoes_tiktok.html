@@ -1232,12 +1232,13 @@ async function confirmAction() {
         }
 
         // monta payload normalizado conforme rota atual (/api/registrar_acao_pendente)
-        const payload = {
-            nome_usuario: selectedAccount,
-            url: currentActionData.url,
-            tipo_acao: currentActionData.tipo_acao || (currentActionData.url && currentActionData.url.includes("/video/") ? "curtir" : "seguir"),
-            valor: Number(currentActionData.valor ?? currentActionData.quantidade_pontos ?? 0),
-        };
+const payload = {
+    nome_usuario: selectedAccount,
+    url: currentActionData.url,
+    tipo_acao: currentActionData.tipo_acao || (currentActionData.url && currentActionData.url.includes("/video/") ? "curtir" : "seguir"),
+    valor: Number(currentActionData.valor ?? currentActionData.quantidade_pontos ?? 0),
+    id_pedido: currentActionData.id_pedido ?? currentActionData.id_action ?? null
+};
 
         // logs para ajudar debug
         console.log("➡ Enviando payload para registrar ação:", payload);
