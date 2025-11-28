@@ -945,9 +945,9 @@
             if (!statusElement) return;
 
             let seconds = 1; // ajuste o tempo conforme necessário
-            
+
             statusElement.dataset.contagem = "true";
-            
+
             function updateCountdown() {
                 if (seconds > 0) {
                     statusElement.innerHTML = `
@@ -960,7 +960,7 @@
                     fetchActionDebounced();
                 }
             }
-            
+
             updateCountdown();
         }
 
@@ -1191,7 +1191,7 @@
                 return;
             }
 
-            await registrarAcaoPendente(payload);
+            await confirmarAcao(payload);
 
             tentativasSemAcoes = 0;
             await fetchAction();
@@ -1219,10 +1219,10 @@
                 const url = document.getElementById("actionUrl").href;
                 const valor_text = document.getElementById("points").textContent;
                 const valor = parseFloat(valor_text.replace('R$ ', ''));
-                
+
                 // CORREÇÃO: Obter o tipo_acao do currentActionData ou do select
                 const tipo_acao = currentActionData?.tipo_acao || document.getElementById("actionType").value;
-                
+
                 const token = localStorage.getItem("token");
 
                 const response = await fetch("/api/pular_acao", {
@@ -1323,16 +1323,16 @@
             }
         }
 
-        async function registrarAcaoPendente(acao) {
+        async function confirmarAcao(acao) {
             try {
-                console.log("➡ registrarAcaoPendente payload:", acao);
+                console.log("➡ confirmarAcao payload:", acao);
 
                 if (!acao.nome_usuario || !acao.url || !acao.tipo_acao || !Number.isFinite(Number(acao.valor))) {
                     console.error("❌ Campos obrigatórios ausentes ou inválidos:", acao);
                     return;
                 }
 
-                const response = await fetch("/api/registrar_acao_pendente", {
+                const response = await fetch("/api/confirmar_acao", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
