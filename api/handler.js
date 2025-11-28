@@ -1093,21 +1093,21 @@ if (req.method !== "GET") {
   if (nomeUsuarioParam) {
     // Busca diretamente pelo nome de usuário, ignorando o token
     const historico = await ActionHistory
-      .find({ nome_usuario: nomeUsuarioParam, acao_validada: { $ne: "pulada" } })
+      .find({ nome_usuario: nomeUsuarioParam, status: { $ne: "pulada" } })
       .sort({ data: -1 });
   
     const formattedData = historico.map(action => {
       let status;
-      if (action.acao_validada === "valida") status = "Válida";
-      else if (action.acao_validada === "invalida") status = "Inválida";
+      if (action.status === "valida") status = "Válida";
+      else if (action.status === "invalida") status = "Inválida";
       else status = "Pendente";
   
       return {
         nome_usuario: action.nome_usuario,
-        quantidade_pontos: action.quantidade_pontos,
+        valor: action.valor,
         data: action.data,
         rede_social: action.rede_social,
-        tipo: action.tipo,
+        tipo_acao: action.tipo_acao,
         url: action.url,
         status
       };
@@ -1118,21 +1118,21 @@ if (req.method !== "GET") {
 
   try {
     const historico = await ActionHistory
-      .find({ user: usuario._id, acao_validada: { $ne: "pulada" } })
+      .find({ user: usuario._id, status: { $ne: "pulada" } })
       .sort({ data: -1 });
 
     const formattedData = historico.map(action => {
       let status;
-      if (action.acao_validada === "valida") status = "Válida";
-      else if (action.acao_validada === "invalida") status = "Inválida";
+      if (action.status === "valida") status = "Válida";
+      else if (action.status === "invalida") status = "Inválida";
       else status = "Pendente";
 
       return {
         nome_usuario: action.nome_usuario,
-        quantidade_pontos: action.quantidade_pontos,
+        valor: action.valor,
         data: action.data,
         rede_social: action.rede_social,
-        tipo: action.tipo,
+        tipo_acao: action.tipo_acao,
         url: action.url,
         status
       };
