@@ -27,6 +27,70 @@ router.get("/get-user-tiktok", getTikTokUser);
 router.post("/smm_acao", smmAcao);
 router.get("/user-following", verificarFollowing);
 
+// ===== Variáveis globais (colocar no topo do arquivo, fora do handler) =====
+let ultimoRanking = null;
+let ultimaAtualizacao = 0;
+let top3FixosHoje = null;
+let diaTop3 = null;
+let horaInicioRanking = null;
+let zeroedAtMidnight = false;
+let dailyFixedRanking = null;
+
+// ---- HELPERS E CONSTANTES GLOBAIS (apenas uma vez) ----
+function norm(s) { return String(s || "").trim().toLowerCase(); }
+
+function shuffleArray(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// baseline consistente usada sempre que preencher com nomes (10 posições)
+const baselineValores = [12, 11, 10, 9, 8, 7, 6, 5, 4, 3];
+
+    // 🚨 RESET MANUAL DO RANKING (via variável de ambiente OU parâmetro na URL)
+    const resetPorEnv = process.env.RESET_RANKING === 'true';
+    const resetPorURL = query?.reset === 'true';
+
+if (resetPorEnv || resetPorURL) {
+    await connectDB(); // garante conexão antes de limpar o banco
+
+    // 🧹 Limpa todos os ganhos diários (zera saldos)
+    const resultado = await DailyEarning.deleteMany({});
+    console.log(`🧾 ${resultado.deletedCount} registros de ganhos diários removidos.`);
+
+    // 🧠 Limpa cache do ranking
+    ultimoRanking = null;
+    ultimaAtualizacao = 0;
+    top3FixosHoje = null;
+    diaTop3 = null;
+    horaInicioRanking = Date.now();
+    console.log("🔥 Ranking e saldos reiniciados manualmente", resetPorEnv ? "(via ENV)" : "(via URL)");
+
+    if (resetPorURL) {
+        return res.status(200).json({
+            success: true,
+            message: `Ranking e saldos zerados (${resultado.deletedCount} ganhos removidos).`
+        });
+    }
+}
+    async function salvarAcaoComLimitePorUsuario(novaAcao) {
+        const LIMITE = 2000;
+        const total = await ActionHistory.countDocuments({ user: novaAcao.user });
+
+        if (total >= LIMITE) {
+            const excess = total - LIMITE + 1;
+            await ActionHistory.find({ user: novaAcao.user })
+                .sort({ createdAt: 1 })
+                .limit(excess)
+                .deleteMany();
+        }
+
+        await novaAcao.save();
+    }
+
 // Rota: /api/contas_tiktok (POST, GET, DELETE)
 function getTokenFromHeader(req) {
   const authHeader = req.headers.authorization || req.headers.Authorization;
