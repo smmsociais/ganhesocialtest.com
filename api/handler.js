@@ -1987,22 +1987,13 @@ router.post("/confirmar_acao", async (req, res) => {
     return res.status(401).json({ error: "Token inválido." });
   }
 
-  const {
-    nome_usuario,
-    url,
-    tipo_acao,
-    valor,
-  } = req.body;
+  const { nome_usuario, url, tipo_acao, valor, id_pedido } = req.body;
 
-  if (!nome_usuario || !tipo_acao || valor == null) {
+  if (!nome_usuario || !tipo_acao || valor == null || !id_pedido) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes." });
   }
 
   try {
-const idPedidoStr = req.body.id_pedido
-  ? req.body.id_pedido.toString()
-  : new Date().getTime().toString();  // fallback seguro
-
     // === Detectar Rede Social ===
     let redeFinal = "TikTok";
     if (url?.includes("instagram.com") || tipo_acao?.toLowerCase().includes("instagram")) {
@@ -2018,26 +2009,26 @@ const idPedidoStr = req.body.id_pedido
     // === Cálculo de valores ===
     const pontos = parseFloat(valor);
     const valorBruto = pontos / 1000;
-    const valorDescontado = (valorBruto > 0.003) ? valorBruto - 0.001 : valorBruto;
+    const valorDescontado = valorBruto > 0.003 ? valorBruto - 0.001 : valorBruto;
     const valorFinalCalculado = Math.min(Math.max(valorDescontado, 0.003), 0.006).toFixed(3);
-    const valorConfirmacaoFinal = (tipoAcaoFinal === "curtir") ? "0.001" : valorFinalCalculado;
+    const valorConfirmacaoFinal = tipoAcaoFinal === "curtir" ? "0.001" : valorFinalCalculado;
 
     // === Criar Ação ===
     const novaAcao = new ActionHistory({
       user: usuario._id,
       token: usuario.token,
       nome_usuario,
-      id_action: idPedidoStr,
+      id_pedido,                    // ✅ campo correto
       url,
       tipo_acao,
-      valor,
+      valor: valorConfirmacaoFinal, // valor que realmente será pago
       tipo: tipoAcaoFinal,
       rede_social: redeFinal,
       status: "pendente",
+      acao_validada: false,         // ✅ obrigatório no schema
       data: new Date()
     });
 
-    // Salvar com limite
     await salvarAcaoComLimitePorUsuario(novaAcao);
 
     return res.status(200).json({ status: "pendente", message: "Ação registrada com sucesso." });
