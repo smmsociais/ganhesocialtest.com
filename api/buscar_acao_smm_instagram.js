@@ -1,16 +1,20 @@
-// api/buscar_acao_smm_instagram.js (versão com debug + case-insensitive)
+// api/buscar_acao_smm_instagram.js
 import connectDB from './db.js';
 import mongoose from 'mongoose';
 import { User, ActionHistory, Pedido } from "./schema.js";
 
 const handler = async (req, res) => {
-  if (req.method !== "GET") return res.status(405).json({ error: "Método não permitido" });
+  if (req.method !== "GET") {
+    return res.status(405).json({ error: "Método não permitido" });
+  }
 
-  const { id_conta, token, tipo, rede: redeQuery, debug } = req.query;
+  const { token, tipo, nome_usuario, rede: redeQuery, debug } = req.query;
 
-  console.log("➡️ Requisição recebida:", { id_conta, token: !!token, tipo, redeQuery });
+  console.log("➡️ Requisição recebida (Instagram):", { token: !!token, tipo, nome_usuario, redeQuery });
 
-  if (!id_conta || !token) return res.status(400).json({ error: "id_conta e token são obrigatórios" });
+  if (!tipo || !token) {
+    return res.status(400).json({ error: "tipo e token são obrigatórios" });
+  }
 
   try {
     await connectDB();
@@ -22,52 +26,61 @@ const handler = async (req, res) => {
       return res.status(401).json({ error: "Token inválido" });
     }
 
-    // normalizar tipo (se fornecido)
-    const tipoNormalized = typeof tipo === 'string' ? String(tipo).trim().toLowerCase() : null;
+    // Se foi passado nome_usuario, validar que pertence ao usuário (token)
+    // Caso não seja passado, tentamos inferir quando o usuário tem apenas 1 conta vinculada.
+    let contaSolicitante = null;
+    if (nome_usuario) {
+      const nomeLower = String(nome_usuario).trim().toLowerCase();
+      const achou = Array.isArray(usuario.contas) && usuario.contas.some(c =>
+        String(c.nome_usuario ?? c.nomeConta ?? "").toLowerCase() === nomeLower
+      );
+      if (!achou) {
+        console.log("❌ Conta solicitante não pertence ao token:", nome_usuario);
+        return res.status(401).json({ error: "Conta não vinculada ao token" });
+      }
+      contaSolicitante = String(nome_usuario).trim();
+    } else {
+      // inferir se o usuário tem exatamente 1 conta vinculada
+      if (Array.isArray(usuario.contas) && usuario.contas.length === 1) {
+        contaSolicitante = String(usuario.contas[0].nome_usuario ?? usuario.contas[0].nomeConta ?? '').trim();
+        console.log(`ℹ Inferido nome_usuario = ${contaSolicitante} (1 conta encontrada)`);
+      } else {
+        // se não podemos inferir com segurança, pedir que o cliente passe o nome
+        return res.status(400).json({ error: "nome_usuario é obrigatório quando o usuário tem múltiplas contas" });
+      }
+    }
+
+    // Mapeamento dos tipos
     const tipoMap = { seguir: "seguir", curtir: "curtir" };
-    const tipoBanco = tipoMap[tipoNormalized] || tipoNormalized;
+    const tipoBanco = tipoMap[(tipo || "").toString().toLowerCase()] || tipo;
 
     // rede: permitir override ?rede=instagram, ou usar 'instagram' por padrão
     const redeNormalized = typeof redeQuery === 'string' && redeQuery.trim().length
       ? redeQuery.trim()
       : 'instagram';
 
-    // construir query com case-insensitive para rede
+    // Query base para pedidos Instagram — não usamos mais reservas
     const query = {
       quantidade: { $gt: 0 },
-      status: { $in: ["pendente", "reservada"] },
+      status: { $in: ["pendente"] },
       rede: { $regex: new RegExp(`^${redeNormalized}$`, 'i') } // aceita "Instagram", "instagram", etc.
     };
 
-    if (tipoNormalized === "seguir_curtir") {
+    if ((tipo || "").toString().toLowerCase() === "seguir_curtir") {
       query.tipo = { $in: ["seguir", "curtir"] };
     } else if (tipoBanco) {
       query.tipo = tipoBanco;
     }
 
-    // DEBUG: contar quantos pedidos correspondem ao filtro base (antes das validações de history)
-    const totalMatching = await Pedido.countDocuments(query);
-    console.log(`🔎 Pedidos que batem com query inicial: ${totalMatching}`);
-
     const pedidos = await Pedido.find(query).sort({ dataCriacao: -1 }).lean();
-
-    console.log(`📦 ${pedidos.length} pedidos encontrados (após find)`);
-
-    if (debug === "1") {
-      // devolve info de debug para ajudar em desenvolvimento
-      return res.status(200).json({
-        debug: true,
-        totalMatching,
-        sampleQuery: query,
-        pedidosSample: pedidos.slice(0, 5)
-      });
-    }
+    console.log(`📦 ${pedidos.length} pedidos encontrados (Instagram)`);
 
     for (const pedido of pedidos) {
-      const id_pedido = pedido._id;
+      // normalizar id como string
+      const idPedidoStr = String(pedido._id);
 
       console.log("🔍 Verificando pedido:", {
-        id_pedido,
+        id_pedido: idPedidoStr,
         tipo: pedido.tipo,
         status: pedido.status,
         quantidade: pedido.quantidade,
@@ -76,72 +89,111 @@ const handler = async (req, res) => {
         rede: pedido.rede
       });
 
-      // garantir que quantidade é número
       const quantidadePedido = Number(pedido.quantidade || 0);
       if (isNaN(quantidadePedido) || quantidadePedido <= 0) {
-        console.log(`⚠ Ignorando pedido ${id_pedido} por quantidade inválida:`, pedido.quantidade);
+        console.log(`⚠ Ignorando pedido ${idPedidoStr} por quantidade inválida:`, pedido.quantidade);
         continue;
       }
 
-      // 1. Fechar pedido se já atingiu o limite
-      const validadas = await ActionHistory.countDocuments({ id_pedido, acao_validada: "valida" });
+      // 1) Total validadas (somente 'valida')
+      const validadas = await ActionHistory.countDocuments({
+        $and: [
+          { $or: [{ id_pedido: idPedidoStr }, { id_action: idPedidoStr }] },
+          { $or: [{ status: "valida" }, { acao_validada: "valida" }] }
+        ]
+      });
       if (validadas >= quantidadePedido) {
-        console.log(`⛔ Pedido ${id_pedido} fechado — já tem ${validadas} validações.`);
+        console.log(`⛔ Pedido ${idPedidoStr} fechado — já tem ${validadas} validações.`);
         continue;
       }
 
-      // 2. Conta pulou esse pedido
-      const pulada = await ActionHistory.findOne({ id_pedido, id_conta, acao_validada: "pulada" });
+      // 2) Conta pulou esse pedido?
+      const nome = contaSolicitante;
+      const pulada = await ActionHistory.findOne({
+        $and: [
+          { $or: [{ id_pedido: idPedidoStr }, { id_action: idPedidoStr }] },
+          { nome_usuario: nome },
+          { $or: [{ status: "pulada" }, { acao_validada: "pulada" }] }
+        ]
+      });
       if (pulada) {
-        console.log(`🚫 Ação ${id_pedido} foi pulada por ${id_conta}`);
+        console.log(`🚫 Conta ${nome} pulou o pedido ${idPedidoStr}`);
         continue;
       }
 
-      // 3. Conta já fez (pendente ou validada)
+      // 3) Conta já fez (pendente ou validada)
       const jaFez = await ActionHistory.findOne({
-        id_pedido,
-        id_conta,
-        acao_validada: { $in: ["pendente", "valida"] }
+        $and: [
+          { $or: [{ id_pedido: idPedidoStr }, { id_action: idPedidoStr }] },
+          { nome_usuario: nome },
+          { $or: [
+              { status: { $in: ["pendente", "valida"] } },
+              { acao_validada: { $in: ["pendente", "valida"] } }
+            ]
+          }
+        ]
       });
       if (jaFez) {
-        console.log(`🚫 Conta ${id_conta} já fez o pedido ${id_pedido}`);
+        console.log(`🚫 Conta ${nome} já fez o pedido ${idPedidoStr}`);
         continue;
       }
 
-      // 4. Quantas ações já foram feitas (inclui pendentes)
+      // 4) Quantas ações já foram feitas (inclui pendentes)
       const feitas = await ActionHistory.countDocuments({
-        id_pedido,
-        acao_validada: { $in: ["pendente", "valida"] }
+        $and: [
+          { $or: [{ id_pedido: idPedidoStr }, { id_action: idPedidoStr }] },
+          { $or: [
+              { status: { $in: ["pendente", "valida"] } },
+              { acao_validada: { $in: ["pendente", "valida"] } }
+            ]
+          }
+        ]
       });
-      console.log(`📊 Ação ${id_pedido}: feitas=${feitas}, limite=${quantidadePedido}`);
+      console.log(`📊 Ação ${idPedidoStr}: feitas=${feitas}, limite=${quantidadePedido}`);
       if (feitas >= quantidadePedido) {
-        console.log(`⏩ Pedido ${id_pedido} atingiu o limite total.`);
+        console.log(`⏩ Pedido ${idPedidoStr} atingiu o limite total.`);
         continue;
       }
 
-      // Pedido disponível -> extrair nome do link (tolerante)
+      // 5) Extrair nome do usuário alvo do pedido (tolerante)
       let nomeUsuario = "";
       if (typeof pedido.link === 'string') {
         if (pedido.link.includes("@")) {
           nomeUsuario = pedido.link.split("@")[1].split(/[/?#]/)[0];
         } else {
-          // tentar extrair do caminho da URL
-          try {
-            const m = pedido.link.match(/instagram\.com\/([^\/?#&]+)/i);
-            if (m && m[1]) nomeUsuario = m[1].replace(/\/$/, '');
-          } catch(e){ /* ignore */ }
+          const m = pedido.link.match(/instagram\.com\/([^\/?#&]+)/i);
+          if (m && m[1]) nomeUsuario = m[1].replace(/\/$/, "");
         }
       }
 
-      console.log(`✅ Ação encontrada: ${nomeUsuario || '<sem-usuario>'} (pedido ${id_pedido})`);
+      // 6) determina valor padrão por tipo (seguir -> 0.006, curtir -> 0.001)
+      const tipoPedido = (pedido.tipo || "").toString().toLowerCase();
+      let valorParaEnviar = 0;
+      if (typeof pedido.valor === "number" && pedido.valor > 0) {
+        valorParaEnviar = Number(pedido.valor);
+      } else {
+        if (tipoPedido === "seguir") {
+          valorParaEnviar = 0.006;
+        } else if (tipoPedido === "curtir") {
+          valorParaEnviar = 0.001;
+        } else if (tipoPedido === "seguir_curtir") {
+          valorParaEnviar = 0.006;
+        } else {
+          valorParaEnviar = 0.006;
+        }
+      }
+      valorParaEnviar = Number(valorParaEnviar.toFixed(3));
+
+      console.log(`✅ Ação encontrada (Instagram): ${nomeUsuario || '<sem-usuario>'} — valor=${valorParaEnviar}`);
 
       return res.json({
         status: "ENCONTRADA",
         nome_usuario: nomeUsuario,
-        quantidade_pontos: pedido.valor,
-        url_dir: pedido.link,
+        valor: valorParaEnviar,
+        url: pedido.link,
         tipo_acao: pedido.tipo,
-        id_pedido: id_pedido
+        id_pedido: pedido._id,
+        save_on_confirm: true
       });
     }
 
@@ -149,7 +201,7 @@ const handler = async (req, res) => {
     return res.json({ status: "NAO_ENCONTRADA" });
 
   } catch (error) {
-    console.error("🔥 Erro ao buscar ação:", error);
+    console.error("🔥 Erro ao buscar ação (Instagram):", error);
     return res.status(500).json({ error: "Erro interno" });
   }
 };
