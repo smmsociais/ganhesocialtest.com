@@ -861,32 +861,26 @@
             }
         }
 
-async function bindAccount() {
-    const accountSelect = document.getElementById("accountSelect");
-    const selectedAccount = accountSelect?.value?.trim();
-    if (!selectedAccount) return;
+        async function bindAccount() {
+            const selectedAccount = document.getElementById("accountSelect").value?.trim();
+            if (!selectedAccount) return;
 
-    // Id da conta local usado pelo restante do sistema (se você precisa dele)
-    const generatedId = "local_" + selectedAccount;
+            // Gera um id_conta estável derivado do nome do usuário
+            const generatedId = "local_" + selectedAccount;
 
-    // Salva nome da conta e id_conta no localStorage — isso é o que a fetchAction espera.
-    localStorage.setItem("nome_usuario", selectedAccount);
-    localStorage.setItem("id_conta", generatedId);
-    localStorage.setItem("conta_invalida", "false");
+            localStorage.setItem("conta_invalida", "false");
 
-    // atualiza o select visual (opcional)
-    accountSelect.value = selectedAccount;
+            limparUI();
+            ativarSelecaoTipoAcao();
+            fetchAction();
+        }
 
-    limparUI();
-    ativarSelecaoTipoAcao();
-
-    // Se actionType estiver vazio, podemos escolher um padrão (seguir) para disparar busca
-    const actionSelect = document.getElementById("actionType");
-    if (!actionSelect.value) actionSelect.value = "seguir";
-
-    // Dispara a busca imediatamente
-    fetchActionDebounced();
-}
+        // variáveis globais
+        let contagemEmAndamento = false;
+        let fetchTimeout;
+        let contagemTimeout;
+        let pausaTimeout;
+        let buscando = false;
 
         function fetchActionDebounced() {
             clearTimeout(fetchTimeout);
@@ -897,37 +891,44 @@ async function bindAccount() {
 
         let inicializou = false;
 
-function ativarSelecaoTipoAcao() {
-    const token = localStorage.getItem("token");
-    if (!token) return; // token ausente -> não habilita
+        function ativarSelecaoTipoAcao() {
+            const token = localStorage.getItem("token");
 
-    const select = document.getElementById("actionType");
-    select.disabled = false;
+            if (token !== "null") {
+                const select = document.getElementById("actionType");
+                select.disabled = false;
 
-    if (!select.dataset.listenerAdded) {
-        select.addEventListener("change", () => {
-            const actionType = select.value;
-            if (actionType) {
-                document.getElementById("actionText").textContent =
-                    actionType === "curtir" ? "Curtir" :
-                    actionType === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
-                fetchActionDebounced();
+                if (!select.dataset.listenerAdded) {
+                    select.addEventListener("change", () => {
+                        const actionType = select.value;
+
+                        if (actionType !== "") {
+                            document.getElementById("actionText").textContent =
+                                actionType === "curtir" ? "Curtir" :
+                                    actionType === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
+
+                            fetchActionDebounced();
+                        }
+                    });
+
+                    select.dataset.listenerAdded = "true";
+                }
+
+                if (!inicializou) {
+                    inicializou = true;
+                    const preSelectedAction = select.value;
+
+                    if (preSelectedAction && preSelectedAction !== "") {
+                        document.getElementById("actionText").textContent =
+                            preSelectedAction === "curtir" ? "Curtir" :
+                                preSelectedAction === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
+
+                        fetchActionDebounced();
+                    }
+                }
             }
-        });
-        select.dataset.listenerAdded = "true";
-    }
-
-    if (!inicializou) {
-        inicializou = true;
-        const preSelectedAction = select.value;
-        if (preSelectedAction) {
-            document.getElementById("actionText").textContent =
-                preSelectedAction === "curtir" ? "Curtir" :
-                preSelectedAction === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
-            fetchActionDebounced();
         }
-    }
-}
+
         let tentativasSemAcoes = 0;
         const maxTentativas = 1;
         const pausaLongaMs = 0;
@@ -1002,15 +1003,16 @@ function ativarSelecaoTipoAcao() {
             try {
                 const token = localStorage.getItem("token");
                 const actionType = document.getElementById("actionType").value;
-                const nome_usuario = localStorage.getItem("nome_usuario");
                 const statusElement = document.getElementById("statusMessage");
                 const contaInvalida = localStorage.getItem("conta_invalida") === "true";
 
-if (!token || !actionType || !nome_usuario) {
-    document.getElementById("warningMessage").style.display = "block";
-    document.getElementById("actionContent").style.opacity = "1";
-    return;
-}
+                // Validações iniciais (mesma lógica)
+                if (!token || !actionType || actionType === "") {
+                    document.getElementById("warningMessage").style.display = "block";
+                    document.getElementById("actionContent").style.opacity = "1";
+                    return;
+                }
+
                 if (!["seguir", "curtir", "seguir_curtir"].includes(actionType)) {
                     if (statusElement) statusElement.textContent = "Tipo de ação inválido.";
                     return;
@@ -1066,7 +1068,7 @@ if (!token || !actionType || !nome_usuario) {
             tentativasSemAcoes = 0;
         });
         window.addEventListener("storage", (e) => {
-            if (e.key === "nome_usuario") tentativasSemAcoes = 0;
+            if (e.key === "id_conta") tentativasSemAcoes = 0;
         });
 
         // ===== Substitua processarAcao por esta versão =====
