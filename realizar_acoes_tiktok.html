@@ -1035,7 +1035,7 @@
                 // Função única: tentar buscar no SMM
                 async function tentarBuscarSMM() {
                     try {
-                        const response = await fetch(`/api/buscar_acao_smm_tiktok?token=${token}&tipo=${actionType}`);
+                        const response = await fetch(`/api/buscar_acao_smm_tiktok?token=${token}&tipo=${actionType}&nome_usuario=${encodeURIComponent(nomeConta)}`);
                         if (!response.ok) throw new Error("Resposta não OK: " + response.status);
                         const data = await response.json();
 
@@ -1071,159 +1071,159 @@
             if (e.key === "id_conta") tentativasSemAcoes = 0;
         });
 
-// ===== Substitua processarAcao por esta versão =====
-async function processarAcao(data, origem) {
-    document.getElementById("skipButton").style.display = "inline-block";
-    document.getElementById("statusMessage").textContent = "";
-    document.getElementById("username").textContent = data.nome_usuario || "";
+        // ===== Substitua processarAcao por esta versão =====
+        async function processarAcao(data, origem) {
+            document.getElementById("skipButton").style.display = "inline-block";
+            document.getElementById("statusMessage").textContent = "";
+            document.getElementById("username").textContent = data.nome_usuario || "";
 
-    // Normaliza campos vindos da API
-    const tiktokUsername = (data.nome_usuario || "").replace(/^@/, '');
-    const id_pedido = data.id_pedido ?? data._id ?? data.id_action ?? null;
-    const rawUrl = data.url ?? data.url_dir ?? `https://www.tiktok.com/@${tiktokUsername}`;
-    const url = (typeof rawUrl === "string" && rawUrl.trim() !== "") ? rawUrl : `https://www.tiktok.com/@${tiktokUsername}`;
+            // Normaliza campos vindos da API
+            const tiktokUsername = (data.nome_usuario || "").replace(/^@/, '');
+            const id_pedido = data.id_pedido ?? data._id ?? data.id_action ?? null;
+            const rawUrl = data.url ?? data.url_dir ?? `https://www.tiktok.com/@${tiktokUsername}`;
+            const url = (typeof rawUrl === "string" && rawUrl.trim() !== "") ? rawUrl : `https://www.tiktok.com/@${tiktokUsername}`;
 
-    // Valor: usar somente o que a rota retornou (data.valor) — aceita também quantidade_pontos por compatibilidade
-    const valorRaw = data.valor ?? data.quantidade_pontos ?? 0;
-    const valorNumber = Number(valorRaw);
-    const valorNumSafe = Number.isFinite(valorNumber) ? valorNumber : 0;
+            // Valor: usar somente o que a rota retornou (data.valor) — aceita também quantidade_pontos por compatibilidade
+            const valorRaw = data.valor ?? data.quantidade_pontos ?? 0;
+            const valorNumber = Number(valorRaw);
+            const valorNumSafe = Number.isFinite(valorNumber) ? valorNumber : 0;
 
-    // Tipo/label da ação (apenas para exibição)
-    const actionType = document.getElementById("actionType").value;
-    let actionText = "Seguir";
-    if ((data.tipo_acao && data.tipo_acao.toLowerCase() === "curtir") || (url && url.includes("/video/"))) {
-        actionText = "Curtir";
-    } else if (actionType === "seguir_curtir") {
-        actionText = "Seguir";
-    } else if (actionType === "curtir") {
-        actionText = "Curtir";
-    }
-    document.getElementById("actionText").textContent = actionText;
+            // Tipo/label da ação (apenas para exibição)
+            const actionType = document.getElementById("actionType").value;
+            let actionText = "Seguir";
+            if ((data.tipo_acao && data.tipo_acao.toLowerCase() === "curtir") || (url && url.includes("/video/"))) {
+                actionText = "Curtir";
+            } else if (actionType === "seguir_curtir") {
+                actionText = "Seguir";
+            } else if (actionType === "curtir") {
+                actionText = "Curtir";
+            }
+            document.getElementById("actionText").textContent = actionText;
 
-    // Avatar / profile image
-    const profileImg = document.getElementById("profileImage");
-    document.getElementById("actionUrl").href = url;
+            // Avatar / profile image
+            const profileImg = document.getElementById("profileImage");
+            document.getElementById("actionUrl").href = url;
 
-    if (url.includes("/video/")) {
-        profileImg.style.display = "none";
-        profileImg.src = "";
-    } else {
-        try {
-            const cacheKey = `avatar_cache_${tiktokUsername}`;
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                profileImg.src = cached;
-                profileImg.style.display = "block";
-                localStorage.setItem("unique_id", tiktokUsername);
+            if (url.includes("/video/")) {
+                profileImg.style.display = "none";
+                profileImg.src = "";
             } else {
-                const resUserInfo = await fetch(`/api/get-user?unique_id=${encodeURIComponent(tiktokUsername)}`);
-                if (!resUserInfo.ok) throw new Error('Usuário não encontrado');
-                const userInfo = await resUserInfo.json();
-                const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
-                function firstValidFromUrlList(obj) {
-                    const list = obj?.url_list;
-                    if (!Array.isArray(list)) return null;
-                    for (const item of list) if (typeof item === 'string' && /^https?:\/\//i.test(item)) return item;
-                    return null;
-                }
-                const candidates = [
-                    user?.avatar_larger, user?.avatar_300x300, user?.avatar_medium,
-                    user?.avatar_168x168, user?.avatar_thumb, user?.avatar, user?.avatarLarger
-                ];
-                let avatarUrl = null;
-                for (const c of candidates) {
-                    avatarUrl = firstValidFromUrlList(c);
-                    if (avatarUrl) break;
-                }
-                if (!avatarUrl && typeof user?.avatar === 'string' && /^https?:\/\//i.test(user.avatar)) avatarUrl = user.avatar;
-                if (avatarUrl) {
-                    profileImg.src = avatarUrl;
-                    profileImg.style.display = "block";
-                    localStorage.setItem("unique_id", tiktokUsername);
-                    try {
-                        localStorage.setItem(cacheKey, avatarUrl);
-                        localStorage.setItem(cacheKey + "_ts", String(Date.now()));
-                    } catch (e) {}
-                } else {
+                try {
+                    const cacheKey = `avatar_cache_${tiktokUsername}`;
+                    const cached = localStorage.getItem(cacheKey);
+                    if (cached) {
+                        profileImg.src = cached;
+                        profileImg.style.display = "block";
+                        localStorage.setItem("unique_id", tiktokUsername);
+                    } else {
+                        const resUserInfo = await fetch(`/api/get-user?unique_id=${encodeURIComponent(tiktokUsername)}`);
+                        if (!resUserInfo.ok) throw new Error('Usuário não encontrado');
+                        const userInfo = await resUserInfo.json();
+                        const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
+                        function firstValidFromUrlList(obj) {
+                            const list = obj?.url_list;
+                            if (!Array.isArray(list)) return null;
+                            for (const item of list) if (typeof item === 'string' && /^https?:\/\//i.test(item)) return item;
+                            return null;
+                        }
+                        const candidates = [
+                            user?.avatar_larger, user?.avatar_300x300, user?.avatar_medium,
+                            user?.avatar_168x168, user?.avatar_thumb, user?.avatar, user?.avatarLarger
+                        ];
+                        let avatarUrl = null;
+                        for (const c of candidates) {
+                            avatarUrl = firstValidFromUrlList(c);
+                            if (avatarUrl) break;
+                        }
+                        if (!avatarUrl && typeof user?.avatar === 'string' && /^https?:\/\//i.test(user.avatar)) avatarUrl = user.avatar;
+                        if (avatarUrl) {
+                            profileImg.src = avatarUrl;
+                            profileImg.style.display = "block";
+                            localStorage.setItem("unique_id", tiktokUsername);
+                            try {
+                                localStorage.setItem(cacheKey, avatarUrl);
+                                localStorage.setItem(cacheKey + "_ts", String(Date.now()));
+                            } catch (e) { }
+                        } else {
+                            profileImg.style.display = "none";
+                            profileImg.src = "";
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Erro ao obter avatar do usuário:", e);
                     profileImg.style.display = "none";
                     profileImg.src = "";
                 }
             }
-        } catch (e) {
-            console.warn("Erro ao obter avatar do usuário:", e);
-            profileImg.style.display = "none";
-            profileImg.src = "";
+
+            // Exibição: usa apenas o valor vindo da rota
+            const valorFinalStr = Number(valorNumSafe).toFixed(3);
+            document.getElementById("points").textContent = `R$ ${valorFinalStr}`;
+
+            // Guarda os dados (valor numérico)
+            currentActionData = {
+                ...data,
+                origem,
+                id_pedido,
+                url,
+                valor: valorNumSafe
+            };
+
+            document.getElementById("actionContent").style.display = "block";
+            document.getElementById("actionContent").style.opacity = "1";
         }
-    }
-
-    // Exibição: usa apenas o valor vindo da rota
-    const valorFinalStr = Number(valorNumSafe).toFixed(3);
-    document.getElementById("points").textContent = `R$ ${valorFinalStr}`;
-
-    // Guarda os dados (valor numérico)
-    currentActionData = {
-        ...data,
-        origem,
-        id_pedido,
-        url,
-        valor: valorNumSafe
-    };
-
-    document.getElementById("actionContent").style.display = "block";
-    document.getElementById("actionContent").style.opacity = "1";
-}
 
         function showConfirmButton() {
             document.getElementById("confirmButton").style.display = "block";
         }
 
-// ===== Substitua confirmAction pela versão que usa apenas currentActionData.valor =====
-async function confirmAction() {
-    const selectedAccount = document.getElementById("accountSelect").value;
-    if (!selectedAccount || !currentActionData) return;
+        // ===== Substitua confirmAction pela versão que usa apenas currentActionData.valor =====
+        async function confirmAction() {
+            const selectedAccount = document.getElementById("accountSelect").value;
+            if (!selectedAccount || !currentActionData) return;
 
-    const statusElement = document.getElementById("statusMessage");
-    const actionContent = document.getElementById("actionContent");
-    const confirmButton = document.getElementById("confirmButton");
-    const profileImage = document.getElementById("profileImage");
+            const statusElement = document.getElementById("statusMessage");
+            const actionContent = document.getElementById("actionContent");
+            const confirmButton = document.getElementById("confirmButton");
+            const profileImage = document.getElementById("profileImage");
 
-    // mostra loading
-    statusElement.innerHTML = `
+            // mostra loading
+            statusElement.innerHTML = `
       <div class="loading-message">Processando confirmação...</div>
       <div class="loading-circle-container"><div class="loading-circle"></div></div>
     `;
 
-    actionContent.style.opacity = "0";
-    confirmButton.style.display = "none";
-    profileImage.style.display = "none";
+            actionContent.style.opacity = "0";
+            confirmButton.style.display = "none";
+            profileImage.style.display = "none";
 
- 
-        // monta payload usando apenas o valor retornado pela rota
-        const payload = {
-            nome_usuario: selectedAccount,
-            url: currentActionData.url,
-            tipo_acao: currentActionData.tipo_acao ?? (currentActionData.url && currentActionData.url.includes("/video/") ? "curtir" : "seguir"),
-            valor: Number(currentActionData.valor ?? 0),
-            id_pedido: currentActionData.id_pedido ?? currentActionData.id_action ?? null
-        };
 
-        console.log("➡ Enviando payload para registrar ação:", payload);
+            // monta payload usando apenas o valor retornado pela rota
+            const payload = {
+                nome_usuario: selectedAccount,
+                url: currentActionData.url,
+                tipo_acao: currentActionData.tipo_acao ?? (currentActionData.url && currentActionData.url.includes("/video/") ? "curtir" : "seguir"),
+                valor: Number(currentActionData.valor ?? 0),
+                id_pedido: currentActionData.id_pedido ?? currentActionData.id_action ?? null
+            };
 
-        // validação: exige valor > 0 (evita salvar 0)
-        if (!payload.nome_usuario || !payload.url || !payload.tipo_acao || !Number.isFinite(payload.valor) || payload.valor <= 0) {
-            statusElement.textContent = "Valor da ação inválido — operação cancelada.";
-            // restaura UI
-            actionContent.style.opacity = "1";
-            confirmButton.style.display = "inline-block";
-            profileImage.style.display = "block";
-            return;
+            console.log("➡ Enviando payload para registrar ação:", payload);
+
+            // validação: exige valor > 0 (evita salvar 0)
+            if (!payload.nome_usuario || !payload.url || !payload.tipo_acao || !Number.isFinite(payload.valor) || payload.valor <= 0) {
+                statusElement.textContent = "Valor da ação inválido — operação cancelada.";
+                // restaura UI
+                actionContent.style.opacity = "1";
+                confirmButton.style.display = "inline-block";
+                profileImage.style.display = "block";
+                return;
+            }
+
+            await registrarAcaoPendente(payload);
+
+            tentativasSemAcoes = 0;
+            await fetchAction();
         }
-
-        await registrarAcaoPendente(payload);
-
-        tentativasSemAcoes = 0;
-        await fetchAction();
-}
 
         async function skipAction() {
             const statusElement = document.getElementById("statusMessage");
@@ -1346,44 +1346,44 @@ async function confirmAction() {
             }
         }
 
-// ===== registrarAcaoPendente - mantém envio do campo valor que vem da rota =====
-async function registrarAcaoPendente(acao) {
-    try {
-        console.log("➡ registrarAcaoPendente payload:", acao);
+        // ===== registrarAcaoPendente - mantém envio do campo valor que vem da rota =====
+        async function registrarAcaoPendente(acao) {
+            try {
+                console.log("➡ registrarAcaoPendente payload:", acao);
 
-        if (!acao.nome_usuario || !acao.url || !acao.tipo_acao || !Number.isFinite(Number(acao.valor))) {
-            console.error("❌ Campos obrigatórios ausentes ou inválidos:", acao);
-            return;
+                if (!acao.nome_usuario || !acao.url || !acao.tipo_acao || !Number.isFinite(Number(acao.valor))) {
+                    console.error("❌ Campos obrigatórios ausentes ou inválidos:", acao);
+                    return;
+                }
+
+                const response = await fetch("/api/registrar_acao_pendente", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        nome_usuario: acao.nome_usuario,
+                        url: acao.url,
+                        tipo_acao: acao.tipo_acao,
+                        valor: Number(acao.valor),
+                        id_pedido: acao.id_pedido ?? acao.id_action ?? null
+                    })
+                });
+
+                const respJson = await response.json();
+
+                if (!response.ok) {
+                    console.log("❌ Erro do servidor:", respJson);
+                    throw new Error("Falha ao registrar ação pendente.");
+                }
+
+                return respJson;
+
+            } catch (error) {
+                console.error("Erro ao registrar ação pendente:", error);
+            }
         }
-
-        const response = await fetch("/api/registrar_acao_pendente", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                nome_usuario: acao.nome_usuario,
-                url: acao.url,
-                tipo_acao: acao.tipo_acao,
-                valor: Number(acao.valor),
-                id_pedido: acao.id_pedido ?? acao.id_action ?? null
-            })
-        });
-
-        const respJson = await response.json();
-
-        if (!response.ok) {
-            console.log("❌ Erro do servidor:", respJson);
-            throw new Error("Falha ao registrar ação pendente.");
-        }
-
-        return respJson;
-
-    } catch (error) {
-        console.error("Erro ao registrar ação pendente:", error);
-    }
-}
 
         function logout() {
             localStorage.removeItem("token");
