@@ -2018,7 +2018,7 @@ const novaAcao = new ActionHistory({
   user: usuario._id,
   token: usuario.token,
   nome_usuario,
-  id_action: id_pedido,      // ✔ campo correto para o schema
+  id_action: String(id_pedido),   // AGORA É O ÚNICO CAMPO ID
   url,
   tipo_acao,
   valor: valorConfirmacaoFinal,
