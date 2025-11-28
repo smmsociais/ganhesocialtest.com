@@ -894,7 +894,7 @@
         function ativarSelecaoTipoAcao() {
             const token = localStorage.getItem("token");
 
-            if (token!== "null") {
+            if (token !== "null") {
                 const select = document.getElementById("actionType");
                 select.disabled = false;
 
@@ -1071,197 +1071,174 @@
             if (e.key === "id_conta") tentativasSemAcoes = 0;
         });
 
-// ===== Substitua a função processarAcao inteira por esta =====
-async function processarAcao(data, origem) {
-    document.getElementById("skipButton").style.display = "inline-block";
-    document.getElementById("statusMessage").textContent = "";
-    document.getElementById("username").textContent = data.nome_usuario || "";
+        // ===== Substitua a função processarAcao inteira por esta =====
+        async function processarAcao(data, origem) {
+            document.getElementById("skipButton").style.display = "inline-block";
+            document.getElementById("statusMessage").textContent = "";
+            document.getElementById("username").textContent = data.nome_usuario || "";
 
-    // Normaliza campos importantes vindos da API (fallbacks)
-    const tiktokUsername = (data.nome_usuario || "").replace(/^@/, '');
-    const id_pedido = data.id_pedido ?? data._id ?? data.id_action ?? null;
-    const rawUrl = data.url ?? data.url_dir ?? `https://www.tiktok.com/@${tiktokUsername}`;
-    const url = (typeof rawUrl === "string" && rawUrl.trim() !== "") ? rawUrl : `https://www.tiktok.com/@${tiktokUsername}`;
+            // Normaliza campos importantes vindos da API (fallbacks)
+            const tiktokUsername = (data.nome_usuario || "").replace(/^@/, '');
+            const id_pedido = data.id_pedido ?? data._id ?? data.id_action ?? null;
+            const rawUrl = data.url ?? data.url_dir ?? `https://www.tiktok.com/@${tiktokUsername}`;
+            const url = (typeof rawUrl === "string" && rawUrl.trim() !== "") ? rawUrl : `https://www.tiktok.com/@${tiktokUsername}`;
 
-    // Normaliza valor: aceita data.valor ou data.quantidade_pontos
-    const valorRaw = data.valor ?? data.quantidade_pontos ?? data.quantidade_pontos ?? 0;
-    const valorNumber = Number(valorRaw);
-    const valorNumSafe = Number.isFinite(valorNumber) ? valorNumber : 0;
+            // Normaliza valor: aceita data.valor ou data.quantidade_pontos
+            const valorRaw = data.valor ?? data.quantidade_pontos ?? data.quantidade_pontos ?? 0;
+            const valorNumber = Number(valorRaw);
+            const valorNumSafe = Number.isFinite(valorNumber) ? valorNumber : 0;
 
-    // Atualiza o texto da ação com base no tipo selecionado
-    const actionType = document.getElementById("actionType").value;
-    let actionText = "Seguir";
-    if ((data.url && data.url.includes("/video/")) || (url && url.includes("/video/"))) {
-        actionText = "Curtir";
-    } else if (actionType === "seguir_curtir") {
-        actionText = "Seguir";
-    } else if (actionType === "curtir") {
-        actionText = "Curtir";
-    }
-    document.getElementById("actionText").textContent = actionText;
+            // Atualiza o texto da ação com base no tipo selecionado
+            const actionType = document.getElementById("actionType").value;
+            let actionText = "Seguir";
+            if ((data.url && data.url.includes("/video/")) || (url && url.includes("/video/"))) {
+                actionText = "Curtir";
+            } else if (actionType === "seguir_curtir") {
+                actionText = "Seguir";
+            } else if (actionType === "curtir") {
+                actionText = "Curtir";
+            }
+            document.getElementById("actionText").textContent = actionText;
 
-    // Avatar / profile image (usa 'url' acima)
-    const profileImg = document.getElementById("profileImage");
-    document.getElementById("actionUrl").href = url;
+            // Avatar / profile image (usa 'url' acima)
+            const profileImg = document.getElementById("profileImage");
+            document.getElementById("actionUrl").href = url;
 
-    if (url.includes("/video/")) {
-        profileImg.style.display = "none";
-        profileImg.src = "";
-    } else {
-        try {
-            const cacheKey = `avatar_cache_${tiktokUsername}`;
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                profileImg.src = cached;
-                profileImg.style.display = "block";
-                localStorage.setItem("unique_id", tiktokUsername);
+            if (url.includes("/video/")) {
+                profileImg.style.display = "none";
+                profileImg.src = "";
             } else {
-                const resUserInfo = await fetch(`/api/get-user?unique_id=${encodeURIComponent(tiktokUsername)}`);
-                if (!resUserInfo.ok) throw new Error('Usuário não encontrado');
-                const userInfo = await resUserInfo.json();
-                const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
-                function firstValidFromUrlList(obj) {
-                    const list = obj?.url_list;
-                    if (!Array.isArray(list)) return null;
-                    for (const item of list) if (typeof item === 'string' && /^https?:\/\//i.test(item)) return item;
-                    return null;
-                }
-                const candidates = [
-                    user?.avatar_larger, user?.avatar_300x300, user?.avatar_medium,
-                    user?.avatar_168x168, user?.avatar_thumb, user?.avatar, user?.avatarLarger
-                ];
-                let avatarUrl = null;
-                for (const c of candidates) {
-                    avatarUrl = firstValidFromUrlList(c);
-                    if (avatarUrl) break;
-                }
-                if (!avatarUrl && typeof user?.avatar === 'string' && /^https?:\/\//i.test(user.avatar)) avatarUrl = user.avatar;
-                if (avatarUrl) {
-                    profileImg.src = avatarUrl;
-                    profileImg.style.display = "block";
-                    localStorage.setItem("unique_id", tiktokUsername);
-                    try {
-                        localStorage.setItem(cacheKey, avatarUrl);
-                        localStorage.setItem(cacheKey + "_ts", String(Date.now()));
-                    } catch (e) {}
-                } else {
+                try {
+                    const cacheKey = `avatar_cache_${tiktokUsername}`;
+                    const cached = localStorage.getItem(cacheKey);
+                    if (cached) {
+                        profileImg.src = cached;
+                        profileImg.style.display = "block";
+                        localStorage.setItem("unique_id", tiktokUsername);
+                    } else {
+                        const resUserInfo = await fetch(`/api/get-user?unique_id=${encodeURIComponent(tiktokUsername)}`);
+                        if (!resUserInfo.ok) throw new Error('Usuário não encontrado');
+                        const userInfo = await resUserInfo.json();
+                        const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
+                        function firstValidFromUrlList(obj) {
+                            const list = obj?.url_list;
+                            if (!Array.isArray(list)) return null;
+                            for (const item of list) if (typeof item === 'string' && /^https?:\/\//i.test(item)) return item;
+                            return null;
+                        }
+                        const candidates = [
+                            user?.avatar_larger, user?.avatar_300x300, user?.avatar_medium,
+                            user?.avatar_168x168, user?.avatar_thumb, user?.avatar, user?.avatarLarger
+                        ];
+                        let avatarUrl = null;
+                        for (const c of candidates) {
+                            avatarUrl = firstValidFromUrlList(c);
+                            if (avatarUrl) break;
+                        }
+                        if (!avatarUrl && typeof user?.avatar === 'string' && /^https?:\/\//i.test(user.avatar)) avatarUrl = user.avatar;
+                        if (avatarUrl) {
+                            profileImg.src = avatarUrl;
+                            profileImg.style.display = "block";
+                            localStorage.setItem("unique_id", tiktokUsername);
+                            try {
+                                localStorage.setItem(cacheKey, avatarUrl);
+                                localStorage.setItem(cacheKey + "_ts", String(Date.now()));
+                            } catch (e) { }
+                        } else {
+                            profileImg.style.display = "none";
+                            profileImg.src = "";
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Erro ao obter avatar do usuário:", e);
                     profileImg.style.display = "none";
                     profileImg.src = "";
                 }
             }
-        } catch (e) {
-            console.warn("Erro ao obter avatar do usuário:", e);
-            profileImg.style.display = "none";
-            profileImg.src = "";
-        }
-    }
 
-    // Calcula valorFinal para exibição (mesma lógica antiga, mas com base em valorNumSafe)
-    let valorFinal;
-    const isCurtir = (url && url.includes("/video/")) || actionType === "curtir";
-    if (isCurtir) {
-        valorFinal = "0.001";
-    } else if (origem === "smm") {
-        valorFinal = "0.006";
-    } else {
-        const pontos = valorNumSafe;
-        const valorBruto = pontos / 1000;
-        let valorDescontado = (valorBruto > 0.004) ? valorBruto - 0.001 : valorBruto;
-        valorFinal = Math.min(Math.max(valorDescontado, 0.004), 0.006).toFixed(3);
-    }
-    document.getElementById("points").textContent = `R$ ${valorFinal}`;
-    document.getElementById("confirmButton").style.display = "none";
+// --- cálculo e normalização do valor (display + valor a salvar) ---
+let valorFinal; // string para exibição
+const isCurtir = (url && url.includes("/video/")) || actionType === "curtir";
 
-    // Normaliza e guarda os dados da ação para uso na confirmação
-    currentActionData = {
-        ...data,
-        origem,
-        id_pedido,
-        url,
-        valor: valorNumSafe   // sempre número (0 quando não confiável)
-    };
-
-    document.getElementById("actionContent").style.display = "block";
-    document.getElementById("actionContent").style.opacity = "1";
+if (isCurtir) {
+  valorFinal = "0.001";
+} else if (origem === "smm") {
+  // se veio do SMM, exiba 0.006 por padrão
+  valorFinal = "0.006";
+} else {
+  const pontos = valorNumSafe; // valorNumSafe já definido antes
+  const valorBruto = pontos / 1000;
+  let valorDescontado = (valorBruto > 0.004) ? valorBruto - 0.001 : valorBruto;
+  valorFinal = Math.min(Math.max(valorDescontado, 0.004), 0.006).toFixed(3);
 }
+document.getElementById("points").textContent = `R$ ${valorFinal}`;
+
+// --- valor numérico que vamos salvar no backend ---
+let valorParaSalvar = Number(valorNumSafe); // tenta usar o valor vindo da API
+if (!Number.isFinite(valorParaSalvar) || valorParaSalvar <= 0) {
+  // fallback: quando não houver valor vindo, derive do valorFinal exibido
+  valorParaSalvar = Number(valorFinal);
+}
+
+// Normaliza e guarda os dados da ação para uso na confirmação
+currentActionData = {
+  ...data,
+  origem,
+  id_pedido,
+  url,
+  // garante sempre um número correto para envio
+  valor: valorParaSalvar
+};
+            document.getElementById("actionContent").style.display = "block";
+            document.getElementById("actionContent").style.opacity = "1";
+        }
 
         function showConfirmButton() {
             document.getElementById("confirmButton").style.display = "block";
         }
 
-// ===== Substitua a função confirmAction pelo trecho abaixo (apenas a parte que chama registrarAcaoPendente) =====
-async function confirmAction() {
-    const selectedAccount = document.getElementById("accountSelect").value;
-    if (!selectedAccount || !currentActionData) return;
+        // ===== Substitua a função confirmAction pelo trecho abaixo (apenas a parte que chama registrarAcaoPendente) =====
+        async function confirmAction() {
+            const selectedAccount = document.getElementById("accountSelect").value;
+            if (!selectedAccount || !currentActionData) return;
 
-    const statusElement = document.getElementById("statusMessage");
-    const actionContent = document.getElementById("actionContent");
-    const confirmButton = document.getElementById("confirmButton");
-    const profileImage = document.getElementById("profileImage");
+            const statusElement = document.getElementById("statusMessage");
+            const actionContent = document.getElementById("actionContent");
+            const confirmButton = document.getElementById("confirmButton");
+            const profileImage = document.getElementById("profileImage");
 
-    statusElement.innerHTML = `
+            statusElement.innerHTML = `
         <div class="loading-message">Buscando ações, aguarde...</div>
         <div class="loading-circle-container">
           <div class="loading-circle"></div>
         </div>
     `;
-    actionContent.style.opacity = "0";
-    confirmButton.style.display = "none";
-    profileImage.style.display = "none";
+            actionContent.style.opacity = "0";
+            confirmButton.style.display = "none";
+            profileImage.style.display = "none";
 
-    try {
-        let confirmData;
-        if (currentActionData.origem !== 'smm') {
-            const confirmResponse = await fetch("/api/confirmar_acao", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    id_pedido: currentActionData.id_pedido,
-                    id_conta: localStorage.getItem("id_conta"),
-                })
-            });
-            confirmData = await confirmResponse.json();
-            if (confirmData.status !== "success" || confirmData.message !== "CONFIRMOU_SUCESSO") {
-                throw new Error("Erro ao confirmar ação.");
-            }
-        } else {
-            confirmData = { valor: "0.007" };
-        }
 
-        // monta payload normalizado conforme rota atual (/api/registrar_acao_pendente)
 const payload = {
-    nome_usuario: selectedAccount,
-    url: currentActionData.url,
-    tipo_acao: currentActionData.tipo_acao || (currentActionData.url && currentActionData.url.includes("/video/") ? "curtir" : "seguir"),
-    valor: Number(currentActionData.valor ?? currentActionData.quantidade_pontos ?? 0),
-    id_pedido: currentActionData.id_pedido ?? currentActionData.id_action ?? null
+  nome_usuario: selectedAccount,
+  url: currentActionData.url,
+  tipo_acao: currentActionData.tipo_acao || (currentActionData.url && currentActionData.url.includes("/video/") ? "curtir" : "seguir"),
+  valor: Number(currentActionData.valor ?? currentActionData.quantidade_pontos ?? 0),
+  id_pedido: currentActionData.id_pedido ?? currentActionData.id_action ?? null
 };
 
-        // logs para ajudar debug
-        console.log("➡ Enviando payload para registrar ação:", payload);
+console.log("➡ Enviando payload para registrar ação:", payload);
 
-        // Validação stricter: valor deve ser numérico e > 0 (ou >= 0 dependendo da sua regra)
-        if (!payload.nome_usuario || !payload.url || !payload.tipo_acao || !Number.isFinite(payload.valor) || payload.valor <= 0) {
-            throw new Error("Dados inválidos para registrar ação pendente: " + JSON.stringify(payload));
-        }
-
-        await registrarAcaoPendente(payload);
-
-        tentativasSemAcoes = 0;
-        await fetchAction();
-
-    } catch (error) {
-        console.error("Erro ao confirmar ação:", error);
-        statusElement.textContent = "Erro ao confirmar ação. Tente novamente.";
-        actionContent.style.opacity = "1";
-        confirmButton.style.display = "inline-block";
-        profileImage.style.display = "block";
-    }
+// validação
+if (!payload.nome_usuario || !payload.url || !payload.tipo_acao || !Number.isFinite(payload.valor) || payload.valor <= 0) {
+  throw new Error("Dados inválidos para registrar ação pendente: " + JSON.stringify(payload));
 }
 
+await registrarAcaoPendente(payload);
+
+                tentativasSemAcoes = 0;
+                await fetchAction();
+
+       } 
         async function confirmAction() {
             const selectedAccount = document.getElementById("accountSelect").value;
             if (!selectedAccount || !currentActionData) return;
@@ -1447,45 +1424,46 @@ const payload = {
             }
         }
 
-// ===== Substitua a função registrarAcaoPendente pela versão abaixo =====
-async function registrarAcaoPendente(acao) {
-    try {
-        // acao já vem normalizada pelo confirmAction (nome_usuario, url, tipo_acao, valor)
-        console.log("➡ registrarAcaoPendente payload:", acao);
+        // ===== Substitua a função registrarAcaoPendente pela versão abaixo =====
+        async function registrarAcaoPendente(acao) {
+            try {
+                // acao já vem normalizada pelo confirmAction (nome_usuario, url, tipo_acao, valor)
+                console.log("➡ registrarAcaoPendente payload:", acao);
 
-        // Confirma os campos mínimos
-        if (!acao.nome_usuario || !acao.url || !acao.tipo_acao || !Number.isFinite(Number(acao.valor))) {
-            console.error("❌ Campos obrigatórios ausentes ou inválidos:", acao);
-            return;
+                // Confirma os campos mínimos
+                if (!acao.nome_usuario || !acao.url || !acao.tipo_acao || !Number.isFinite(Number(acao.valor))) {
+                    console.error("❌ Campos obrigatórios ausentes ou inválidos:", acao);
+                    return;
+                }
+
+                const response = await fetch("/api/registrar_acao_pendente", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem('token')}`
+                    },
+body: JSON.stringify({
+  nome_usuario: acao.nome_usuario,
+  url: acao.url,
+  tipo_acao: acao.tipo_acao,
+  valor: Number(acao.valor),
+  id_pedido: acao.id_pedido // opcional mas útil
+})
+                });
+
+                const respJson = await response.json();
+
+                if (!response.ok) {
+                    console.log("❌ Erro do servidor:", respJson);
+                    throw new Error("Falha ao registrar ação pendente.");
+                }
+
+                return respJson;
+
+            } catch (error) {
+                console.error("Erro ao registrar ação pendente:", error);
+            }
         }
-
-        const response = await fetch("/api/registrar_acao_pendente", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                nome_usuario: acao.nome_usuario,
-                url: acao.url,
-                tipo_acao: acao.tipo_acao,
-                valor: Number(acao.valor)
-            })
-        });
-
-        const respJson = await response.json();
-
-        if (!response.ok) {
-            console.log("❌ Erro do servidor:", respJson);
-            throw new Error("Falha ao registrar ação pendente.");
-        }
-
-        return respJson;
-
-    } catch (error) {
-        console.error("Erro ao registrar ação pendente:", error);
-    }
-}
         function logout() {
             localStorage.removeItem("token");
             window.location.href = "https://ganhesocialtest.com";
