@@ -1861,7 +1861,7 @@ router.post("/pular_acao", async (req, res) => {
   } = req.body;
 
   // ===== VALIDAÇÃO DE CAMPOS =====
-if (!id_pedido || !id_conta || !nome_usuario || !url || !tipo_acao || !valor) {
+if (!id_pedido || !nome_usuario || !url || !tipo_acao || !valor) {
     return res.status(400).json({ error: "Campos obrigatórios ausentes." });
   }
 
