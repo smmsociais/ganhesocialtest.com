@@ -1243,7 +1243,9 @@ async function skipAction() {
     profileImage.style.display = "none";
 
     try {
-        const nome_usuario = document.getElementById("username").textContent;
+        // ✔ PEGAR A CONTA SELECIONADA (o correto!)
+        const nome_usuario = document.getElementById("accountSelect").value;
+
         const url = document.getElementById("actionUrl").href;
         const token = localStorage.getItem("token");
 
