@@ -1,4 +1,4 @@
-// api/buscar_acao_smm_tiktok.js
+// api/buscar_acao_smm_tiktok.js (corrigido)
 import connectDB from './db.js';
 import mongoose from 'mongoose';
 import { User, ActionHistory, Pedido } from "./schema.js";
@@ -78,8 +78,10 @@ const handler = async (req, res) => {
 
       // 1) Total validadas (somente 'valida')
       const validadas = await ActionHistory.countDocuments({
-        $or: [{ id_pedido }, { id_action: idPedidoStr }],
-        $or: [{ status: "valida" }, { acao_validada: "valida" }]
+        $and: [
+          { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
+          { $or: [{ status: "valida" }, { acao_validada: "valida" }] }
+        ]
       });
       if (validadas >= (Number(pedido.quantidade) || 0)) {
         console.log(`⛔ Pedido ${idPedidoStr} fechado — já tem ${validadas} validações.`);
@@ -88,10 +90,13 @@ const handler = async (req, res) => {
 
       // 2) Total feitas (pendente + reservada + valida)
       const feitas = await ActionHistory.countDocuments({
-        $or: [{ id_pedido }, { id_action: idPedidoStr }],
-        $or: [
-          { status: { $in: ["pendente", "reservada", "valida"] } },
-          { acao_validada: { $in: ["pendente", "reservada", "valida"] } }
+        $and: [
+          { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
+          { $or: [
+              { status: { $in: ["pendente", "reservada", "valida"] } },
+              { acao_validada: { $in: ["pendente", "reservada", "valida"] } }
+            ]
+          }
         ]
       });
       console.log(`📊 Ação ${idPedidoStr}: feitas=${feitas}, limite=${pedido.quantidade}`);
@@ -106,9 +111,11 @@ const handler = async (req, res) => {
 
         // pulada?
         const pulada = await ActionHistory.findOne({
-          $or: [{ id_pedido }, { id_action: idPedidoStr }],
-          nome_usuario: nome,
-          $or: [{ status: "pulada" }, { acao_validada: "pulada" }]
+          $and: [
+            { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
+            { nome_usuario: nome },
+            { $or: [{ status: "pulada" }, { acao_validada: "pulada" }] }
+          ]
         });
         if (pulada) {
           console.log(`🚫 Conta ${nome} pulou o pedido ${idPedidoStr}`);
@@ -117,11 +124,14 @@ const handler = async (req, res) => {
 
         // já fez / pendente / reservada?
         const jaFez = await ActionHistory.findOne({
-          $or: [{ id_pedido }, { id_action: idPedidoStr }],
-          nome_usuario: nome,
-          $or: [
-            { status: { $in: ["pendente", "reservada", "valida"] } },
-            { acao_validada: { $in: ["pendente", "reservada", "valida"] } }
+          $and: [
+            { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
+            { nome_usuario: nome },
+            { $or: [
+                { status: { $in: ["pendente", "reservada", "valida"] } },
+                { acao_validada: { $in: ["pendente", "reservada", "valida"] } }
+              ]
+            }
           ]
         });
         if (jaFez) {
@@ -141,7 +151,7 @@ const handler = async (req, res) => {
         if (pedido.link.includes("@")) {
           nomeUsuario = pedido.link.split("@")[1].split(/[/?#]/)[0];
         } else {
-          const m = pedido.link.match(/tiktok\.com\/@?([^\/?#&]+)/i);
+          const m = pedido.link.match(/tiktok\.com\/@?([^\/\?#&]+)/i);
           if (m && m[1]) nomeUsuario = m[1].replace(/\/$/, "");
         }
       }
@@ -169,21 +179,21 @@ const handler = async (req, res) => {
       if (contaSolicitante) {
         const nome = contaSolicitante;
 
-        // checar se já existe reserva (por segurança)
-        const reservaExistente = await ActionHistory.findOne({
-          $or: [{ id_pedido }, { id_action: idPedidoStr }],
-          nome_usuario: nome,
-          $or: [{ status: "reservada" }, { acao_validada: "reservada" }]
-        });
-
-        if (reservaExistente) {
-          console.log(`⚠ Conta ${nome} já tem reserva para pedido ${idPedidoStr} — pulando.`);
-          continue;
-        }
-
-        // Criar uma reserva (documento) — usado para evitar race conditions simples
+        // checar se já existe reserva (por segurança) — operação atômica via findOneAndUpdate+upsert
         try {
-          const reserva = new ActionHistory({
+          const filterExistente = {
+            $and: [
+              { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
+              { nome_usuario: nome },
+              { $or: [
+                { status: { $in: ["reservada", "pendente", "valida"] } },
+                { acao_validada: { $in: ["reservada", "pendente", "valida"] } }
+              ] }
+            ]
+          };
+
+          // Se existir um doc com status relevante, findOneAndUpdate retornará esse doc.
+          const setOnInsert = {
             user: usuario._id,
             token: usuario.token,
             nome_usuario: nome,
@@ -198,25 +208,35 @@ const handler = async (req, res) => {
             status: "reservada",
             acao_validada: "reservada",
             data: new Date()
+          };
+
+          const existente = await ActionHistory.findOneAndUpdate(
+            filterExistente,
+            { $setOnInsert: setOnInsert },
+            { upsert: true, new: false } // new:false => retorna documento antigo se encontrado, ou null se inserido agora
+          );
+
+          if (existente) {
+            console.log(`⚠ Conta ${nome} já tem registro ativo para pedido ${idPedidoStr} — pulando.`);
+            continue;
+          }
+
+          console.log(`🔒 Reserva criada (atômica) para conta ${nome} no pedido ${idPedidoStr}`);
+
+          // retorna a ação já reservada
+          return res.json({
+            status: "ENCONTRADA",
+            nome_usuario: nomeUsuario,
+            valor: valorParaEnviar,
+            url: pedido.link,
+            tipo_acao: pedido.tipo,
+            id_pedido: pedido._id
           });
 
-          await reserva.save();
-          console.log(`🔒 Reserva criada para conta ${nome} no pedido ${idPedidoStr}`);
         } catch (err) {
-          // se falhar ao criar reserva, continua para próximo pedido
-          console.warn("Falha ao criar reserva (ignorar e tentar próximo pedido):", err);
+          console.warn("Falha ao criar reserva atômica (ignorar e tentar próximo pedido):", err);
           continue;
         }
-
-        // retorna a ação já reservada
-        return res.json({
-          status: "ENCONTRADA",
-          nome_usuario: nomeUsuario,
-          valor: valorParaEnviar,
-          url: pedido.link,
-          tipo_acao: pedido.tipo,
-          id_pedido: pedido._id
-        });
 
       } else {
         // Sem conta solicitante: retorna sem criar reserva (compatibilidade com fluxo antigo)
