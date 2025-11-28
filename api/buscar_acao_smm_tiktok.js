@@ -1,4 +1,4 @@
-// api/buscar_acao_smm_tiktok.js (corrigido v2)
+// api/buscar_acao_smm_tiktok.js (sem reservadas)
 import connectDB from './db.js';
 import mongoose from 'mongoose';
 import { User, ActionHistory, Pedido } from "./schema.js";
@@ -57,10 +57,10 @@ const handler = async (req, res) => {
     const tipoMap = { seguir: "seguir", curtir: "curtir" };
     const tipoBanco = tipoMap[tipo] || tipo;
 
-    // Query base para pedidos TikTok
+    // Query base para pedidos TikTok — removemos "reservada": não usamos mais reservas
     const query = {
       quantidade: { $gt: 0 },
-      status: { $in: ["pendente", "reservada"] }, // pedidos ainda aceitáveis
+      status: { $in: ["pendente"] }, // pedidos ativos
       rede: { $regex: /^tiktok$/i }
     };
 
@@ -98,13 +98,13 @@ const handler = async (req, res) => {
         continue;
       }
 
-      // 2) Total feitas (pendente + reservada + valida)
+      // 2) Total feitas (pendente + valida) — não consideramos mais "reservada"
       const feitas = await ActionHistory.countDocuments({
         $and: [
           { $or: [{ id_pedido: idPedidoStr }, { id_action: idPedidoStr }] },
           { $or: [
-              { status: { $in: ["pendente", "reservada", "valida"] } },
-              { acao_validada: { $in: ["pendente", "reservada", "valida"] } }
+              { status: { $in: ["pendente", "valida"] } },
+              { acao_validada: { $in: ["pendente", "valida"] } }
             ]
           }
         ]
@@ -115,7 +115,7 @@ const handler = async (req, res) => {
         continue;
       }
 
-      // 3) Verificar se a conta solicitante pulou/ja fez/reservou essa ação (quando fornecida)
+      // 3) Verificar se a conta solicitante pulou/ja fez essa ação (quando fornecida)
       const nome = contaSolicitante;
 
       // pulada? (qualquer registro 'pulada' para esse pedido + conta)
@@ -131,14 +131,14 @@ const handler = async (req, res) => {
         continue;
       }
 
-      // já fez / pendente / reservada? — se existir qualquer doc para essa conta+pedido com status pendente/reservada/valida, pulamos
+      // já fez / pendente? — se existir qualquer doc para essa conta+pedido com status pendente/valida, pulamos
       const jaFez = await ActionHistory.findOne({
         $and: [
           { $or: [{ id_pedido: idPedidoStr }, { id_action: idPedidoStr }] },
           { nome_usuario: nome },
           { $or: [
-              { status: { $in: ["pendente", "reservada", "valida"] } },
-              { acao_validada: { $in: ["pendente", "reservada", "valida"] } }
+              { status: { $in: ["pendente", "valida"] } },
+              { acao_validada: { $in: ["pendente", "valida"] } }
             ]
           }
         ]
@@ -177,68 +177,23 @@ const handler = async (req, res) => {
       }
       valorParaEnviar = Number(valorParaEnviar.toFixed(3));
 
-      // 5) Criar reserva atômica para a conta solicitante — com filtro que normaliza id como string
-      try {
-        const filterExistente = {
-          $and: [
-            { $or: [{ id_pedido: idPedidoStr }, { id_action: idPedidoStr }] },
-            { nome_usuario: nome },
-            { $or: [
-              { status: { $in: ["reservada", "pendente", "valida"] } },
-              { acao_validada: { $in: ["reservada", "pendente", "valida"] } }
-            ] }
-          ]
-        };
+      // 5) Não criamos mais reserva no backend — retornamos a ação para o frontend e o frontend deve
+      //    salvar/registrar no backend APENAS após o usuário confirmar que fez a ação.
+      //    Isso reduz gravações prematuras; porém, sem reserva existe a possibilidade de duas
+      //    instâncias pegarem a mesma ação quase simultaneamente. Se quiser evitar essa race
+      //    condition, implemente no futuro um endpoint de "lock"/"confirm" ou use decremento
+      //    atômico em Pedido.
 
-        const setOnInsert = {
-          user: usuario._id,
-          token: usuario.token,
-          nome_usuario: nome,
-          id_pedido: idPedidoStr,
-          id_action: idPedidoStr,
-          url: pedido.link,
-          tipo_acao: pedido.tipo,
-          quantidade_pontos: pedido.valor ?? null,
-          valor: valorParaEnviar,
-          tipo: pedido.tipo,
-          rede_social: pedido.rede,
-          status: "reservada",
-          acao_validada: "reservada",
-          data: new Date()
-        };
-
-        // Operação atômica: se já existe um doc com a combinação (pedido X conta) e status relevante, retornará esse doc
-        const existente = await ActionHistory.findOneAndUpdate(
-          filterExistente,
-          { $setOnInsert: setOnInsert },
-          { upsert: true, new: false, setDefaultsOnInsert: true }
-        );
-
-        if (existente) {
-          console.log(`⚠ Conta ${nome} já tem registro ativo para pedido ${idPedidoStr} — pulando.`);
-          continue;
-        }
-
-        console.log(`🔒 Reserva criada (atômica) para conta ${nome} no pedido ${idPedidoStr}`);
-
-        return res.json({
-          status: "ENCONTRADA",
-          nome_usuario: nomeUsuario,
-          valor: valorParaEnviar,
-          url: pedido.link,
-          tipo_acao: pedido.tipo,
-          id_pedido: pedido._id
-        });
-
-      } catch (err) {
-        // Defesa em profundidade: se der erro de duplicidade no banco (E11000), interpretar como já existente
-        if (err && err.code === 11000) {
-          console.log(`⚠ Duplicate key ao criar reserva para ${nome} no pedido ${idPedidoStr} — pulando.`);
-          continue;
-        }
-        console.warn("Falha ao criar reserva atômica (ignorar e tentar próximo pedido):", err);
-        continue;
-      }
+      return res.json({
+        status: "ENCONTRADA",
+        nome_usuario: nomeUsuario,
+        valor: valorParaEnviar,
+        url: pedido.link,
+        tipo_acao: pedido.tipo,
+        id_pedido: pedido._id,
+        // sinaliza para o frontend que ele deve chamar a rota de confirmação ao completar a ação
+        save_on_confirm: true
+      });
 
     } // end for
 
@@ -254,19 +209,26 @@ const handler = async (req, res) => {
 export default handler;
 
 /*
-  NOTAS IMPORTANTES (aplique no schema):
+  NOTAS IMPORTANTES (aplique no schema e no fluxo do frontend):
 
-  1) Normalize sempre id_action / id_pedido como STRING ao salvar no ActionHistory — evita problemas de tipo
-     (Number vs ObjectId vs String). No trecho acima eu salvo id_pedido/id_action como string.
+  1) Agora o backend NÃO cria mais documentos com status "reservada". O frontend deve:
+     - pedir a ação (/api/buscar_acao_smm_tiktok?nome_usuario=...)
+     - exibir a ação ao usuário
+     - quando o usuário confirmar, chamar um endpoint POST /api/confirmar_acao (ou similar)
+       que cria o documento ActionHistory com status: "pendente" (ou realiza validação imediata
+       e marca "valida" quando apropriado).
 
-  2) Adicione índices parciais no seu schema ActionHistory para reforçar unicidade (defesa em profundidade):
+  2) Ajuste as queries de contagem para considerar apenas os status relevantes ("pendente","valida").
+
+  3) Índices parciais recomendados no schema ActionHistory para evitar duplicidade por conta+pedido
+     (defesa em profundidade):
 
      ActionHistorySchema.index(
        { id_action: 1, nome_usuario: 1 },
        { unique: true, partialFilterExpression: {
            $or: [
-             { status: { $in: ["reservada","pendente","valida"] } },
-             { acao_validada: { $in: ["reservada","pendente","valida"] } }
+             { status: { $in: ["pendente","valida"] } },
+             { acao_validada: { $in: ["pendente","valida"] } }
            ]
          }
        }
@@ -276,15 +238,15 @@ export default handler;
        { id_pedido: 1, nome_usuario: 1 },
        { unique: true, partialFilterExpression: {
            $or: [
-             { status: { $in: ["reservada","pendente","valida"] } },
-             { acao_validada: { $in: ["reservada","pendente","valida"] } }
+             { status: { $in: ["pendente","valida"] } },
+             { acao_validada: { $in: ["pendente","valida"] } }
            ]
          }
        }
      );
 
-  3) Recomendação de fluxo: exigir `nome_usuario` no cliente quando o usuário tiver mais de 1 conta vinculada.
-
-  Essas três mudanças (normalizar ids como string, usar filtro atômico + upsert, adicionar índices únicos parciais)
-  devem garantir que UMA conta não consiga reservar a mesma ação mais de uma vez, mesmo quando `pedido.quantidade` > 1.
+  4) Se você quer evitar completamente race conditions sem reservas, estude uma operação
+     atômica que decremente `Pedido.quantidade` e registre o ActionHistory em uma mesma
+     transação/operação atômica — mas isso exige atenção (transações Mongo, ou uso de campos
+     lock/ttl, etc.).
 */
