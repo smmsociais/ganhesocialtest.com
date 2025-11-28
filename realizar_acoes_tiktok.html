@@ -1245,15 +1245,20 @@ async function skipAction() {
     try {
         const nome_usuario = document.getElementById("username").textContent;
         const url = document.getElementById("actionUrl").href;
-
         const token = localStorage.getItem("token");
 
-        // 🔥 CAMPOS ESSENCIAIS
-        const id_pedido = currentActionData?.id_action;
-        const tipo_acao = currentActionData?.tipo_acao;
+        // ✔ Corrigido: mesmo esquema do confirmAction
+        const id_pedido =
+            currentActionData?.id_pedido ??
+            currentActionData?.id_action ??
+            null;
 
-        if (!id_pedido || !id_conta) {
-            console.error("ERRO: id_pedido está ausente.");
+        const tipo_acao =
+            currentActionData?.tipo_acao ??
+            (url.includes("/video/") ? "curtir" : "seguir");
+
+        if (!id_pedido) {
+            console.error("ERRO: id_pedido está ausente.", currentActionData);
             return;
         }
 
@@ -1276,14 +1281,13 @@ async function skipAction() {
         clearTimeout(pausaTimeout);
         statusElement?.removeAttribute("data-contagem");
 
-        // Próxima ação
         fetchAction();
 
     } catch (error) {
         console.error("Erro ao pular ação:", error);
     }
 }
-        async function loadAccounts() {
+    async function loadAccounts() {
             try {
                 const token = localStorage.getItem("token");
                 if (!token) {
