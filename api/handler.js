@@ -233,11 +233,12 @@ router.route("/contas_instagram")
       const nomeNormalized = String(rawName).trim();
       const nomeLower = nomeNormalized.toLowerCase();
 
-      // Procura conta já existente no próprio usuário (compatível com nome_usuario e nomeConta)
-      const contaExistenteIndex = (user.contas || []).findIndex(
-        c => String((c.nome_usuario ?? c.nomeConta ?? "")).toLowerCase() === nomeLower
-      );
-
+// 🔍 Verificar se já existe conta TikTok com o mesmo nome
+const contaExistenteIndex = (user.contas || []).findIndex(
+  c =>
+    String((c.nome_usuario ?? c.nomeConta ?? "")).toLowerCase() === nomeLower &&
+    String(c.rede ?? "").toLowerCase() === "instagram"
+);
       if (contaExistenteIndex !== -1) {
         const contaExistente = user.contas[contaExistenteIndex];
 
@@ -353,9 +354,12 @@ router.route("/contas_instagram")
 
     const nomeLower = String(nomeRaw).trim().toLowerCase();
 
-    const contaIndex = (user.contas || []).findIndex(c =>
-      String(c.nome_usuario ?? c.nomeConta ?? "").toLowerCase() === nomeLower
-    );
+// 🔍 Encontrar conta específica DO TIKTOK
+const contaIndex = (user.contas || []).findIndex(c =>
+  String((c.nome_usuario ?? c.nomeConta ?? "")).toLowerCase() === nomeLower &&
+  String(c.rede ?? "").toLowerCase() === "instagram"
+);
+
 
     if (contaIndex === -1) return res.status(404).json({ error: "Conta não encontrada." });
 
