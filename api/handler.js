@@ -14,7 +14,7 @@ import fs from "fs";
 import buscarInstagram from "./buscar_acao_smm_instagram.js";
 import buscarTikTok from "./buscar_acao_smm_tiktok.js";
 import getInstagramUser from "./get-instagram-user.js";
-import getTikTokUser from "./get-user-tiktok.js";
+import getTikTokUser from "./get-tiktok-user.js";
 import smmAcao from "./smm_acao.js";
 import verificarFollowing from "./user-following.js";
 
