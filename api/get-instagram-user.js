@@ -9,6 +9,7 @@ import axios from "axios";
  * Melhorias:
  *  - parsing tolerante do query param (tratamento de decodeURIComponent com fallback)
  *  - aceita image_url em query ou body (útil para POST)
+ *  - tenta reconstruir URLs não-encoded juntando parâmetros típicos do CDN do Instagram
  *  - allowlist de hosts para reduzir abuso
  *  - não repassa headers do CDN e define explicitamente headers de resposta
  */
@@ -23,6 +24,12 @@ const ALLOWED_IMAGE_HOSTS = [
   "fbcdn.net"
 ];
 
+// parâmetros que frequentemente aparecem como query params do CDN do Instagram
+const INSTAGRAM_QUERY_PARTS = new Set([
+  "efg", "_nc_ht", "_nc_cat", "_nc_oc", "_nc_ohc", "_nc_gid",
+  "edm", "ccb", "ig_cache_key", "oh", "oe", "_nc_sid", "igshid"
+]);
+
 function isProbablyInstagramHost(url) {
   try {
     const u = new URL(url);
@@ -34,26 +41,92 @@ function isProbablyInstagramHost(url) {
 
 function safeDecode(input) {
   if (!input || typeof input !== "string") return input;
-  // remover possíveis <> que alguns clientes adicionam
   const trimmed = input.trim().replace(/^<|>$/g, "");
   try {
-    // tentar decodificar. se falhar, retorna original 'trimmed'
     return decodeURIComponent(trimmed);
   } catch (e) {
     return trimmed;
   }
 }
 
+/**
+ * Reconstrói uma possível image_url quando a query foi dividida por '&'.
+ * - se image_url inicial não começa com http, tenta anexar keys conhecidas (insta) encontradas em req.query
+ * - fallback: tenta extrair do req.originalUrl tudo que vier após 'image_url='
+ */
+function tryReconstructImageUrl(originalUrl, parsedQueryObj, initialCandidate) {
+  let candidate = initialCandidate ?? "";
+  // Se já é um URL válido, devolve
+  if (/^https?:\/\//i.test(candidate)) return candidate;
+
+  // Tentar juntar parâmetros conhecidos do Instagram (ex.: oh, oe, _nc_ht, ig_cache_key, etc.)
+  // Começamos com o que veio no parsedQueryObj.image_url (mesmo que truncado)
+  const parts = [];
+  if (candidate) parts.push(candidate);
+
+  for (const [key, val] of Object.entries(parsedQueryObj)) {
+    if (key === "image_url") continue;
+    if (INSTAGRAM_QUERY_PARTS.has(key) && typeof val === "string") {
+      // add as key=value
+      parts.push(`${key}=${val}`);
+    }
+  }
+
+  if (parts.length > 0) {
+    // se a primeira parte não contém '?', criar '?'
+    // mas aqui candidate pode já incluir '?' se o cliente enviou parcialmente; então juntamos com '&'
+    const joined = parts.join("&");
+    // se a primeira parte já começa com 'http' apenas retorne joined (já deve conter a base)
+    if (/^https?:\/\//i.test(parts[0])) {
+      return joined;
+    }
+  }
+
+  // Fallback mais agressivo: extrair raw substring após 'image_url=' no originalUrl
+  try {
+    if (originalUrl && originalUrl.includes("image_url=")) {
+      const after = originalUrl.split("image_url=")[1];
+      if (after) {
+        // originalUrl pode conter outros parâmetros depois; assumimos que o cliente enviou a URL inteira sem encode,
+        // então tentamos recuperar até o final da string (pois os & que pertencem à imagem também estão ali).
+        // Para evitar incluir parâmetros legítimos que venham depois, tentamos URL-decode e checar se começa com http.
+        const maybe = decodeURIComponent(after);
+        // Se tiver outros params depois separados por ' & ' que não pertencem, muitas vezes 'maybe' ainda começará com http.
+        const possible = maybe.split("&").map(s => s.trim()).filter(Boolean).join("&");
+        if (/^https?:\/\//i.test(possible)) return possible;
+        // se decodeURIComponent falhar ou não começar com http, retornar the initialCandidate
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  // Se nada funcionou, devolve initialCandidate (pode ser truncado)
+  return initialCandidate;
+}
+
 export default async function handler(req, res) {
   // --- modo proxy de imagem ---
-  const rawImageUrl = req.query?.image_url ?? req.body?.image_url;
+  // Aceita image_url via query ou via body (POST)
+  let rawImageUrl = req.query?.image_url ?? req.body?.image_url;
+
+  // Tentar também casos em que Express quebrou a query; parsedQueryObj é req.query
+  const parsedQueryObj = req.query ?? {};
+
   if (rawImageUrl) {
-    const decoded = safeDecode(rawImageUrl);
+    // try decode safely
+    let decoded = safeDecode(rawImageUrl);
+
+    // If decoded doesn't start with http, attempt reconstruction by joining instagram param fragments
+    if (!/^https?:\/\//i.test(decoded)) {
+      const reconstructed = tryReconstructImageUrl(req.originalUrl, parsedQueryObj, decoded);
+      decoded = reconstructed ?? decoded;
+    }
 
     // segurança mínima: só aceitar http(s)
     if (!/^https?:\/\//i.test(decoded)) {
-      console.warn("[get-instagram-user] Invalid image_url param:", decoded);
-      return res.status(400).send("Invalid image URL (must be an absolute http(s) URL)");
+      console.warn("[get-instagram-user] Invalid image_url param after attempts:", decoded, "req.query keys:", Object.keys(req.query || {}));
+      return res.status(400).send("Invalid image URL (must be an absolute http(s) URL). Try encoding the URL or send it in the request body.");
     }
 
     // opcional: restringir a hosts plausíveis do Instagram para reduzir abuso
@@ -72,7 +145,6 @@ export default async function handler(req, res) {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
           Referer: "https://www.instagram.com/"
         },
-        // aceita 2xx e 3xx (seguimos redirects automaticamente)
         validateStatus: s => s >= 200 && s < 400,
         maxRedirects: 5
       });
