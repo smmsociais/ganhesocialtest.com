@@ -47,37 +47,39 @@ export default async function handler(req, res) {
         return res.status(400).send("Image host not allowed");
       }
 
-      // Requisição ao CDN do Instagram (arraybuffer)
-      const resp = await axios.get(decoded, {
-        responseType: "arraybuffer",
-        timeout: 15000,
-        headers: {
-          // fingir navegador / referer para reduzir bloqueios
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
-          Referer: "https://www.instagram.com/"
-        },
-        validateStatus: status => status >= 200 && status < 400
-      });
+// trecho proxy (substituir a seção atual de proxy)
+const resp = await axios.get(decoded, {
+  responseType: "arraybuffer",
+  timeout: 15000,
+  headers: {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
+    Referer: "https://www.instagram.com/"
+  },
+  validateStatus: s => s >= 200 && s < 400
+});
 
-      const contentType = resp.headers["content-type"] || "image/jpeg";
-      const body = Buffer.from(resp.data, "binary");
+const contentType = resp.headers["content-type"] || "image/jpeg";
+const body = Buffer.from(resp.data, "binary");
 
-      // NÃO repassar headers problemáticos do CDN (Cross-Origin-Resource-Policy, COEP, COOP, CSP, etc.)
-      // Em vez disso, definimos explicitamente os headers que queremos enviar ao cliente.
-      res.setHeader("Content-Type", contentType);
-      res.setHeader("Content-Length", String(body.length));
-      res.setHeader("Cache-Control", `public, max-age=${IMAGE_CACHE_SECONDS}`);
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-      res.setHeader("Vary", "Origin");
-      // permissivo — se preferir mais seguro, mude Access-Control-Allow-Origin para seu domínio
+// NÃO propagar headers vindos do CDN — definimos apenas os seguros
+res.setHeader("Content-Type", contentType);
+res.setHeader("Content-Length", String(body.length));
+res.setHeader("Cache-Control", `public, max-age=${IMAGE_CACHE_SECONDS}`);
 
-      // opcional: informar ao browser que essa imagem pode ser usada cross-origin
-      // (alguns navegadores respeitam Cross-Origin-Resource-Policy — colocar cross-origin ajuda)
-      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+// CORS seguro para imagens (mude '*' para seu domínio se preferir)
+res.setHeader("Access-Control-Allow-Origin", "*");
+res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+res.setHeader("Vary", "Origin");
 
-      return res.status(200).send(body);
+// reduz chance de bloqueio por política de recursos
+res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+// opcionalmente também permitir uso cross-origin em canvas/requests
+res.setHeader("Cross-Origin-Embedder-Policy", "unsafe-none");
+res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+
+return res.status(200).send(body);
+
     } catch (err) {
       // log detalhado para debugging (sem vazar conteúdo sensível)
       console.error("Erro no proxy de imagem:", err?.response?.status || err.message || err);
