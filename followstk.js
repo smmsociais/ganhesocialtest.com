@@ -1,4 +1,4 @@
-// worker.index.js
+// worker.followstk.js (versão ajustada para seu schema)
 import express from "express";
 import axios from "axios";
 import { z } from "zod";
@@ -33,6 +33,9 @@ if (!MONGODB_URI) {
 if (!RAPIDAPI_KEY) {
   console.warn("⚠ RAPIDAPI_KEY não definido. Scraptik chamadas irão falhar.");
 }
+if (!SMM_API_KEY) {
+  console.warn("⚠ SMM_API_KEY não definido. Rotas de notificação SMM não irão funcionar.");
+}
 
 /* ---------- DB ---------- */
 let cachedClient = null;
@@ -55,7 +58,6 @@ async function axiosGetWithRetries(url, opts = {}, retries = MAX_FETCH_RETRIES) 
       return await axios.get(url, { timeout: AXIOS_TIMEOUT, ...opts });
     } catch (err) {
       lastErr = err;
-      // Checa 400 non-retryable (mensagens comuns)
       const status = err?.response?.status;
       const data = err?.response?.data;
       const dstr = typeof data === "string" ? data : JSON.stringify(data || {});
@@ -74,7 +76,6 @@ async function axiosGetWithRetries(url, opts = {}, retries = MAX_FETCH_RETRIES) 
 
 async function scraptikGet(path, params = {}) {
   if (!RAPIDAPI_KEY) throw new Error("RAPIDAPI_KEY not set");
-  // valida params simples
   for (const [k, v] of Object.entries(params)) {
     if (v === undefined || v === null || String(v).trim() === "") {
       throw new Error(`invalid_param_${k}`);
@@ -105,6 +106,16 @@ function extractUsernameFromUrl(urlDir) {
   if (s.startsWith("@")) s = s.slice(1);
   s = s.trim().toLowerCase();
   return s === "" ? null : s;
+}
+
+function toObjectId(maybe) {
+  if (!maybe) return null;
+  if (maybe instanceof ObjectId) return maybe;
+  try {
+    return new ObjectId(String(maybe));
+  } catch (e) {
+    return null;
+  }
 }
 
 /* ---------- Scraptik helpers with cache ---------- */
@@ -177,27 +188,46 @@ async function getFollowingsSetForSecUid(secUid) {
   return set;
 }
 
-/* ---------- Zod action schema ---------- */
+/* ---------- Zod action schema (ajustado ao seu mongoose schema) ---------- */
 const ActionSchema = z.object({
   _id: z.any(),
   user: z.any(),
-  nome_usuario: z.string().min(1),
-  id_pedido: z.string().optional(),
-  id_conta: z.string().min(1),
-  url_dir: z.string().min(1),
-  quantidade_pontos: z.number().optional(),
-  valor_confirmacao: z.union([z.string(), z.number()]).optional(),
-  tipo_acao: z.string().min(1),
-  token: z.string().min(1)
+  token: z.string().optional(),
+  nome_usuario: z.string().optional(),
+  id_action: z.string().min(1),
+  id_pedido: z.union([z.string(), z.number()]).optional(),
+  url: z.string().min(1),
+  status: z.string().optional(),
+  acao_validada: z.string().min(1),
+  valor: z.number().optional(),
+  tipo_acao: z.string().min(1)
 });
 
-/* ---------- lock helper ---------- */
+/* ---------- normalization helper (mapeia campos para o schema que esperamos) ---------- */
+function normalizeAction(raw) {
+  if (!raw || typeof raw !== "object") return raw;
+  return {
+    ...raw,
+    // prefer explicit fields from seu schema: url, tipo_acao, valor, acao_validada
+    url: raw.url || raw.url_dir || raw.actionUrl || raw.link || "",
+    tipo_acao: raw.tipo_acao || raw.tipo || raw.action_type || "",
+    valor: (raw.valor !== undefined && raw.valor !== null) ? Number(raw.valor) : (raw.valor_confirmacao !== undefined ? Number(raw.valor_confirmacao) : (raw.valor_confirmacao_str ? Number(raw.valor_confirmacao_str) : undefined)),
+    acao_validada: raw.acao_validada || raw.status || (raw.acaoValidada ? String(raw.acaoValidada) : "pendente"),
+    nome_usuario: raw.nome_usuario || raw.username || raw.actor || "",
+    id_action: raw.id_action || raw.id_action_smm || raw.id_action_local || raw.idAction || raw.id || "",
+    id_pedido: raw.id_pedido || raw.idPedido || raw.id_acao_smm || raw.id_action
+  };
+}
+
+/* ---------- lock helper (aceita string ou ObjectId) ---------- */
 async function acquireLock(colecao, id) {
   const TWO_MIN_MS = 2 * 60 * 1000;
   const now = new Date();
+  const oid = toObjectId(id);
+  if (!oid) return null;
   const lock = await colecao.findOneAndUpdate(
     {
-      _id: new ObjectId(id),
+      _id: oid,
       $or: [
         { processing: { $ne: true } },
         { processingAt: { $lte: new Date(Date.now() - TWO_MIN_MS) } }
@@ -209,31 +239,39 @@ async function acquireLock(colecao, id) {
   return lock?.value || null;
 }
 
-/* ---------- core: processBatch ---------- */
+/* ---------- core: processBatch (ajustada ao seu schema) ---------- */
 async function processBatch() {
   const db = await connectToDatabase();
   const colecao = db.collection("actionhistories");
   const usuarios = db.collection("users");
   const dailyearnings = db.collection("dailyearnings");
 
-  const acoes = await colecao.find({ acao_validada: "pendente", tipo: "seguir" })
+  // Query baseada no seu schema: procura acao_validada pendente e tipo_acao seguir
+  const query = {
+    status: "pendente",
+    tipo_acao: "seguir"
+  };
+
+  console.log("🔎 Executando find com query:", JSON.stringify(query));
+  const acoes = await colecao.find(query)
     .sort({ data: 1 })
     .limit(MAX_BATCH)
     .toArray();
 
   if (!acoes || acoes.length === 0) {
-    // nothing
+    console.log(`⏳ Nenhuma ação encontrada neste poll (${new Date().toISOString()}). Voltando a esperar ${POLL_INTERVAL_MS}ms`);
     return { processed: 0, fetched: 0 };
   }
 
   console.log(`📦 ${acoes.length} ações pendentes (agrupando por actor)...`);
 
-  // Agrupa por actorUsername extraído de nome_usuario (fallback para id_conta)
+  // Agrupa por actorUsername extraído de nome_usuario (fallback para user id string)
   const groups = new Map();
   for (const ac of acoes) {
     try {
-      const valid = ActionSchema.parse(ac);
-      let actor = String(valid.nome_usuario || valid.id_conta || "").trim();
+      const norm = normalizeAction(ac);
+      const valid = ActionSchema.parse(norm);
+      let actor = String(valid.nome_usuario || valid.user || "").trim();
       if (actor.startsWith("local_")) actor = actor.slice(6);
       if (actor.startsWith("@")) actor = actor.slice(1);
       actor = actor.toLowerCase();
@@ -241,7 +279,7 @@ async function processBatch() {
       arr.push(valid);
       groups.set(actor, arr);
     } catch (e) {
-      console.warn("   ⚠ documento inválido ignorado:", ac._id, e.message || e);
+      console.warn("   ⚠ documento inválido ignorado (normalização/parse):", ac._id, e.message || e);
     }
   }
 
@@ -255,7 +293,6 @@ async function processBatch() {
 
     if (!actorSecUid) {
       console.log(`   → Não foi possível obter sec_uid para actor ${actorUsername}.`);
-      // Para cada ação: incrementa verify_attempts; se >= MAX_VERIFY_ATTEMPTS marca inválida, senão libera lock
       for (const action of actions) {
         let lock = null;
         try {
@@ -265,22 +302,22 @@ async function processBatch() {
             continue;
           }
           const upd = await colecao.findOneAndUpdate(
-            { _id: new ObjectId(action._id) },
+            { _id: toObjectId(action._id) },
             { $inc: { verify_attempts: 1 } },
             { returnDocument: "after" }
           );
           const attempts = upd?.value?.verify_attempts || 1;
           if (attempts >= MAX_VERIFY_ATTEMPTS) {
-            await colecao.updateOne({ _id: new ObjectId(action._id) }, { $set: { acao_validada: "invalida", verificada_em: new Date(), processing: false } });
+            await colecao.updateOne({ _id: toObjectId(action._id) }, { $set: { acao_validada: "invalida", verificada_em: new Date(), processing: false } });
             console.log(`   ✗ Action ${action._id} marcada INVALIDA (sec_uid não obtido; attempts=${attempts})`);
             processedCount++;
           } else {
-            await colecao.updateOne({ _id: new ObjectId(action._id) }, { $set: { processing: false } });
+            await colecao.updateOne({ _id: toObjectId(action._id) }, { $set: { processing: false } });
             console.log(`   → Action ${action._id} deixada PENDENTE (verify_attempts=${attempts})`);
           }
         } catch (err) {
           console.error("   ✗ Erro tratando actor sem sec_uid:", err.message || err);
-          try { if (lock) await colecao.updateOne({ _id: new ObjectId(action._id) }, { $set: { processing: false } }); } catch (_) {}
+          try { if (lock) await colecao.updateOne({ _id: toObjectId(action._id) }, { $set: { processing: false } }); } catch (_) {}
         }
       }
       continue;
@@ -299,10 +336,10 @@ async function processBatch() {
           continue;
         }
 
-        const targetUsername = extractUsernameFromUrl(action.url_dir);
+        const targetUsername = extractUsernameFromUrl(action.url);
         if (!targetUsername) {
-          console.warn("   ⚠ Não foi possível extrair targetUsername:", action._id);
-          await colecao.updateOne({ _id: new ObjectId(action._id) }, { $set: { acao_validada: "invalida", verificada_em: new Date(), processing: false } });
+          console.warn("   ⚠ Não foi possível extrair targetUsername:", action._id, action.url);
+          await colecao.updateOne({ _id: toObjectId(action._id) }, { $set: { status: "invalida", verificada_em: new Date(), processing: false } });
           processedCount++;
           continue;
         }
@@ -310,22 +347,22 @@ async function processBatch() {
         const found = followingSet.has(targetUsername.toLowerCase());
 
         await colecao.updateOne(
-          { _id: new ObjectId(action._id) },
-          { $set: { acao_validada: found ? "valida" : "invalida", verificada_em: new Date(), processing: false } }
+          { _id: toObjectId(action._id) },
+          { $set: { status: found ? "valida" : "invalida", verificada_em: new Date(), processing: false } }
         );
 
         if (found) {
-          const valor = parseFloat(action.valor_confirmacao || 0);
+          const valor = Number(action.valor || 0);
           if (!isNaN(valor) && valor > 0) {
             // incrementa saldo
             try {
-              await usuarios.updateOne({ _id: new ObjectId(action.user) }, { $inc: { saldo: valor } });
+              await usuarios.updateOne({ _id: toObjectId(action.user) }, { $inc: { saldo: valor } });
               console.log(`   ✓ Incrementado saldo user ${action.user} R$${valor}`);
             } catch (err) {
               console.error("   ✗ Erro ao incrementar saldo do usuário:", err.message || err);
             }
 
-            // atualiza dailyearnings (native driver)
+            // atualiza dailyearnings
             try {
               const agora = new Date();
               const brasilAgora = new Date(agora.getTime() + (-3) * 3600 * 1000);
@@ -337,7 +374,7 @@ async function processBatch() {
               ));
               const valorToInc = Number(valor);
               await dailyearnings.updateOne(
-                { userId: new ObjectId(action.user), expiresAt: brasilMidnightTomorrow },
+                { userId: toObjectId(action.user), expiresAt: brasilMidnightTomorrow },
                 { $inc: { valor: valorToInc }, $setOnInsert: { expiresAt: brasilMidnightTomorrow } },
                 { upsert: true }
               );
@@ -345,60 +382,51 @@ async function processBatch() {
               console.error("   ⚠ Erro ao atualizar DailyEarning:", err.message || err);
             }
 
-// notifica smmsociais (opcional) — USAR SMM_API_KEY (const declarada no topo)
-if (action.id_pedido && SMM_API_KEY) {
-  try {
-    const payload = { id_acao_smm: Number(action.id_pedido) || action.id_pedido };
-    console.log("   → Notificando smmsociais:", payload, "Authorization: Bearer <redacted>");
+            // notifica smmsociais (opcional)
+            if (action.id_pedido && SMM_API_KEY) {
+              try {
+                const payload = { id_acao_smm: Number(action.id_pedido) || action.id_pedido };
+                console.log("   → Notificando smmsociais:", payload, "Authorization: Bearer <redacted>");
 
-    const resp = await axios.post(
-      "https://smmsociais.com/api/incrementar-validadas",
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${SMM_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        timeout: 10000
-      }
-    );
+                const resp = await axios.post(
+                  "https://smmsociais.com/api/incrementar-validadas",
+                  payload,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${SMM_API_KEY}`,
+                      "Content-Type": "application/json"
+                    },
+                    timeout: 10000
+                  }
+                );
 
-    console.log("   ✓ smmsociais respondeu:", resp.status, JSON.stringify(resp.data));
-  } catch (err) {
-    // mostra tanto err.message quanto err.response.data quando disponível
-    console.error("   ✗ Erro notificando smmsociais:", err.message);
-    if (err.response) {
-      console.error("     response.status:", err.response.status);
-      console.error("     response.data:", JSON.stringify(err.response.data));
-    }
-  }
-} else {
-  // log útil para saber por que não chamou
-  if (!action.id_pedido) {
-    console.log("   → Pulando notificação smmsociais: action.id_pedido ausente");
-  } else if (!SMM_API_KEY) {
-    console.log("   → Pulando notificação smmsociais: SMM_API_KEY não configurada (usando SMM_API_KEY const)");
-  }
-}
+                console.log("   ✓ smmsociais respondeu:", resp.status, JSON.stringify(resp.data));
+              } catch (err) {
+                console.error("   ✗ Erro notificando smmsociais:", err.message || err);
+                if (err.response) {
+                  console.error("     response.status:", err.response.status);
+                  console.error("     response.data:", JSON.stringify(err.response.data));
+                }
+              }
+            } else {
+              if (!action.id_pedido) {
+                console.log("   → Pulando notificação smmsociais: action.id_pedido ausente");
+              } else if (!SMM_API_KEY) {
+                console.log("   → Pulando notificação smmsociais: SMM_API_KEY não configurada (usando SMM_API_KEY const)");
+              }
+            }
+
           } else {
-            console.warn("   ⚠ valor_confirmacao inválido:", action.valor_confirmacao);
+            console.warn("   ⚠ valor_confirmacao/valor inválido:", action.valor);
           }
         } else {
           console.log(`   ✗ Ação ${action._id} inválida (não encontrou follow).`);
         }
 
- if (!RAPIDAPI_KEY) {
-  console.warn("⚠ RAPIDAPI_KEY não definido. Scraptik chamadas irão falhar.");
-}
-
-if (!SMM_API_KEY) {
-  console.warn("⚠ SMM_API_KEY não definido. Rotas de notificação SMM não irão funcionar.");
-}       
-
         processedCount++;
       } catch (err) {
         console.error("   ✗ Erro ao processar ação:", err?.message || err);
-        try { if (lock) await colecao.updateOne({ _id: new ObjectId(action._id) }, { $set: { processing: false } }); } catch (e) { console.error("   ⚠ Erro liberando lock:", e.message || e); }
+        try { if (lock) await colecao.updateOne({ _id: toObjectId(action._id) }, { $set: { processing: false } }); } catch (e) { console.error("   ⚠ Erro liberando lock:", e.message || e); }
       }
     } // fim actions do actor
 
