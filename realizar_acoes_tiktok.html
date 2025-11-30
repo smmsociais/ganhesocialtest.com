@@ -1119,7 +1119,7 @@
                         profileImg.style.display = "block";
                         localStorage.setItem("unique_id", tiktokUsername);
                     } else {
-                        const resUserInfo = await fetch(`/api/get-user?unique_id=${encodeURIComponent(tiktokUsername)}`);
+                        const resUserInfo = await fetch(`/api/get-tiktok-user?unique_id=${encodeURIComponent(tiktokUsername)}`);
                         if (!resUserInfo.ok) throw new Error('Usuário não encontrado');
                         const userInfo = await resUserInfo.json();
                         const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
@@ -1224,76 +1224,76 @@
             await fetchAction();
         }
 
-async function skipAction() {
-    const statusElement = document.getElementById("statusMessage");
-    const actionContent = document.getElementById("actionContent");
-    const confirmButton = document.getElementById("confirmButton");
-    const profileImage = document.getElementById("profileImage");
+        async function skipAction() {
+            const statusElement = document.getElementById("statusMessage");
+            const actionContent = document.getElementById("actionContent");
+            const confirmButton = document.getElementById("confirmButton");
+            const profileImage = document.getElementById("profileImage");
 
-    statusElement.innerHTML = `
+            statusElement.innerHTML = `
         <div class="loading-message">Buscando ações, aguarde...</div>
         <div class="loading-circle-container">
             <div class="loading-circle"></div>
         </div>
     `;
-    actionContent.style.opacity = "0";
-    confirmButton.style.display = "none";
-    profileImage.style.display = "none";
+            actionContent.style.opacity = "0";
+            confirmButton.style.display = "none";
+            profileImage.style.display = "none";
 
-    try {
-        // ✔ PEGAR A CONTA SELECIONADA (o correto!)
-        const nome_usuario = document.getElementById("accountSelect").value;
+            try {
+                // ✔ PEGAR A CONTA SELECIONADA (o correto!)
+                const nome_usuario = document.getElementById("accountSelect").value;
 
-        const url = document.getElementById("actionUrl").href;
-        const token = localStorage.getItem("token");
+                const url = document.getElementById("actionUrl").href;
+                const token = localStorage.getItem("token");
 
-        // PEGAR VALOR CERTO DA AÇÃO
-        const valor_text = document.getElementById("points").textContent;
-        const valor = parseFloat(valor_text.replace("R$ ", ""));
+                // PEGAR VALOR CERTO DA AÇÃO
+                const valor_text = document.getElementById("points").textContent;
+                const valor = parseFloat(valor_text.replace("R$ ", ""));
 
-        // PEGAR ID CERTO
-        const id_pedido =
-            currentActionData?.id_pedido ??
-            currentActionData?.id_action ??
-            null;
+                // PEGAR ID CERTO
+                const id_pedido =
+                    currentActionData?.id_pedido ??
+                    currentActionData?.id_action ??
+                    null;
 
-        const tipo_acao =
-            currentActionData?.tipo_acao ??
-            (url.includes("/video/") ? "curtir" : "seguir");
+                const tipo_acao =
+                    currentActionData?.tipo_acao ??
+                    (url.includes("/video/") ? "curtir" : "seguir");
 
-        if (!id_pedido) {
-            console.error("ERRO: id_pedido está ausente.", currentActionData);
-            return;
+                if (!id_pedido) {
+                    console.error("ERRO: id_pedido está ausente.", currentActionData);
+                    return;
+                }
+
+                await fetch("/api/pular_acao", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        id_pedido,
+                        nome_usuario,
+                        url,
+                        tipo_acao,
+                        valor
+                    })
+                });
+
+                tentativasSemAcoes = 0;
+                clearTimeout(contagemTimeout);
+                clearTimeout(pausaTimeout);
+                statusElement?.removeAttribute("data-contagem");
+
+                fetchAction();
+
+            } catch (error) {
+                console.error("Erro ao pular ação:", error);
+            }
         }
 
-        await fetch("/api/pular_acao", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                id_pedido,
-                nome_usuario,
-                url,
-                tipo_acao,
-                valor
-            })
-        });
-
-        tentativasSemAcoes = 0;
-        clearTimeout(contagemTimeout);
-        clearTimeout(pausaTimeout);
-        statusElement?.removeAttribute("data-contagem");
-
-        fetchAction();
-
-    } catch (error) {
-        console.error("Erro ao pular ação:", error);
-    }
-}
-
-    async function loadAccounts() {
+        async function loadAccounts() {
             try {
                 const token = localStorage.getItem("token");
                 if (!token) {
