@@ -23,7 +23,7 @@ const router = express.Router();
 router.get("/buscar_acao_smm_instagram", buscarInstagram);
 router.get("/buscar_acao_smm_tiktok", buscarTikTok);
 router.get("/get-instagram-user", getInstagramUser);
-router.get("/get-user-tiktok", getTikTokUser);
+router.get("/api/get-tiktok-user", getTikTokUser);
 router.post("/smm_acao", smmAcao);
 router.get("/user-following", verificarFollowing);
 
