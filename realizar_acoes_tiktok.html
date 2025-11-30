@@ -1083,8 +1083,20 @@
             // Normaliza campos vindos da API
             const tiktokUsername = (data.nome_usuario || "").replace(/^@/, '');
             const id_pedido = data.id_pedido ?? data._id ?? data.id_action ?? null;
-            const rawUrl = data.url ?? data.url_dir ?? `https://www.tiktok.com/@${tiktokUsername}`;
-            const url = (typeof rawUrl === "string" && rawUrl.trim() !== "") ? rawUrl : `https://www.tiktok.com/@${tiktokUsername}`;
+            
+            // CORREÇÃO PRINCIPAL: Garantir que a URL seja sempre do TikTok oficial
+            let url;
+            if (data.url && data.url.includes('tiktok.com')) {
+                // Se já é uma URL do TikTok, usa como está
+                url = data.url;
+            } else if (data.url && data.url.includes('ganhesocialtest.com')) {
+                // Se é uma URL do GanheSocial, extrai o username e constrói a URL correta
+                const usernameFromUrl = data.url.split('/').pop();
+                url = `https://www.tiktok.com/@${usernameFromUrl}`;
+            } else {
+                // Caso padrão: constrói a URL do TikTok
+                url = `https://www.tiktok.com/@${tiktokUsername}`;
+            }
 
             // Valor: usar somente o que a rota retornou (data.valor) — aceita também quantidade_pontos por compatibilidade
             const valorRaw = data.valor ?? data.quantidade_pontos ?? 0;
