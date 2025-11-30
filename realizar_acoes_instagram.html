@@ -911,10 +911,8 @@
                         const id_conta = localStorage.getItem("id_conta");
 
                         if (id_conta && id_conta !== "null" && actionType !== "") {
-                            document.getElementById("actionText").textContent =
-                                actionType === "curtir" ? "Curtir" :
-                                    actionType === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
-
+                            // Atualiza o texto da ação baseado no tipo selecionado
+                            updateActionText(actionType);
                             tentativasSemAcoes = 0;
                             fetchActionDebounced();
                         }
@@ -928,13 +926,22 @@
                     const preSelectedAction = select.value;
 
                     if (preSelectedAction && preSelectedAction !== "") {
-                        document.getElementById("actionText").textContent =
-                            preSelectedAction === "curtir" ? "Curtir" :
-                                preSelectedAction === "seguir_curtir" ? "Seguir e Curtir" : "Seguir";
-
+                        updateActionText(preSelectedAction);
                         fetchActionDebounced();
                     }
                 }
+            }
+        }
+
+        // Função para atualizar o texto da ação baseado no tipo
+        function updateActionText(actionType) {
+            const actionTextElement = document.getElementById("actionText");
+            if (actionType === "curtir") {
+                actionTextElement.textContent = "Curtir";
+            } else if (actionType === "seguir_curtir") {
+                actionTextElement.textContent = "Seguir";
+            } else {
+                actionTextElement.textContent = "Seguir";
             }
         }
 
@@ -1104,10 +1111,9 @@
             let actionText = "Seguir";
             if ((data.tipo_acao && data.tipo_acao.toLowerCase() === "curtir") || (url && (url.includes("/p/") || url.includes("/reel/")))) {
                 actionText = "Curtir";
-            } else if (actionType === "seguir_curtir") {
-                actionText = "Seguir e Curtir";
-            } else if (actionType === "curtir") {
-                actionText = "Curtir";
+            } else {
+                // Para ações de seguir (incluindo "seguir_curtir"), sempre mostrar "Seguir"
+                actionText = "Seguir";
             }
             document.getElementById("actionText").textContent = actionText;
 
@@ -1119,78 +1125,78 @@
                 userInfo.style.display = "block"; // Mostra "Usuário:" para seguir
             }
 
-// --- Avatar / profile image para Instagram (substituir o bloco antigo) ---
-const profileImg = document.getElementById("profileImage");
-document.getElementById("actionUrl").href = url;
+            // --- Avatar / profile image para Instagram ---
+            const profileImg = document.getElementById("profileImage");
+            document.getElementById("actionUrl").href = url;
 
-// helper: transforma uma URL externa em URL proxificada da sua API
-function toProxyUrl(orig) {
-    try {
-        if (!orig || typeof orig !== 'string') return null;
-        // se já for proxied (com sua rota), devolve como está
-        if (orig.includes('/api/get-instagram-user')) return orig;
-        // assegura que seja uma URL absoluta antes de proxificar
-        if (/^https?:\/\//i.test(orig)) {
-            return `/api/get-instagram-user?image_url=${encodeURIComponent(orig)}`;
-        }
-        return null;
-    } catch (e) { return null; }
-}
-
-// Carregar avatar do Instagram se disponível
-if (instagramUsername) {
-    try {
-        const cacheKey = `avatar_cache_instagram_${instagramUsername}`;
-        let cached = localStorage.getItem(cacheKey);
-
-        // Migração: se o cache antigo contém CDN direto (ex: cdninstagram.com), converte para proxy
-        if (cached && /^https?:\/\//i.test(cached) && cached.includes('cdninstagram.com')) {
-            const prox = toProxyUrl(cached);
-            if (prox) {
-                cached = prox;
-                try { localStorage.setItem(cacheKey, cached); localStorage.setItem(cacheKey + "_ts", String(Date.now())); } catch (e) {}
+            // helper: transforma uma URL externa em URL proxificada da sua API
+            function toProxyUrl(orig) {
+                try {
+                    if (!orig || typeof orig !== 'string') return null;
+                    // se já for proxied (com sua rota), devolve como está
+                    if (orig.includes('/api/get-instagram-user')) return orig;
+                    // assegura que seja uma URL absoluta antes de proxificar
+                    if (/^https?:\/\//i.test(orig)) {
+                        return `/api/get-instagram-user?image_url=${encodeURIComponent(orig)}`;
+                    }
+                    return null;
+                } catch (e) { return null; }
             }
-        }
 
-        if (cached) {
-            // usar cache (deve já ser a URL proxificada)
-            profileImg.src = cached;
-            profileImg.style.display = "block";
-        } else {
-            // Tentar obter avatar via API do Instagram (rota que retorna profile_pic_proxy)
-            const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(instagramUsername)}`);
-            if (resUserInfo.ok) {
-                const userInfo = await resUserInfo.json();
-                const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
+            // Carregar avatar do Instagram se disponível
+            if (instagramUsername) {
+                try {
+                    const cacheKey = `avatar_cache_instagram_${instagramUsername}`;
+                    let cached = localStorage.getItem(cacheKey);
 
-                // preferir sempre a URL proxificada retornada pelo backend
-                let avatarProxy = user?.profile_pic_proxy ?? null;
-                // se backend não forneceu profile_pic_proxy, mas deu profile_pic direta, proxificar localmente
-                if (!avatarProxy && (user?.profile_pic || user?.profile_pic_url)) {
-                    avatarProxy = toProxyUrl(user.profile_pic || user.profile_pic_url);
-                }
+                    // Migração: se o cache antigo contém CDN direto (ex: cdninstagram.com), converte para proxy
+                    if (cached && /^https?:\/\//i.test(cached) && cached.includes('cdninstagram.com')) {
+                        const prox = toProxyUrl(cached);
+                        if (prox) {
+                            cached = prox;
+                            try { localStorage.setItem(cacheKey, cached); localStorage.setItem(cacheKey + "_ts", String(Date.now())); } catch (e) {}
+                        }
+                    }
 
-                if (avatarProxy) {
-                    profileImg.src = avatarProxy;
-                    profileImg.style.display = "block";
-                    try {
-                        localStorage.setItem(cacheKey, avatarProxy);
-                        localStorage.setItem(cacheKey + "_ts", String(Date.now()));
-                    } catch (e) { /* ignore storage errors */ }
-                } else {
+                    if (cached) {
+                        // usar cache (deve já ser a URL proxificada)
+                        profileImg.src = cached;
+                        profileImg.style.display = "block";
+                    } else {
+                        // Tentar obter avatar via API do Instagram (rota que retorna profile_pic_proxy)
+                        const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(instagramUsername)}`);
+                        if (resUserInfo.ok) {
+                            const userInfo = await resUserInfo.json();
+                            const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
+
+                            // preferir sempre a URL proxificada retornada pelo backend
+                            let avatarProxy = user?.profile_pic_proxy ?? null;
+                            // se backend não forneceu profile_pic_proxy, mas deu profile_pic direta, proxificar localmente
+                            if (!avatarProxy && (user?.profile_pic || user?.profile_pic_url)) {
+                                avatarProxy = toProxyUrl(user.profile_pic || user.profile_pic_url);
+                            }
+
+                            if (avatarProxy) {
+                                profileImg.src = avatarProxy;
+                                profileImg.style.display = "block";
+                                try {
+                                    localStorage.setItem(cacheKey, avatarProxy);
+                                    localStorage.setItem(cacheKey + "_ts", String(Date.now()));
+                                } catch (e) { /* ignore storage errors */ }
+                            } else {
+                                profileImg.style.display = "none";
+                            }
+                        } else {
+                            profileImg.style.display = "none";
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Erro ao obter avatar do Instagram:", e);
                     profileImg.style.display = "none";
                 }
             } else {
                 profileImg.style.display = "none";
             }
-        }
-    } catch (e) {
-        console.warn("Erro ao obter avatar do Instagram:", e);
-        profileImg.style.display = "none";
-    }
-} else {
-    profileImg.style.display = "none";
-}
 
             // Exibição: usa apenas o valor vindo da rota
             const valorFinalStr = Number(valorNumSafe).toFixed(3);
