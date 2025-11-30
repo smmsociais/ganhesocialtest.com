@@ -728,10 +728,10 @@
 
                 <div class="form-group">
                     <select id="actionType" class="form-select">
-                        <option value="" disabled selected hidden>Tipo de ação</option>
+                        <option value="" disabled>Tipo de ação</option>
                         <option value="seguir">Seguir</option>
                         <option value="curtir">Curtir</option>
-                        <option value="seguir_curtir">Seguir e Curtir</option>
+                        <option value="seguir_curtir" selected>Seguir e Curtir</option>
                     </select>
                 </div>
 
@@ -741,7 +741,6 @@
                     <h3>Atenção</h3>
                     <ul>
                         <li>Não deixe de seguir ou curtir após as ações serem realizadas.</li>
-                        <li>Não envie mensagens privadas para os perfis das ações.</li>
                     </ul>
                     <p>Se fizer isso, sua conta será permanentemente suspensa da plataforma.</p>
                 </div>
@@ -787,6 +786,12 @@
                     window.location.href = "https://ganhesocialtest.com/login";
                 },);
                 return;
+            }
+
+            // Definir "Seguir e Curtir" como padrão após o carregamento
+            const actionTypeSelect = document.getElementById("actionType");
+            if (actionTypeSelect) {
+                actionTypeSelect.value = "seguir_curtir";
             }
 
             // Controle do menu hamburguer
