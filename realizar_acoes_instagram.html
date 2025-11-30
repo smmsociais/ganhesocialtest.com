@@ -717,7 +717,7 @@
     <div class="main-container">
         <div class="container fade-in">
             <div class="container-header">
-                <h2></i> Realizar Ações Instagram</h2>
+                <h2></i> Realizar Ações TikTok</h2>
             </div>
             <div class="container-body">
                 <div class="form-group">
@@ -728,10 +728,10 @@
 
                 <div class="form-group">
                     <select id="actionType" class="form-select">
-                        <option value="" disabled selected hidden>Tipo de ação</option>
+                        <option value="" disabled>Tipo de ação</option>
                         <option value="seguir">Seguir</option>
                         <option value="curtir">Curtir</option>
-                        <option value="seguir_curtir">Seguir e Curtir</option>
+                        <option value="seguir_curtir" selected>Seguir e Curtir</option>
                     </select>
                 </div>
 
@@ -787,6 +787,12 @@
                     window.location.href = "https://ganhesocialtest.com/login";
                 },);
                 return;
+            }
+
+            // Definir "Seguir e Curtir" como padrão após o carregamento
+            const actionTypeSelect = document.getElementById("actionType");
+            if (actionTypeSelect) {
+                actionTypeSelect.value = "seguir_curtir";
             }
 
             // Controle do menu hamburguer
