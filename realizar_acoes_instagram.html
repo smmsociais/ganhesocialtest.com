@@ -1109,47 +1109,78 @@
             }
             document.getElementById("actionText").textContent = actionText;
 
-            // Avatar / profile image para Instagram
-            const profileImg = document.getElementById("profileImage");
-            document.getElementById("actionUrl").href = url;
+// --- Avatar / profile image para Instagram (substituir o bloco antigo) ---
+const profileImg = document.getElementById("profileImage");
+document.getElementById("actionUrl").href = url;
 
-            // Carregar avatar do Instagram se disponível
-            if (instagramUsername) {
-                try {
-                    const cacheKey = `avatar_cache_instagram_${instagramUsername}`;
-                    const cached = localStorage.getItem(cacheKey);
-                    if (cached) {
-                        profileImg.src = cached;
-                        profileImg.style.display = "block";
-                    } else {
-                        // Tentar obter avatar via API do Instagram
-                        const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(instagramUsername)}`);
-                        if (resUserInfo.ok) {
-                            const userInfo = await resUserInfo.json();
-                            const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
-                            const avatarUrl = user?.profile_pic_url || user?.profile_pic || null;
+// helper: transforma uma URL externa em URL proxificada da sua API
+function toProxyUrl(orig) {
+    try {
+        if (!orig || typeof orig !== 'string') return null;
+        // se já for proxied (com sua rota), devolve como está
+        if (orig.includes('/api/get-instagram-user')) return orig;
+        // assegura que seja uma URL absoluta antes de proxificar
+        if (/^https?:\/\//i.test(orig)) {
+            return `/api/get-instagram-user?image_url=${encodeURIComponent(orig)}`;
+        }
+        return null;
+    } catch (e) { return null; }
+}
 
-                            if (avatarUrl) {
-                                profileImg.src = avatarUrl;
-                                profileImg.style.display = "block";
-                                try {
-                                    localStorage.setItem(cacheKey, avatarUrl);
-                                    localStorage.setItem(cacheKey + "_ts", String(Date.now()));
-                                } catch (e) { }
-                            } else {
-                                profileImg.style.display = "none";
-                            }
-                        } else {
-                            profileImg.style.display = "none";
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Erro ao obter avatar do Instagram:", e);
+// Carregar avatar do Instagram se disponível
+if (instagramUsername) {
+    try {
+        const cacheKey = `avatar_cache_instagram_${instagramUsername}`;
+        let cached = localStorage.getItem(cacheKey);
+
+        // Migração: se o cache antigo contém CDN direto (ex: cdninstagram.com), converte para proxy
+        if (cached && /^https?:\/\//i.test(cached) && cached.includes('cdninstagram.com')) {
+            const prox = toProxyUrl(cached);
+            if (prox) {
+                cached = prox;
+                try { localStorage.setItem(cacheKey, cached); localStorage.setItem(cacheKey + "_ts", String(Date.now())); } catch (e) {}
+            }
+        }
+
+        if (cached) {
+            // usar cache (deve já ser a URL proxificada)
+            profileImg.src = cached;
+            profileImg.style.display = "block";
+        } else {
+            // Tentar obter avatar via API do Instagram (rota que retorna profile_pic_proxy)
+            const resUserInfo = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(instagramUsername)}`);
+            if (resUserInfo.ok) {
+                const userInfo = await resUserInfo.json();
+                const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
+
+                // preferir sempre a URL proxificada retornada pelo backend
+                let avatarProxy = user?.profile_pic_proxy ?? null;
+                // se backend não forneceu profile_pic_proxy, mas deu profile_pic direta, proxificar localmente
+                if (!avatarProxy && (user?.profile_pic || user?.profile_pic_url)) {
+                    avatarProxy = toProxyUrl(user.profile_pic || user.profile_pic_url);
+                }
+
+                if (avatarProxy) {
+                    profileImg.src = avatarProxy;
+                    profileImg.style.display = "block";
+                    try {
+                        localStorage.setItem(cacheKey, avatarProxy);
+                        localStorage.setItem(cacheKey + "_ts", String(Date.now()));
+                    } catch (e) { /* ignore storage errors */ }
+                } else {
                     profileImg.style.display = "none";
                 }
             } else {
                 profileImg.style.display = "none";
             }
+        }
+    } catch (e) {
+        console.warn("Erro ao obter avatar do Instagram:", e);
+        profileImg.style.display = "none";
+    }
+} else {
+    profileImg.style.display = "none";
+}
 
             // Exibição: usa apenas o valor vindo da rota
             const valorFinalStr = Number(valorNumSafe).toFixed(3);
