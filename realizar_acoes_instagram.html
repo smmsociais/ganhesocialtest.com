@@ -1128,7 +1128,7 @@
                             const userInfo = await resUserInfo.json();
                             const user = userInfo.user || userInfo.data?.user || userInfo.data || userInfo;
                             const avatarUrl = user?.profile_pic_url || user?.profile_pic || null;
-                            
+
                             if (avatarUrl) {
                                 profileImg.src = avatarUrl;
                                 profileImg.style.display = "block";
@@ -1404,6 +1404,42 @@
 
             } catch (error) {
                 console.error("Erro ao pular ação:", error);
+            }
+        }
+
+        async function confirmarAcao(acao) {
+            try {
+                if (!acao.nome_usuario || !acao.url || !acao.tipo_acao || !Number.isFinite(Number(acao.valor))) {
+                    console.error("❌ Campos obrigatórios ausentes ou inválidos:", acao);
+                    return;
+                }
+
+                const response = await fetch("/api/confirmar_acao", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        nome_usuario: acao.nome_usuario,
+                        url: acao.url,
+                        tipo_acao: acao.tipo_acao,
+                        valor: Number(acao.valor),
+                        id_pedido: acao.id_pedido ?? acao.id_action ?? null
+                    })
+                });
+
+                const respJson = await response.json();
+
+                if (!response.ok) {
+                    console.log("❌ Erro do servidor:", respJson);
+                    throw new Error("Falha ao registrar ação.");
+                }
+
+                return respJson;
+
+            } catch (error) {
+                console.error("Erro ao confirmar ação:", error);
             }
         }
 
