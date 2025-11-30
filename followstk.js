@@ -252,14 +252,12 @@ async function processBatch() {
     tipo_acao: "seguir"
   };
 
-  console.log("🔎 Executando find com query:", JSON.stringify(query));
   const acoes = await colecao.find(query)
     .sort({ data: 1 })
     .limit(MAX_BATCH)
     .toArray();
 
   if (!acoes || acoes.length === 0) {
-    console.log(`⏳ Nenhuma ação encontrada neste poll (${new Date().toISOString()}). Voltando a esperar ${POLL_INTERVAL_MS}ms`);
     return { processed: 0, fetched: 0 };
   }
 
