@@ -1,12 +1,16 @@
 // /api/get-instagram-user.js
-// Proxy de imagem + endpoint de consulta ao Instagram (RapidAPI)
-
 import axios from "axios";
 
 /**
  * 2 modos:
  *  - ?username=...  -> busca dados do Instagram e retorna { user: {..., profile_pic_proxy } }
  *  - ?image_url=... -> proxy (stream) para evitar bloqueios CORS do CDN do Instagram
+ *
+ * Melhorias:
+ *  - parsing tolerante do query param (tratamento de decodeURIComponent com fallback)
+ *  - aceita image_url em query ou body (útil para POST)
+ *  - allowlist de hosts para reduzir abuso
+ *  - não repassa headers do CDN e define explicitamente headers de resposta
  */
 
 const IMAGE_CACHE_SECONDS = 300; // 5 minutos
@@ -23,75 +27,88 @@ function isProbablyInstagramHost(url) {
   try {
     const u = new URL(url);
     return ALLOWED_IMAGE_HOSTS.some(h => u.hostname.includes(h) || u.hostname.endsWith(h));
-  } catch (e) {
+  } catch {
     return false;
   }
 }
 
+function safeDecode(input) {
+  if (!input || typeof input !== "string") return input;
+  // remover possíveis <> que alguns clientes adicionam
+  const trimmed = input.trim().replace(/^<|>$/g, "");
+  try {
+    // tentar decodificar. se falhar, retorna original 'trimmed'
+    return decodeURIComponent(trimmed);
+  } catch (e) {
+    return trimmed;
+  }
+}
+
 export default async function handler(req, res) {
-  // modo proxy de imagem
-  const { image_url: imageUrl } = req.query;
-  if (imageUrl) {
+  // --- modo proxy de imagem ---
+  const rawImageUrl = req.query?.image_url ?? req.body?.image_url;
+  if (rawImageUrl) {
+    const decoded = safeDecode(rawImageUrl);
+
+    // segurança mínima: só aceitar http(s)
+    if (!/^https?:\/\//i.test(decoded)) {
+      console.warn("[get-instagram-user] Invalid image_url param:", decoded);
+      return res.status(400).send("Invalid image URL (must be an absolute http(s) URL)");
+    }
+
+    // opcional: restringir a hosts plausíveis do Instagram para reduzir abuso
+    if (!isProbablyInstagramHost(decoded)) {
+      console.warn("[get-instagram-user] Image host not allowed:", (() => { try { return new URL(decoded).hostname } catch { return decoded } })());
+      return res.status(400).send("Image host not allowed");
+    }
+
     try {
-      const decoded = decodeURIComponent(imageUrl);
+      const resp = await axios.get(decoded, {
+        responseType: "arraybuffer",
+        timeout: 15000,
+        headers: {
+          // fingir navegador / referer para reduzir bloqueios
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
+          Referer: "https://www.instagram.com/"
+        },
+        // aceita 2xx e 3xx (seguimos redirects automaticamente)
+        validateStatus: s => s >= 200 && s < 400,
+        maxRedirects: 5
+      });
 
-      // segurança mínima: só aceitar http(s)
-      if (!/^https?:\/\//i.test(decoded)) {
-        return res.status(400).send("Invalid image URL");
-      }
+      const contentType = resp.headers["content-type"] || "image/jpeg";
+      const body = Buffer.from(resp.data, "binary");
 
-      // opcional: restringir a hosts plausíveis do Instagram para reduzir abuso
-      if (!isProbablyInstagramHost(decoded)) {
-        // não é estritamente necessário, mas melhora segurança
-        console.warn("Image proxy blocked (host not in allowlist):", decoded);
-        return res.status(400).send("Image host not allowed");
-      }
+      // NÃO propagar headers perigosos do upstream — definimos apenas os necessários
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Content-Length", String(body.length));
+      res.setHeader("Cache-Control", `public, max-age=${IMAGE_CACHE_SECONDS}`);
+      // CORS para permitir uso cross-origin — ajuste para seu domínio se preferir
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+      res.setHeader("Vary", "Origin");
+      // reduzir chance de bloqueio por CRP
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      // valores permissivos compatíveis com a maioria dos usos de imagem
+      res.setHeader("Cross-Origin-Embedder-Policy", "unsafe-none");
+      res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
 
-// trecho proxy (substituir a seção atual de proxy)
-const resp = await axios.get(decoded, {
-  responseType: "arraybuffer",
-  timeout: 15000,
-  headers: {
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
-    Referer: "https://www.instagram.com/"
-  },
-  validateStatus: s => s >= 200 && s < 400
-});
-
-const contentType = resp.headers["content-type"] || "image/jpeg";
-const body = Buffer.from(resp.data, "binary");
-
-// NÃO propagar headers vindos do CDN — definimos apenas os seguros
-res.setHeader("Content-Type", contentType);
-res.setHeader("Content-Length", String(body.length));
-res.setHeader("Cache-Control", `public, max-age=${IMAGE_CACHE_SECONDS}`);
-
-// CORS seguro para imagens (mude '*' para seu domínio se preferir)
-res.setHeader("Access-Control-Allow-Origin", "*");
-res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-res.setHeader("Vary", "Origin");
-
-// reduz chance de bloqueio por política de recursos
-res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-// opcionalmente também permitir uso cross-origin em canvas/requests
-res.setHeader("Cross-Origin-Embedder-Policy", "unsafe-none");
-res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-
-return res.status(200).send(body);
-
+      return res.status(200).send(body);
     } catch (err) {
-      // log detalhado para debugging (sem vazar conteúdo sensível)
-      console.error("Erro no proxy de imagem:", err?.response?.status || err.message || err);
-      const status = err?.response?.status || 500;
-      // se o CDN retornou 403/401, repassamos 502 (bad gateway) para indicar problema externo
-      if (status === 403 || status === 401) return res.status(502).send("Failed to proxy image (forbidden)");
-      if (status === 404) return res.status(404).send("Image not found");
+      const upstreamStatus = err?.response?.status;
+      console.error("[get-instagram-user] Erro no proxy de imagem:", upstreamStatus ?? "", err?.message ?? err);
+      if (upstreamStatus === 403 || upstreamStatus === 401) {
+        return res.status(502).send("Failed to proxy image (forbidden by origin)");
+      }
+      if (upstreamStatus === 404) {
+        return res.status(404).send("Image not found");
+      }
       return res.status(500).send("Failed to proxy image");
     }
   }
 
-  // modo normal: buscar usuário do instagram via RapidAPI
+  // --- modo normal: buscar usuário do instagram via RapidAPI ---
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Método não permitido." });
   }
@@ -162,8 +179,8 @@ return res.status(200).send(body);
       username: usernameRet,
       full_name,
       biography,
-      profile_pic,        // URL original (útil para debug)
-      profile_pic_proxy,  // URL que o frontend deve usar para exibir (proxy)
+      profile_pic,
+      profile_pic_proxy,
       is_private,
       is_verified,
       follower_count,
@@ -171,10 +188,7 @@ return res.status(200).send(body);
       media_count
     };
 
-    // debug raw payload se ?debug=1
-    if (req.query?.debug === "1") {
-      user.raw = payload;
-    }
+    if (req.query?.debug === "1") user.raw = payload;
 
     return res.status(200).json({ user });
   } catch (error) {
