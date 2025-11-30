@@ -632,8 +632,6 @@ async function mainLoop() {
       const totalProcessed = (followResult?.processed || 0) + (likeResult?.processed || 0);
       const totalFetched = (followResult?.fetched || 0) + (likeResult?.fetched || 0);
 
-      console.log(`   ◦ ciclo completo - processed=${totalProcessed} fetched=${totalFetched} (${new Date().toISOString()})`);
-
       if (totalProcessed === 0 && totalFetched > 0) {
         await new Promise(r => setTimeout(r, Math.max(POLL_INTERVAL_MS, 2000)));
       } else {
