@@ -741,7 +741,6 @@
                     <h3>Atenção</h3>
                     <ul>
                         <li>Não deixe de seguir ou curtir após as ações serem realizadas.</li>
-                        <li>Não envie mensagens privadas para os perfis das ações.</li>
                     </ul>
                     <p>Se fizer isso, sua conta será permanentemente suspensa da plataforma.</p>
                 </div>
@@ -749,7 +748,8 @@
                 <div id="actionContent" class="action-content">
                     <div class="action-details">
                         <p><strong>Ação:</strong> <span id="actionText">Seguir</span></p>
-                        <p id="userInfo" style="display: block;"><strong>Usuário:</strong> <span id="username"></span></p>
+                        <p id="userInfo" style="display: block;"><strong>Usuário:</strong> <span id="username"></span>
+                        </p>
                         <p><strong>Valor:</strong> <span id="points"></span></p>
                     </div>
 
@@ -1154,7 +1154,7 @@
                         const prox = toProxyUrl(cached);
                         if (prox) {
                             cached = prox;
-                            try { localStorage.setItem(cacheKey, cached); localStorage.setItem(cacheKey + "_ts", String(Date.now())); } catch (e) {}
+                            try { localStorage.setItem(cacheKey, cached); localStorage.setItem(cacheKey + "_ts", String(Date.now())); } catch (e) { }
                         }
                     }
 
