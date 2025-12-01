@@ -2052,9 +2052,8 @@ router.post("/confirmar_acao", async (req, res) => {
       tipoAcaoFinal = "curtir";
     }
 
-    // === DEFINIÇÃO FINAL DOS VALORES ===
-    const valorConfirmacaoFinal =
-      tipoAcaoFinal === "seguir" ? 0.006 : 0.001;
+    // === VALOR FINAL VIA VARIAVEL DE AMBIENTE ===
+    const valorConfirmacaoFinal = getValorAcao(tipoAcaoFinal, redeFinal);
 
     // === Criar Ação ===
     const novaAcao = new ActionHistory({
@@ -2064,7 +2063,7 @@ router.post("/confirmar_acao", async (req, res) => {
       id_action: String(id_pedido),
       url,
       tipo_acao,
-      valor: valorConfirmacaoFinal,
+      valor: valorConfirmacaoFinal, // <-- AGORA CORRETO!
       tipo: tipoAcaoFinal,
       rede_social: redeFinal,
       status: "pendente",
