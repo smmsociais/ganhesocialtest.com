@@ -2,6 +2,7 @@
 import connectDB from './db.js';
 import mongoose from 'mongoose';
 import { User, ActionHistory, Pedido } from "./schema.js";
+import { getValorAcao } from "./handler.js";
 
 const handler = async (req, res) => {
   if (req.method !== "GET") {
@@ -166,25 +167,7 @@ const handler = async (req, res) => {
         }
       }
 
-      // 6) determina valor padrão por tipo (seguir -> 0.006, curtir -> 0.001)
-      const tipoPedido = (pedido.tipo || "").toString().toLowerCase();
-      let valorParaEnviar = 0;
-      if (typeof pedido.valor === "number" && pedido.valor > 0) {
-        valorParaEnviar = Number(pedido.valor);
-      } else {
-        if (tipoPedido === "seguir") {
-          valorParaEnviar = 0.006;
-        } else if (tipoPedido === "curtir") {
-          valorParaEnviar = 0.001;
-        } else if (tipoPedido === "seguir_curtir") {
-          valorParaEnviar = 0.006;
-        } else {
-          valorParaEnviar = 0.006;
-        }
-      }
-      valorParaEnviar = Number(valorParaEnviar.toFixed(3));
-
-      console.log(`✅ Ação encontrada (Instagram): ${nomeUsuario || '<sem-usuario>'} — valor=${valorParaEnviar}`);
+const valorParaEnviar = Number(getValorAcao(pedido, "Instagram"));
 
       return res.json({
         status: "ENCONTRADA",
