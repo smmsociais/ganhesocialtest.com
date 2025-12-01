@@ -1442,8 +1442,11 @@ router.post("/tiktok/confirm_action", async (req, res) => {
       pedidoLocal.tipo
     );
 
-    // Valor da ação
-const valorFinal = getValorAcao(pedido);
+// Valor da ação (agora usando função global)
+const valorFinal = getValorAcao({
+  tipo: tipo_acao,
+  valor: pedidoLocal.valor
+});
 
     // URL do perfil alvo
     const url_dir = pedidoLocal.link;
