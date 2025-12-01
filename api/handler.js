@@ -1525,7 +1525,7 @@ router.get("/instagram/get_user", async (req, res) => {
   }
 });
 
-// Rota: /api/instagram/get_action (GET)
+// Rota: /api/instagram/get_action (GET) — VERSÃO CORRIGIDA
 router.get("/instagram/get_action", async (req, res) => {
   const { nome_usuario, token, tipo, debug } = req.query;
 
@@ -1570,7 +1570,7 @@ router.get("/instagram/get_action", async (req, res) => {
       tipoBanco = { $in: ["seguir", "curtir"] };
     else tipoBanco = "seguir";
 
-    // query base — instagram, status e quantidade disponível
+    // query base — instagram, status e quantidade disponível (mesma lógica do /tiktok/get_action)
     const query = {
       quantidade: { $gt: 0 },
       status: { $in: ["pendente", "reservada"] },
@@ -1590,8 +1590,8 @@ router.get("/instagram/get_action", async (req, res) => {
     }
 
     for (const pedido of pedidos) {
-      const id_pedido = pedido._id;
-      const idPedidoStr = String(id_pedido);
+      const id_pedido = pedido._id;               // pode ser número ou ObjectId
+      const idPedidoStr = String(id_pedido);     // comparação com strings armazenadas em id_action
 
       console.log("[GET_ACTION][IG] Verificando pedido:", {
         id_pedido,
@@ -1607,81 +1607,70 @@ router.get("/instagram/get_action", async (req, res) => {
         continue;
       }
 
-      // --- IMPORTANTE: filtrar histórico PELO MESMO TIPO do pedido ---
-      const tipoFilter = { tipo: pedido.tipo }; // ex: { tipo: "seguir" } ou { tipo: "curtir" }
-
-      // helpers para checar estados: consideram tanto acao_validada quanto status
-      const matchValida = { $or: [{ acao_validada: "valida" }, { status: "valida" }] };
-      const matchPendenteOrValida = { $or: [{ acao_validada: { $in: ["pendente", "valida"] } }, { status: { $in: ["pendente", "valida"] } }] };
-      const matchPulada = { $or: [{ acao_validada: "pulada" }, { status: "pulada" }] };
-
-      // 0) Se já houver N confirmações (valida) do MESMO TIPO >= quantidade, fecha
+      // === Contagens (sem filtrar por "tipo" para evitar mismatch com campo tipo_acao) ===
+      // validadas: status validadas (considera ambos campos possíveis)
       const validadas = await ActionHistory.countDocuments({
         $and: [
           { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
-          tipoFilter,
-          matchValida
+          { $or: [{ status: "valida" }, { acao_validada: "valida" }] }
         ]
       });
       if (validadas >= quantidadePedido) {
-        console.log(`[GET_ACTION][IG] Pedido ${id_pedido} fechado (tipo ${pedido.tipo}) — já tem ${validadas} validações.`);
+        console.log(`[GET_ACTION][IG] Pedido ${id_pedido} fechado — já tem ${validadas} validações.`);
         continue;
       }
 
-      // 1) Total feitas (pendente + valida) DO MESMO TIPO
+      // feitas: pendente + valida (também considerando ambos os campos)
       const feitas = await ActionHistory.countDocuments({
         $and: [
           { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
-          tipoFilter,
-          matchPendenteOrValida
+          { $or: [{ status: { $in: ["pendente", "valida"] } }, { acao_validada: { $in: ["pendente", "valida"] } }] }
         ]
       });
       console.log(`[GET_ACTION][IG] Ação ${id_pedido} (tipo ${pedido.tipo}): feitas=${feitas}, limite=${quantidadePedido}`);
       if (feitas >= quantidadePedido) {
-        console.log(`[GET_ACTION][IG] Pedido ${id_pedido} atingiu limite (tipo ${pedido.tipo}) — pulando`);
+        console.log(`[GET_ACTION][IG] Pedido ${id_pedido} atingiu limite — pulando`);
         continue;
       }
 
-      // 2) Verificar se ESTE NOME_DE_CONTA pulou => bloqueia só esta conta e só para este tipo
+      // Verificar se ESTE NOME_DE_CONTA pulou => bloqueia só esta conta
       const pulada = await ActionHistory.findOne({
         $and: [
           { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
-          tipoFilter,
           { nome_usuario: nomeUsuarioRequest },
-          matchPulada
+          { $or: [{ status: "pulada" }, { acao_validada: "pulada" }] }
         ]
       });
       if (pulada) {
-        console.log(`[GET_ACTION][IG] Usuário ${nomeUsuarioRequest} pulou o pedido ${id_pedido} (tipo ${pedido.tipo}) — pulando`);
+        console.log(`[GET_ACTION][IG] Usuário ${nomeUsuarioRequest} pulou o pedido ${id_pedido} — pulando`);
         continue;
       }
 
-      // 3) Verificar se ESTE NOME_DE_CONTA já possui pendente/valida => bloqueia só esta conta (mesmo tipo)
+      // Verificar se ESTE NOME_DE_CONTA já possui pendente/valida => bloqueia só esta conta
       const jaFez = await ActionHistory.findOne({
         $and: [
           { $or: [{ id_pedido }, { id_action: idPedidoStr }] },
-          tipoFilter,
           { nome_usuario: nomeUsuarioRequest },
-          matchPendenteOrValida
+          { $or: [{ status: { $in: ["pendente", "valida"] } }, { acao_validada: { $in: ["pendente", "valida"] } }] }
         ]
       });
       if (jaFez) {
-        console.log(`[GET_ACTION][IG] Usuário ${nomeUsuarioRequest} já possuí ação pendente/validada para pedido ${id_pedido} (tipo ${pedido.tipo}) — pulando`);
+        console.log(`[GET_ACTION][IG] Usuário ${nomeUsuarioRequest} já possui ação pendente/validada para pedido ${id_pedido} — pulando`);
         continue;
       }
 
-      // Se chegou aqui: feitas < quantidade AND este nome_usuario ainda NÃO fez (para este tipo) => pode pegar
+      // Se chegou aqui: feitas < quantidade AND este nome_usuario ainda NÃO fez (para este pedido) => pode pegar
       // extrair alvo do link (Instagram tolerant)
       let nomeUsuarioAlvo = "";
       if (typeof pedido.link === "string") {
         const link = pedido.link.trim();
 
-        // 1) post (curtir): /p/POST_ID/
+        // post (curtir): /p/POST_ID/
         const postMatch = link.match(/instagram\.com\/p\/([^\/?#&]+)/i);
         if (postMatch && postMatch[1]) {
           nomeUsuarioAlvo = postMatch[1]; // devolve o id do post
         } else {
-          // 2) perfil: /username/
+          // perfil: /username/
           const m = link.match(/instagram\.com\/@?([^\/?#&\/]+)/i);
           if (m && m[1]) {
             nomeUsuarioAlvo = m[1].replace(/\/$/, "");
@@ -1691,11 +1680,34 @@ router.get("/instagram/get_action", async (req, res) => {
         }
       }
 
-      console.log(`[GET_ACTION][IG] Ação disponível para ${nomeUsuarioRequest}: ${nomeUsuarioAlvo || '<sem-usuario>'} (pedido ${id_pedido}, tipo ${pedido.tipo}) — feitas=${feitas}/${quantidadePedido}`);
+      console.log(`[GET_ACTION][IG] Ação disponível para ${nomeUsuarioRequest}: ${nomeUsuarioAlvo || '<sem-usuario>'} (pedido ${id_pedido}) — feitas=${feitas}/${quantidadePedido}`);
 
       const valorFinal = typeof pedido.valor !== "undefined" && pedido.valor !== null
         ? String(pedido.valor)
         : (pedido.tipo === "curtir" ? "0.001" : "0.006");
+
+      // **RESERVA IMEDIATA** — cria um ActionHistory com status "pendente" para bloquear a ação
+      try {
+        const newHistory = {
+          id_pedido,
+          id_action: idPedidoStr,
+          nome_usuario: nomeUsuarioRequest,
+          status: "pendente",
+          tipo_acao: pedido.tipo, // campo usado em parte do código
+          tipo: pedido.tipo,      // outro nome de campo que algumas rotas consultam — criamos ambos para compatibilidade
+          valor: pedido.valor,
+          rede_social: pedido.rede || "Instagram",
+          url: pedido.link || pedido.url || "",
+          token: token,
+          createdAt: new Date()
+        };
+        await ActionHistory.create(newHistory);
+        console.log(`[GET_ACTION][IG] Reservada ação ${idPedidoStr} para ${nomeUsuarioRequest} (status pendente).`);
+      } catch (errCreate) {
+        console.error(`[GET_ACTION][IG] Erro ao criar ActionHistory pendente para ${idPedidoStr}:`, errCreate);
+        // Se falhar na reserva, continue para o próximo pedido (evita entregar a mesma ação sem reserva)
+        continue;
+      }
 
       // retorno diferenciado para seguir x curtir
       if (pedido.tipo === "seguir") {
