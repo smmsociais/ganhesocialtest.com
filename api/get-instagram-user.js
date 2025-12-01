@@ -6,12 +6,11 @@ import axios from "axios";
  *  - ?username=...  -> busca dados do Instagram e retorna { user: {..., profile_pic_proxy } }
  *  - ?image_url=... -> proxy (stream) para evitar bloqueios CORS do CDN do Instagram
  *
- * Melhorias:
- *  - parsing tolerante do query param (tratamento de decodeURIComponent com fallback)
- *  - aceita image_url em query ou body (útil para POST)
- *  - tenta reconstruir URLs não-encoded juntando parâmetros típicos do CDN do Instagram
- *  - allowlist de hosts para reduzir abuso
- *  - não repassa headers do CDN e define explicitamente headers de resposta
+ * Melhorias adicionadas nesta versão:
+ *  - inclui `owner` no profile_pic_proxy (para usar Referer correto)
+ *  - proxy aprimorado: tenta variações de host/headers e múltiplas tentativas
+ *  - fallback: ao receber 403 do CDN, reconsulta a API RapidAPI para obter nova URL e tenta novamente
+ *  - logs detalhados para debugging
  */
 
 const IMAGE_CACHE_SECONDS = 300; // 5 minutos
@@ -49,242 +48,50 @@ function safeDecode(input) {
   }
 }
 
-/**
- * Reconstrói uma possível image_url quando a query foi dividida por '&'.
- * - se image_url inicial não começa com http, tenta anexar keys conhecidas (insta) encontradas em req.query
- * - fallback: tenta extrair do req.originalUrl tudo que vier após 'image_url='
- */
 function tryReconstructImageUrl(originalUrl, parsedQueryObj, initialCandidate) {
   let candidate = initialCandidate ?? "";
-  // Se já é um URL válido, devolve
   if (/^https?:\/\//i.test(candidate)) return candidate;
 
-  // Tentar juntar parâmetros conhecidos do Instagram (ex.: oh, oe, _nc_ht, ig_cache_key, etc.)
-  // Começamos com o que veio no parsedQueryObj.image_url (mesmo que truncado)
   const parts = [];
   if (candidate) parts.push(candidate);
 
   for (const [key, val] of Object.entries(parsedQueryObj)) {
     if (key === "image_url") continue;
     if (INSTAGRAM_QUERY_PARTS.has(key) && typeof val === "string") {
-      // add as key=value
       parts.push(`${key}=${val}`);
     }
   }
 
   if (parts.length > 0) {
-    // se a primeira parte não contém '?', criar '?'
-    // mas aqui candidate pode já incluir '?' se o cliente enviou parcialmente; então juntamos com '&'
     const joined = parts.join("&");
-    // se a primeira parte já começa com 'http' apenas retorne joined (já deve conter a base)
     if (/^https?:\/\//i.test(parts[0])) {
       return joined;
     }
   }
 
-  // Fallback mais agressivo: extrair raw substring após 'image_url=' no originalUrl
   try {
     if (originalUrl && originalUrl.includes("image_url=")) {
       const after = originalUrl.split("image_url=")[1];
       if (after) {
-        // originalUrl pode conter outros parâmetros depois; assumimos que o cliente enviou a URL inteira sem encode,
-        // então tentamos recuperar até o final da string (pois os & que pertencem à imagem também estão ali).
-        // Para evitar incluir parâmetros legítimos que venham depois, tentamos URL-decode e checar se começa com http.
         const maybe = decodeURIComponent(after);
-        // Se tiver outros params depois separados por ' & ' que não pertencem, muitas vezes 'maybe' ainda começará com http.
         const possible = maybe.split("&").map(s => s.trim()).filter(Boolean).join("&");
         if (/^https?:\/\//i.test(possible)) return possible;
-        // se decodeURIComponent falhar ou não começar com http, retornar the initialCandidate
       }
     }
   } catch (e) {
     // ignore
   }
 
-  // Se nada funcionou, devolve initialCandidate (pode ser truncado)
   return initialCandidate;
 }
 
-export default async function handler(req, res) {
-  // --- modo proxy de imagem ---
-  // Aceita image_url via query ou via body (POST)
-  let rawImageUrl = req.query?.image_url ?? req.body?.image_url;
-
-  // Tentar também casos em que Express quebrou a query; parsedQueryObj é req.query
-  const parsedQueryObj = req.query ?? {};
-
-  if (rawImageUrl) {
-    // try decode safely
-    let decoded = safeDecode(rawImageUrl);
-
-    // If decoded doesn't start with http, attempt reconstruction by joining instagram param fragments
-    if (!/^https?:\/\//i.test(decoded)) {
-      const reconstructed = tryReconstructImageUrl(req.originalUrl, parsedQueryObj, decoded);
-      decoded = reconstructed ?? decoded;
-    }
-
-    // segurança mínima: só aceitar http(s)
-    if (!/^https?:\/\//i.test(decoded)) {
-      console.warn("[get-instagram-user] Invalid image_url param after attempts:", decoded, "req.query keys:", Object.keys(req.query || {}));
-      return res.status(400).send("Invalid image URL (must be an absolute http(s) URL). Try encoding the URL or send it in the request body.");
-    }
-
-    // opcional: restringir a hosts plausíveis do Instagram para reduzir abuso
-    if (!isProbablyInstagramHost(decoded)) {
-      console.warn("[get-instagram-user] Image host not allowed:", (() => { try { return new URL(decoded).hostname } catch { return decoded } })());
-      return res.status(400).send("Image host not allowed");
-    }
-
-// ---------- Início do bloco proxy aprimorado ----------
-/**
- * Estratégia:
- * - construir uma lista de candidate URLs (original + variações de host / versões menores)
- * - para cada candidate tentar com 2 conjuntos de headers (simples + mais browser-like + referer com owner se disponível)
- * - retornar no primeiro sucesso (status 2xx)
- */
-
-const owner = req.query?.owner ?? null;
-
-function hostVariants(u) {
-  try {
-    const urlObj = new URL(u);
-    const host = urlObj.hostname; // ex: scontent-lax3-2.cdninstagram.com
-    const variants = new Set([host]);
-
-    // versão sem sufixos regionais (ex: scontent.cdninstagram.com)
-    if (host.startsWith('scontent')) {
-      variants.add('scontent.cdninstagram.com');
-    }
-    // também tente host sem o segmento '-lax3-2' (remover hyphen groups)
-    variants.add(host.replace(/-[a-z0-9]+/gi, ''));
-
-    // manter a original e outras variações
-    return Array.from(variants);
-  } catch {
-    return [];
-  }
-}
-
-function makeUrlWithHost(u, newHost) {
-  try {
-    const nu = new URL(u);
-    nu.hostname = newHost;
-    return nu.toString();
-  } catch {
-    return u;
-  }
-}
-
-const candidateUrls = [];
-
-// 1) versão original
-candidateUrls.push(decoded);
-
-// 2) variações de host
-for (const h of hostVariants(decoded)) {
-  const v = makeUrlWithHost(decoded, h);
-  if (!candidateUrls.includes(v)) candidateUrls.push(v);
-}
-
-// 3) se a URL contém 'stp=' ou 's150x150' / 's320x320' tente alternativas sem o 'stp' ou com outra dimensão
-try {
-  const uobj = new URL(decoded);
-  const qp = uobj.searchParams;
-  // tentar remover 'stp' (pode causar menos proteção)
-  if (qp.has('stp')) {
-    const copy = new URL(decoded);
-    copy.searchParams.delete('stp');
-    const s = copy.toString();
-    if (!candidateUrls.includes(s)) candidateUrls.push(s);
-  }
-} catch (e) { /* ignore */ }
-
-// Headers sets: prefer browser-like + owner referer
-const headerSets = [
-  {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
-    "Referer": owner ? `https://www.instagram.com/${owner}/` : "https://www.instagram.com/",
-    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-  },
-  {
-    // alternativa mais simples (algumas CDNs aceitam apenas UA+Referer)
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-    "Referer": owner ? `https://www.instagram.com/${owner}/` : "https://www.instagram.com/",
-    "Accept": "image/*,*/*;q=0.8"
-  }
-];
-
-let proxiedResponse = null;
-let lastErr = null;
-
-for (const cUrl of candidateUrls) {
-  for (const hs of headerSets) {
-    try {
-      const resp = await axios.get(cUrl, {
-        responseType: "arraybuffer",
-        timeout: 15000,
-        headers: hs,
-        validateStatus: s => s >= 200 && s < 400,
-        maxRedirects: 5
-      });
-      // sucesso! preparar resposta ao cliente
-      const contentType = resp.headers["content-type"] || "image/jpeg";
-      const body = Buffer.from(resp.data, "binary");
-
-      res.setHeader("Content-Type", contentType);
-      res.setHeader("Content-Length", String(body.length));
-      res.setHeader("Cache-Control", `public, max-age=${IMAGE_CACHE_SECONDS}`);
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-      res.setHeader("Vary", "Origin");
-      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-      res.setHeader("Cross-Origin-Embedder-Policy", "unsafe-none");
-      res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-
-      return res.status(200).send(body);
-    } catch (e) {
-      // registrar e tentar próxima combinação
-      lastErr = e;
-      const code = e?.response?.status;
-      console.warn("[get-instagram-user] proxy attempt failed", { url: cUrl, status: code, owner, msg: e?.message });
-      // se for 403/401, tentar próximo candidate/header — pode ser temporário/por host
-      continue;
-    }
-  }
-}
-
-// se chegou aqui, tudo falhou
-const upstreamStatus = lastErr?.response?.status;
-console.error("[get-instagram-user] All proxy attempts failed. last status:", upstreamStatus, lastErr?.message ?? lastErr);
-if (upstreamStatus === 403 || upstreamStatus === 401) {
-  return res.status(502).send("Failed to proxy image (forbidden by origin)");
-}
-if (upstreamStatus === 404) {
-  return res.status(404).send("Image not found");
-}
-return res.status(500).send("Failed to proxy image");
-// ---------- Fim do bloco proxy aprimorado ----------
-
-    }
-
-  // --- modo normal: buscar usuário do instagram via RapidAPI ---
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Método não permitido." });
-  }
-
-  const { username } = req.query;
-  if (!username) {
-    return res.status(400).json({ error: "Parâmetro 'username' é obrigatório." });
-  }
-
+async function fetchProfileFromRapidAPI(username) {
   const RAPIDAPI_KEY = process.env.rapidapi_key;
   if (!RAPIDAPI_KEY) {
-    console.error("Env rapidapi_key não encontrada");
-    return res.status(500).json({ error: "Configuração da API não encontrada (missing rapidapi_key)." });
+    console.warn('[get-instagram-user] RapidAPI key not configured');
+    return null;
   }
-
   const url = "https://instagram-social-api.p.rapidapi.com/v1/info";
-
   try {
     const response = await axios.get(url, {
       params: { username_or_id_or_url: username },
@@ -294,16 +101,240 @@ return res.status(500).send("Failed to proxy image");
       },
       timeout: 15000
     });
+    const resp = response.data;
+    const payload = resp?.data ?? resp?.user ?? resp;
+    return payload || null;
+  } catch (e) {
+    console.warn('[get-instagram-user] RapidAPI refresh failed for', username, e?.response?.status ?? e?.message ?? e);
+    return null;
+  }
+}
+
+export default async function handler(req, res) {
+  // --- modo proxy de imagem ---
+  let rawImageUrl = req.query?.image_url ?? req.body?.image_url;
+  const parsedQueryObj = req.query ?? {};
+
+  if (rawImageUrl) {
+    let decoded = safeDecode(rawImageUrl);
+
+    if (!/^https?:\/\//i.test(decoded)) {
+      const reconstructed = tryReconstructImageUrl(req.originalUrl, parsedQueryObj, decoded);
+      decoded = reconstructed ?? decoded;
+    }
+
+    if (!/^https?:\/\//i.test(decoded)) {
+      console.warn('[get-instagram-user] Invalid image_url param after attempts:', decoded, 'req.query keys:', Object.keys(req.query || {}));
+      return res.status(400).send('Invalid image URL (must be an absolute http(s) URL). Try encoding the URL or send it in the request body.');
+    }
+
+    if (!isProbablyInstagramHost(decoded)) {
+      console.warn('[get-instagram-user] Image host not allowed:', (() => { try { return new URL(decoded).hostname } catch { return decoded } })());
+      return res.status(400).send('Image host not allowed');
+    }
+
+    // BEGIN: improved proxy logic
+    const owner = req.query?.owner ?? null; // used to set Referer
+
+    function hostVariants(u) {
+      try {
+        const urlObj = new URL(u);
+        const host = urlObj.hostname;
+        const variants = new Set([host]);
+        if (host.startsWith('scontent')) {
+          variants.add('scontent.cdninstagram.com');
+        }
+        variants.add(host.replace(/-[a-z0-9]+/gi, ''));
+        return Array.from(variants);
+      } catch { return []; }
+    }
+
+    function makeUrlWithHost(u, newHost) {
+      try {
+        const nu = new URL(u);
+        nu.hostname = newHost;
+        return nu.toString();
+      } catch { return u; }
+    }
+
+    const candidateUrls = [];
+    candidateUrls.push(decoded);
+    for (const h of hostVariants(decoded)) {
+      const v = makeUrlWithHost(decoded, h);
+      if (!candidateUrls.includes(v)) candidateUrls.push(v);
+    }
+
+    try {
+      const uobj = new URL(decoded);
+      const qp = uobj.searchParams;
+      if (qp.has('stp')) {
+        const copy = new URL(decoded);
+        copy.searchParams.delete('stp');
+        const s = copy.toString();
+        if (!candidateUrls.includes(s)) candidateUrls.push(s);
+      }
+    } catch (e) { /* ignore */ }
+
+    const headerSets = [
+      {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
+        "Referer": owner ? `https://www.instagram.com/${owner}/` : "https://www.instagram.com/",
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      },
+      {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Referer": owner ? `https://www.instagram.com/${owner}/` : "https://www.instagram.com/",
+        "Accept": "image/*,*/*;q=0.8"
+      }
+    ];
+
+    let lastErr = null;
+
+    // Try each candidate URL with each header set
+    for (const cUrl of candidateUrls) {
+      for (const hs of headerSets) {
+        try {
+          const resp = await axios.get(cUrl, {
+            responseType: 'arraybuffer',
+            timeout: 15000,
+            headers: hs,
+            validateStatus: s => s >= 200 && s < 400,
+            maxRedirects: 5
+          });
+
+          const contentType = resp.headers['content-type'] || 'image/jpeg';
+          const body = Buffer.from(resp.data, 'binary');
+
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Content-Length', String(body.length));
+          res.setHeader('Cache-Control', `public, max-age=${IMAGE_CACHE_SECONDS}`);
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+          res.setHeader('Vary', 'Origin');
+          res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+          res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+          res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+
+          console.info('[get-instagram-user] proxy success', { url: cUrl, owner });
+          return res.status(200).send(body);
+        } catch (e) {
+          lastErr = e;
+          const code = e?.response?.status;
+          console.warn('[get-instagram-user] proxy attempt failed', { url: cUrl, status: code, owner, msg: e?.message });
+          // continue to next combo
+        }
+      }
+    }
+
+    // If we got here, all attempts failed. If 403/401, try refreshing the profile via RapidAPI (if owner provided)
+    const upstreamStatus = lastErr?.response?.status;
+    console.warn('[get-instagram-user] all proxy attempts failed', { upstreamStatus, owner });
+
+    if ((upstreamStatus === 403 || upstreamStatus === 401) && owner) {
+      console.info('[get-instagram-user] attempting RapidAPI refresh for owner', owner);
+      const refreshed = await fetchProfileFromRapidAPI(owner);
+      if (refreshed) {
+        // try to extract a new profile pic URL from refreshed payload
+        const candidates = [
+          refreshed.hd_profile_pic_url_info?.url,
+          refreshed.profile_pic_url_hd,
+          refreshed.profile_pic_url,
+          refreshed.profile_pic,
+          Array.isArray(refreshed.hd_profile_pic_versions) ? refreshed.hd_profile_pic_versions[0]?.url : null,
+          Array.isArray(refreshed.profile_pic_versions) ? refreshed.profile_pic_versions[0]?.url : null,
+          refreshed.user?.profile_pic_url_hd,
+          refreshed.user?.profile_pic_url,
+          refreshed.user?.profile_pic
+        ].filter(Boolean);
+
+        for (const newPic of candidates) {
+          try {
+            const newDecoded = newPic;
+            if (!isProbablyInstagramHost(newDecoded)) continue;
+
+            for (const hs of headerSets) {
+              try {
+                const resp = await axios.get(newDecoded, {
+                  responseType: 'arraybuffer',
+                  timeout: 15000,
+                  headers: hs,
+                  validateStatus: s => s >= 200 && s < 400,
+                  maxRedirects: 5
+                });
+                const contentType = resp.headers['content-type'] || 'image/jpeg';
+                const body = Buffer.from(resp.data, 'binary');
+
+                res.setHeader('Content-Type', contentType);
+                res.setHeader('Content-Length', String(body.length));
+                res.setHeader('Cache-Control', `public, max-age=${IMAGE_CACHE_SECONDS}`);
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+                res.setHeader('Vary', 'Origin');
+                res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+                res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+                res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+
+                console.info('[get-instagram-user] proxy success after refresh', { url: newDecoded, owner });
+                return res.status(200).send(body);
+              } catch (e2) {
+                console.warn('[get-instagram-user] attempt with refreshed url failed', { url: newDecoded, status: e2?.response?.status, msg: e2?.message });
+                continue;
+              }
+            }
+          } catch (inner) {
+            // continue
+          }
+        }
+      }
+    }
+
+    // nothing worked
+    if (upstreamStatus === 403 || upstreamStatus === 401) {
+      return res.status(502).send('Failed to proxy image (forbidden by origin)');
+    }
+    if (upstreamStatus === 404) {
+      return res.status(404).send('Image not found');
+    }
+    return res.status(500).send('Failed to proxy image');
+    // END: improved proxy logic
+  }
+
+  // --- modo normal: buscar usuário do instagram via RapidAPI ---
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Método não permitido.' });
+  }
+
+  const { username } = req.query;
+  if (!username) {
+    return res.status(400).json({ error: "Parâmetro 'username' é obrigatório." });
+  }
+
+  const RAPIDAPI_KEY = process.env.rapidapi_key;
+  if (!RAPIDAPI_KEY) {
+    console.error('Env rapidapi_key não encontrada');
+    return res.status(500).json({ error: 'Configuração da API não encontrada (missing rapidapi_key).' });
+  }
+
+  const url = 'https://instagram-social-api.p.rapidapi.com/v1/info';
+
+  try {
+    const response = await axios.get(url, {
+      params: { username_or_id_or_url: username },
+      headers: {
+        'x-rapidapi-key': RAPIDAPI_KEY,
+        'x-rapidapi-host': 'instagram-social-api.p.rapidapi.com'
+      },
+      timeout: 15000
+    });
 
     const resp = response.data;
     const payload = resp?.data ?? resp?.user ?? resp;
 
     if (!payload || Object.keys(payload).length === 0) {
-      console.warn("Instagram API retornou payload vazio para:", username, "resp:", resp);
-      return res.status(404).json({ error: "Usuário do Instagram não encontrado." });
+      console.warn('Instagram API retornou payload vazio para:', username, 'resp:', resp);
+      return res.status(404).json({ error: 'Usuário do Instagram não encontrado.' });
     }
 
-    // Extrair campos principais
     const usernameRet = payload.username ?? payload.user?.username ?? null;
     const full_name = payload.full_name ?? payload.user?.full_name ?? null;
     const biography = payload.biography ?? payload.user?.biography ?? payload.biography_with_entities?.raw_text ?? null;
@@ -313,7 +344,6 @@ return res.status(500).send("Failed to proxy image");
     const following_count = payload.following_count ?? payload.user?.following_count ?? null;
     const media_count = payload.media_count ?? payload.user?.media_count ?? null;
 
-    // Encontrar melhor URL da imagem (vários locais possíveis)
     const profilePicCandidates = [
       payload.hd_profile_pic_url_info?.url,
       payload.profile_pic_url_hd,
@@ -327,12 +357,12 @@ return res.status(500).send("Failed to proxy image");
       payload.user?.profile_pic
     ];
 
-    const profile_pic = profilePicCandidates.find(u => typeof u === "string" && /^https?:\/\//i.test(u)) || null;
+    const profile_pic = profilePicCandidates.find(u => typeof u === 'string' && /^https?:\/\//i.test(u)) || null;
 
-    // gerar URL proxificada (mesma rota): /api/get-instagram-user?image_url=<enc>
-const profile_pic_proxy = profile_pic
-  ? `/api/get-instagram-user?image_url=${encodeURIComponent(profile_pic)}&owner=${encodeURIComponent(usernameRet)}`
-  : null;
+    // include owner in proxy URL so proxy can use owner as Referer
+    const profile_pic_proxy = profile_pic
+      ? `/api/get-instagram-user?image_url=${encodeURIComponent(profile_pic)}&owner=${encodeURIComponent(usernameRet ?? username)}`
+      : null;
 
     const user = {
       username: usernameRet,
@@ -347,17 +377,17 @@ const profile_pic_proxy = profile_pic
       media_count
     };
 
-    if (req.query?.debug === "1") user.raw = payload;
+    if (req.query?.debug === '1') user.raw = payload;
 
     return res.status(200).json({ user });
   } catch (error) {
     const status = error?.response?.status;
-    console.error("Erro Instagram API:", status, error?.response?.data ?? error.message);
+    console.error('Erro Instagram API:', status, error?.response?.data ?? error.message);
 
-    if (status === 404) return res.status(404).json({ error: "Usuário não encontrado no Instagram." });
-    if (status === 401 || status === 403) return res.status(502).json({ error: "Problema de autenticação com a API externa." });
-    if (status === 429) return res.status(429).json({ error: "Limite da API Instagram atingido. Tente novamente em 1 minuto." });
+    if (status === 404) return res.status(404).json({ error: 'Usuário não encontrado no Instagram.' });
+    if (status === 401 || status === 403) return res.status(502).json({ error: 'Problema de autenticação com a API externa.' });
+    if (status === 429) return res.status(429).json({ error: 'Limite da API Instagram atingido. Tente novamente em 1 minuto.' });
 
-    return res.status(500).json({ error: "Erro ao buscar dados do Instagram via API." });
+    return res.status(500).json({ error: 'Erro ao buscar dados do Instagram via API.' });
   }
 }
