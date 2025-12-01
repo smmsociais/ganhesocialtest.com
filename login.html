@@ -9,23 +9,36 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-color: #121212;
-            --text-color: #e0e0e0;
-            --container-color: #1e1e1e;
-            --button-color: #1a73e8;
-            --success-color: #34a853;
-            --pending-color: #f9ab00;
-            --failed-color: #ea4335;
-            --border-color: #333333;
-            --hover-color: #2d2d2d;
-            --shadow-color: rgba(0, 0, 0, 0.3);
+            /* Tema claro - Mesma estrutura do primeiro HTML */
+            --bg-color: #f8f9fa;
+            --text-color: #000000;
+            --container-color: #ffffff;
+            --button-color: #007bff;
+            --success-color: #28a745;
+            --pending-color: #ffc107;
+            --failed-color: #dc3545;
+            --border-color: #e0e0e0;
+            --hover-color: #f1f1f1;
+            --shadow-color: rgba(0, 0, 0, 0.08);
             --card-radius: 12px;
             --transition: all 0.3s ease;
+            --hover-blue: #0069d9;
+        }
+
+        /* REGRA GLOBAL PARA GARANTIR TEXTO PRETO */
+        * {
+            color: #000000 !important;
+        }
+
+        /* Exceção para botões com texto branco */
+        .btn-login,
+        .btn-login * {
+            color: white !important;
         }
 
         body {
             background-color: var(--bg-color);
-            color: var(--text-color);
+            color: #000000 !important;
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 0;
@@ -56,9 +69,9 @@
 
         .login-title {
             margin: 0 0 25px 0;
-            font-size: 1.2rem;
+            font-size: 1.5rem;
             font-weight: 600;
-            color: var(--text-color);
+            color: #000000 !important;
         }
 
         .input-group {
@@ -70,7 +83,7 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: var(--text-color);
+            color: #000000 !important;
         }
 
         .input-group input {
@@ -80,15 +93,15 @@
             border-radius: var(--card-radius);
             box-sizing: border-box;
             font-size: 0.9rem;
-            background-color: var(--container-color);
-            color: var(--text-color);
+            background-color: white;
+            color: #000000 !important;
             transition: var(--transition);
         }
 
         .input-group input:focus {
             border-color: var(--button-color);
             outline: none;
-            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
         }
 
         .forgot-password {
@@ -97,7 +110,7 @@
         }
 
         .forgot-password a {
-            color: var(--button-color);
+            color: var(--button-color) !important;
             font-size: 0.9rem;
             text-decoration: none;
             transition: var(--transition);
@@ -105,6 +118,7 @@
 
         .forgot-password a:hover {
             text-decoration: underline;
+            color: #0056b3 !important;
         }
 
         .btn-login {
@@ -113,7 +127,7 @@
             border: none;
             border-radius: var(--card-radius);
             background: var(--button-color);
-            color: white;
+            color: white !important;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
@@ -127,15 +141,15 @@
 
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px var(--shadow-color);
-            background: #1669d6;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+            background: var(--hover-blue);
         }
 
         .signup-link {
             margin-top: 20px;
             display: block;
             text-align: center;
-            color: var(--button-color);
+            color: var(--button-color) !important;
             text-decoration: none;
             font-weight: 600;
             transition: var(--transition);
@@ -143,6 +157,7 @@
 
         .signup-link:hover {
             text-decoration: underline;
+            color: #0056b3 !important;
         }
 
         .status-message {
@@ -155,8 +170,8 @@
         }
 
         .error-message {
-            background-color: rgba(234, 67, 53, 0.1);
-            color: var(--failed-color);
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545 !important;
             display: block;
         }
 
@@ -170,11 +185,6 @@
             .logo-login {
                 max-width: 150px;
             }
-        }
-
-        .login-title {
-            font-size: 1.2rem;
-            margin-bottom: 20px;
         }
 
         @media (max-width: 480px) {
@@ -244,12 +254,42 @@
         body.loaded {
             visibility: visible;
         }
+
+        /* Dark Mode Styles (opcional - mantido para compatibilidade) */
+        @media (prefers-color-scheme: dark) {
+            * {
+                color: #000000 !important;
+            }
+
+            body {
+                background-color: #ffffff;
+            }
+
+            .login-container {
+                background: #ffffff;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+                border-color: #e0e0e0;
+            }
+
+            .input-group input {
+                background-color: white;
+                border-color: #e0e0e0;
+            }
+
+            .login-title,
+            .input-group label,
+            .signup-link,
+            .forgot-password a {
+                color: #000000 !important;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="login-container fade-in">
-        <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo-login">
+        <img src="https://raw.githubusercontent.com/smmsociais/ganhesocialtest.com/refs/heads/main/1764621628851.jpg"
+            alt="Logo GanheSocial" class="logo-login">
         <h1 class="login-title">Login</h1>
 
         <form id="loginForm">
