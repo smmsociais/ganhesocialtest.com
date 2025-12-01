@@ -21,7 +21,7 @@ const ActionHistorySchema = new mongoose.Schema({
   id_action: { type: String, required: true },
   url: { type: String, required: true },
   status: { type: String, enum: ['valida', 'pendente', 'pulada', 'invalida'], default: 'pendente' },
-  acao_validada: { type: String, required: true },
+  acao_validada: { type: String, required: false },
   valor: { type: Number, required: true },
   tipo_acao: { type: String, required: true },
   rede_social: { type: String},
