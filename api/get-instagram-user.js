@@ -135,50 +135,137 @@ export default async function handler(req, res) {
       return res.status(400).send("Image host not allowed");
     }
 
+// ---------- Início do bloco proxy aprimorado ----------
+/**
+ * Estratégia:
+ * - construir uma lista de candidate URLs (original + variações de host / versões menores)
+ * - para cada candidate tentar com 2 conjuntos de headers (simples + mais browser-like + referer com owner se disponível)
+ * - retornar no primeiro sucesso (status 2xx)
+ */
+
+const owner = req.query?.owner ?? null;
+
+function hostVariants(u) {
+  try {
+    const urlObj = new URL(u);
+    const host = urlObj.hostname; // ex: scontent-lax3-2.cdninstagram.com
+    const variants = new Set([host]);
+
+    // versão sem sufixos regionais (ex: scontent.cdninstagram.com)
+    if (host.startsWith('scontent')) {
+      variants.add('scontent.cdninstagram.com');
+    }
+    // também tente host sem o segmento '-lax3-2' (remover hyphen groups)
+    variants.add(host.replace(/-[a-z0-9]+/gi, ''));
+
+    // manter a original e outras variações
+    return Array.from(variants);
+  } catch {
+    return [];
+  }
+}
+
+function makeUrlWithHost(u, newHost) {
+  try {
+    const nu = new URL(u);
+    nu.hostname = newHost;
+    return nu.toString();
+  } catch {
+    return u;
+  }
+}
+
+const candidateUrls = [];
+
+// 1) versão original
+candidateUrls.push(decoded);
+
+// 2) variações de host
+for (const h of hostVariants(decoded)) {
+  const v = makeUrlWithHost(decoded, h);
+  if (!candidateUrls.includes(v)) candidateUrls.push(v);
+}
+
+// 3) se a URL contém 'stp=' ou 's150x150' / 's320x320' tente alternativas sem o 'stp' ou com outra dimensão
+try {
+  const uobj = new URL(decoded);
+  const qp = uobj.searchParams;
+  // tentar remover 'stp' (pode causar menos proteção)
+  if (qp.has('stp')) {
+    const copy = new URL(decoded);
+    copy.searchParams.delete('stp');
+    const s = copy.toString();
+    if (!candidateUrls.includes(s)) candidateUrls.push(s);
+  }
+} catch (e) { /* ignore */ }
+
+// Headers sets: prefer browser-like + owner referer
+const headerSets = [
+  {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
+    "Referer": owner ? `https://www.instagram.com/${owner}/` : "https://www.instagram.com/",
+    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+  },
+  {
+    // alternativa mais simples (algumas CDNs aceitam apenas UA+Referer)
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "Referer": owner ? `https://www.instagram.com/${owner}/` : "https://www.instagram.com/",
+    "Accept": "image/*,*/*;q=0.8"
+  }
+];
+
+let proxiedResponse = null;
+let lastErr = null;
+
+for (const cUrl of candidateUrls) {
+  for (const hs of headerSets) {
     try {
-      const resp = await axios.get(decoded, {
+      const resp = await axios.get(cUrl, {
         responseType: "arraybuffer",
         timeout: 15000,
-        headers: {
-          // fingir navegador / referer para reduzir bloqueios
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
-          Referer: "https://www.instagram.com/"
-        },
+        headers: hs,
         validateStatus: s => s >= 200 && s < 400,
         maxRedirects: 5
       });
-
+      // sucesso! preparar resposta ao cliente
       const contentType = resp.headers["content-type"] || "image/jpeg";
       const body = Buffer.from(resp.data, "binary");
 
-      // NÃO propagar headers perigosos do upstream — definimos apenas os necessários
       res.setHeader("Content-Type", contentType);
       res.setHeader("Content-Length", String(body.length));
       res.setHeader("Cache-Control", `public, max-age=${IMAGE_CACHE_SECONDS}`);
-      // CORS para permitir uso cross-origin — ajuste para seu domínio se preferir
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
       res.setHeader("Vary", "Origin");
-      // reduzir chance de bloqueio por CRP
       res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-      // valores permissivos compatíveis com a maioria dos usos de imagem
       res.setHeader("Cross-Origin-Embedder-Policy", "unsafe-none");
       res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
 
       return res.status(200).send(body);
-    } catch (err) {
-      const upstreamStatus = err?.response?.status;
-      console.error("[get-instagram-user] Erro no proxy de imagem:", upstreamStatus ?? "", err?.message ?? err);
-      if (upstreamStatus === 403 || upstreamStatus === 401) {
-        return res.status(502).send("Failed to proxy image (forbidden by origin)");
-      }
-      if (upstreamStatus === 404) {
-        return res.status(404).send("Image not found");
-      }
-      return res.status(500).send("Failed to proxy image");
+    } catch (e) {
+      // registrar e tentar próxima combinação
+      lastErr = e;
+      const code = e?.response?.status;
+      console.warn("[get-instagram-user] proxy attempt failed", { url: cUrl, status: code, owner, msg: e?.message });
+      // se for 403/401, tentar próximo candidate/header — pode ser temporário/por host
+      continue;
     }
   }
+}
+
+// se chegou aqui, tudo falhou
+const upstreamStatus = lastErr?.response?.status;
+console.error("[get-instagram-user] All proxy attempts failed. last status:", upstreamStatus, lastErr?.message ?? lastErr);
+if (upstreamStatus === 403 || upstreamStatus === 401) {
+  return res.status(502).send("Failed to proxy image (forbidden by origin)");
+}
+if (upstreamStatus === 404) {
+  return res.status(404).send("Image not found");
+}
+return res.status(500).send("Failed to proxy image");
+// ---------- Fim do bloco proxy aprimorado ----------
+
+    }
 
   // --- modo normal: buscar usuário do instagram via RapidAPI ---
   if (req.method !== "GET") {
@@ -243,9 +330,9 @@ export default async function handler(req, res) {
     const profile_pic = profilePicCandidates.find(u => typeof u === "string" && /^https?:\/\//i.test(u)) || null;
 
     // gerar URL proxificada (mesma rota): /api/get-instagram-user?image_url=<enc>
-    const profile_pic_proxy = profile_pic
-      ? `/api/get-instagram-user?image_url=${encodeURIComponent(profile_pic)}`
-      : null;
+const profile_pic_proxy = profile_pic
+  ? `/api/get-instagram-user?image_url=${encodeURIComponent(profile_pic)}&owner=${encodeURIComponent(usernameRet)}`
+  : null;
 
     const user = {
       username: usernameRet,
