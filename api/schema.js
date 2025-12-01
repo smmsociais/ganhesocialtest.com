@@ -22,7 +22,7 @@ const ActionHistorySchema = new mongoose.Schema({
   url: { type: String, required: true },
   status: { type: String, enum: ['valida', 'pendente', 'pulada', 'invalida'], default: 'pendente' },
   acao_validada: { type: String, required: false },
-  valor: { type: Number, required: true },
+  valor: { type: Number, required: false },
   tipo_acao: { type: String, required: true },
   rede_social: { type: String},
   afiliado: { type: String },
