@@ -1686,29 +1686,6 @@ router.get("/instagram/get_action", async (req, res) => {
         ? String(pedido.valor)
         : (pedido.tipo === "curtir" ? "0.001" : "0.006");
 
-      // **RESERVA IMEDIATA** — cria um ActionHistory com status "pendente" para bloquear a ação
-      try {
-        const newHistory = {
-          id_pedido,
-          id_action: idPedidoStr,
-          nome_usuario: nomeUsuarioRequest,
-          status: "pendente",
-          tipo_acao: pedido.tipo, // campo usado em parte do código
-          tipo: pedido.tipo,      // outro nome de campo que algumas rotas consultam — criamos ambos para compatibilidade
-          valor: pedido.valor,
-          rede_social: pedido.rede || "Instagram",
-          url: pedido.link || pedido.url || "",
-          token: token,
-          createdAt: new Date()
-        };
-        await ActionHistory.create(newHistory);
-        console.log(`[GET_ACTION][IG] Reservada ação ${idPedidoStr} para ${nomeUsuarioRequest} (status pendente).`);
-      } catch (errCreate) {
-        console.error(`[GET_ACTION][IG] Erro ao criar ActionHistory pendente para ${idPedidoStr}:`, errCreate);
-        // Se falhar na reserva, continue para o próximo pedido (evita entregar a mesma ação sem reserva)
-        continue;
-      }
-
       // retorno diferenciado para seguir x curtir
       if (pedido.tipo === "seguir") {
         return res.status(200).json({
