@@ -429,6 +429,95 @@ const contaIndex = (user.contas || []).findIndex(c =>
   }
 });
 
+// ===============================
+// ROTA: /api/profile
+// GET → retorna dados do usuário
+// PUT → atualiza dados do usuário
+// ===============================
+
+router.get("/profile", async (req, res) => {
+  await connectDB();
+
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Não autorizado." });
+  }
+
+  const token = authHeader.split(" ")[1].trim();
+  console.log("🔐 Token recebido:", token);
+
+  try {
+    const usuario = await User.findOne({ token });
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    return res.status(200).json({
+      nome_usuario: usuario.nome,
+      email: usuario.email,
+      token: usuario.token
+    });
+
+  } catch (error) {
+    console.error("💥 Erro no GET /profile:", error);
+    return res.status(500).json({ error: "Erro ao processar perfil." });
+  }
+});
+
+// Rota: /api/profile (GET ou PUT)
+router.put("/profile", async (req, res) => {
+  await connectDB();
+
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Não autorizado." });
+  }
+
+  const token = authHeader.split(" ")[1].trim();
+  console.log("🔐 Token recebido:", token);
+
+  try {
+    const usuario = await User.findOne({ token });
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    // Campos enviados
+    const { nome_usuario, email, senha } = req.body;
+
+    const updateFields = {};
+    if (nome_usuario) updateFields.nome = nome_usuario;
+    if (email) updateFields.email = email;
+    if (senha) {
+      // ⚠️ Aqui você deveria criptografar a senha antes de salvar
+      // ex: updateFields.senha = await bcrypt.hash(senha, 10);
+      updateFields.senha = senha;
+    }
+
+    const usuarioAtualizado = await User.findOneAndUpdate(
+      { token },
+      updateFields,
+      { new: true }
+    );
+
+    if (!usuarioAtualizado) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    return res.status(200).json({
+      message: "Perfil atualizado com sucesso!",
+      nome_usuario: usuarioAtualizado.nome,
+      email: usuarioAtualizado.email
+    });
+
+  } catch (error) {
+    console.error("💥 Erro no PUT /profile:", error);
+    return res.status(500).json({ error: "Erro ao atualizar perfil." });
+  }
+});
+
 // Rota: /api/login
 router.post("/login", async (req, res) => {
         if (req.method !== "POST") {
