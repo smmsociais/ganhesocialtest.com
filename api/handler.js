@@ -1439,7 +1439,7 @@ router.post("/tiktok/confirm_action", async (req, res) => {
       nome_usuario,
       tipo_acao,
       tipo: tipo_acao,
-      quantidade_pontos: valorFinal,
+      valor: valorFinal,
       rede_social: "TikTok",
       url: url_dir,            // ✔ CORRIGIDO
       id_action,
