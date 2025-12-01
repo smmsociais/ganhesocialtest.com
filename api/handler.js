@@ -27,20 +27,22 @@ router.get("/get-tiktok-user", getTikTokUser);
 router.post("/smm_acao", smmAcao);
 router.get("/user-following", verificarFollowing);
 
-// 🔥 FUNÇÃO GLOBAL — retorna o valor da ação conforme o tipo
-export function getValorAcao(pedido) {
-  // Se o valor veio definido no pedido, usa ele
-  if (pedido && typeof pedido.valor !== "undefined" && pedido.valor !== null) {
-    return String(pedido.valor);
+// 🔥 FUNÇÃO GLOBAL PARA DEFINIR O VALOR DA AÇÃO
+export function getValorAcao(pedidoOuTipo) {
+  if (!pedidoOuTipo) return "0.006";
+
+  // caso venha o pedido completo (preferido)
+  if (typeof pedidoOuTipo === "object") {
+    if (pedidoOuTipo.valor !== undefined && pedidoOuTipo.valor !== null) {
+      return String(pedidoOuTipo.valor);
+    }
+    if (pedidoOuTipo.tipo === "curtir") return "0.001";
+    return "0.006";
   }
 
-  // Caso contrário, aplica valores padrões
-  if (pedido.tipo === "curtir") {
-    return "0.001";
-  }
-
-  // padrão para seguir
-  return "0.006";
+  // caso a função receba apenas um tipo ("seguir", "curtir")
+  const tipo = String(pedidoOuTipo).toLowerCase();
+  return tipo === "curtir" ? "0.001" : "0.006";
 }
 
     async function salvarAcaoComLimitePorUsuario(novaAcao) {
@@ -1786,8 +1788,11 @@ router.post("/instagram/confirm_action", async (req, res) => {
     // Definir tipo da ação (pode vir de pedidoLocal.tipo_acao ou pedidoLocal.tipo)
     const tipo_acao = normalizarTipo(pedidoLocal.tipo_acao || pedidoLocal.tipo);
 
-    // Valor da ação
-const valorFinal = getValorAcao(pedido);
+// Valor da ação (agora usando função global)
+const valorFinal = getValorAcao({
+  tipo: tipo_acao,
+  valor: pedidoLocal.valor
+});
 
     // URL do alvo
     const url_dir = pedidoLocal.link;
