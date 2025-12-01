@@ -13,7 +13,7 @@ const ContaSchema = new mongoose.Schema({
     dataDesativacao: { type: Date }
 });
 
-// 🔹 Schema para Histórico de Ações (com suporte a comissões de afiliados)
+// 🔹 Schema para Histórico de Ações
 const ActionHistorySchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   token: { type: String },
