@@ -27,20 +27,31 @@ router.get("/get-tiktok-user", getTikTokUser);
 router.post("/smm_acao", smmAcao);
 router.get("/user-following", verificarFollowing);
 
-    async function salvarAcaoComLimitePorUsuario(novaAcao) {
-        const LIMITE = 1;
-        const total = await ActionHistory.countDocuments({ user: novaAcao.user });
+async function salvarAcaoComLimitePorUsuario(novaAcao) {
+    const LIMITE = 1;
 
-        if (total >= LIMITE) {
-            const excess = total - LIMITE + 1;
-            await ActionHistory.find({ user: novaAcao.user })
-                .sort({ createdAt: 1 })
-                .limit(excess)
-                .deleteMany();
-        }
+    // Conta apenas ações válidas e inválidas
+    const totalValidasOuInvalidas = await ActionHistory.countDocuments({
+        user: novaAcao.user,
+        status: { $in: ["valida", "invalida"] }
+    });
 
-        await novaAcao.save();
+    // Se excedeu o limite, remover somente as mais antigas
+    if (totalValidasOuInvalidas >= LIMITE) {
+        const excess = totalValidasOuInvalidas - LIMITE + 1;
+
+        await ActionHistory.find({
+            user: novaAcao.user,
+            status: { $in: ["valida", "invalida"] }
+        })
+        .sort({ createdAt: 1 }) // remove as mais antigas
+        .limit(excess)
+        .deleteMany();
     }
+
+    // Salva a nova ação (pendente, válida ou inválida)
+    await novaAcao.save();
+}
 
 // 🔥 FUNÇÃO GLOBAL COM SUPORTE A VARIÁVEIS DE AMBIENTE
 export function getValorAcao(pedidoOuTipo, rede = "TikTok") {
