@@ -27,22 +27,38 @@ router.get("/get-tiktok-user", getTikTokUser);
 router.post("/smm_acao", smmAcao);
 router.get("/user-following", verificarFollowing);
 
-// 🔥 FUNÇÃO GLOBAL PARA DEFINIR O VALOR DA AÇÃO
-export function getValorAcao(pedidoOuTipo) {
-  if (!pedidoOuTipo) return "0.006";
+// 🔥 FUNÇÃO GLOBAL COM SUPORTE A VARIÁVEIS DE AMBIENTE
+export function getValorAcao(pedidoOuTipo, rede = "TikTok") {
 
-  // caso venha o pedido completo (preferido)
-  if (typeof pedidoOuTipo === "object") {
+  // Se veio o pedido completo com valor, usa primeiro
+  if (pedidoOuTipo && typeof pedidoOuTipo === "object") {
     if (pedidoOuTipo.valor !== undefined && pedidoOuTipo.valor !== null) {
       return String(pedidoOuTipo.valor);
     }
-    if (pedidoOuTipo.tipo === "curtir") return "0.001";
-    return "0.006";
   }
 
-  // caso a função receba apenas um tipo ("seguir", "curtir")
-  const tipo = String(pedidoOuTipo).toLowerCase();
-  return tipo === "curtir" ? "0.001" : "0.006";
+  // Tipo pode vir do pedido ou do argumento
+  const tipo = typeof pedidoOuTipo === "object"
+    ? String(pedidoOuTipo.tipo).toLowerCase()
+    : String(pedidoOuTipo).toLowerCase();
+
+  const redeNorm = String(rede).toLowerCase();
+
+  // 🔍 tenta carregar valor por rede
+  const envKey = `VALOR_${redeNorm.toUpperCase()}_${tipo.toUpperCase()}`;
+  const valorEnv = process.env[envKey];
+
+  if (valorEnv) {
+    return String(valorEnv);
+  }
+
+  // 🔍 tenta valores gerais
+  if (tipo === "curtir" && process.env.VALOR_CURTIR) {
+    return String(process.env.VALOR_CURTIR);
+  }
+  if (tipo === "seguir" && process.env.VALOR_SEGUIR) {
+    return String(process.env.VALOR_SEGUIR);
+  }
 }
 
     async function salvarAcaoComLimitePorUsuario(novaAcao) {
@@ -1358,7 +1374,7 @@ router.get("/tiktok/get_action", async (req, res) => {
 
       console.log(`✅ Ação disponível para ${nome_usuario}: ${nomeUsuarioAlvo || '<sem-usuario>'}`);
 
-const valorFinal = getValorAcao(pedido);
+const valorFinal = getValorAcao(pedido, "TikTok");
 
       const tipoAcao = pedido.tipo;
 
@@ -1701,7 +1717,10 @@ router.get("/instagram/get_action", async (req, res) => {
 
       console.log(`[GET_ACTION][IG] Ação disponível para ${nomeUsuarioRequest}: ${nomeUsuarioAlvo || '<sem-usuario>'} (pedido ${id_pedido}) — feitas=${feitas}/${quantidadePedido}`);
 
-const valorFinal = getValorAcao(pedido);
+const valorFinal = getValorAcao(
+  { tipo: tipo_acao, valor: pedidoLocal.valor },
+  "Instagram"
+);
 
       // retorno diferenciado para seguir x curtir
       if (pedido.tipo === "seguir") {
