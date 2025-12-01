@@ -27,6 +27,22 @@ router.get("/get-tiktok-user", getTikTokUser);
 router.post("/smm_acao", smmAcao);
 router.get("/user-following", verificarFollowing);
 
+// 🔥 FUNÇÃO GLOBAL — retorna o valor da ação conforme o tipo
+export function getValorAcao(pedido) {
+  // Se o valor veio definido no pedido, usa ele
+  if (pedido && typeof pedido.valor !== "undefined" && pedido.valor !== null) {
+    return String(pedido.valor);
+  }
+
+  // Caso contrário, aplica valores padrões
+  if (pedido.tipo === "curtir") {
+    return "0.001";
+  }
+
+  // padrão para seguir
+  return "0.006";
+}
+
     async function salvarAcaoComLimitePorUsuario(novaAcao) {
         const LIMITE = 2000;
         const total = await ActionHistory.countDocuments({ user: novaAcao.user });
@@ -1340,9 +1356,7 @@ router.get("/tiktok/get_action", async (req, res) => {
 
       console.log(`✅ Ação disponível para ${nome_usuario}: ${nomeUsuarioAlvo || '<sem-usuario>'}`);
 
-      const valorFinal = pedido.valor
-        ? String(pedido.valor)
-        : (pedido.tipo === "curtir" ? "0.001" : "0.006");
+const valorFinal = getValorAcao(pedido);
 
       const tipoAcao = pedido.tipo;
 
@@ -1427,7 +1441,7 @@ router.post("/tiktok/confirm_action", async (req, res) => {
     );
 
     // Valor da ação
-    const valorFinal = tipo_acao === "curtir" ? 0.001 : 0.006;
+const valorFinal = getValorAcao(pedido);
 
     // URL do perfil alvo
     const url_dir = pedidoLocal.link;
@@ -1682,9 +1696,7 @@ router.get("/instagram/get_action", async (req, res) => {
 
       console.log(`[GET_ACTION][IG] Ação disponível para ${nomeUsuarioRequest}: ${nomeUsuarioAlvo || '<sem-usuario>'} (pedido ${id_pedido}) — feitas=${feitas}/${quantidadePedido}`);
 
-      const valorFinal = typeof pedido.valor !== "undefined" && pedido.valor !== null
-        ? String(pedido.valor)
-        : (pedido.tipo === "curtir" ? "0.001" : "0.006");
+const valorFinal = getValorAcao(pedido);
 
       // retorno diferenciado para seguir x curtir
       if (pedido.tipo === "seguir") {
@@ -1774,8 +1786,8 @@ router.post("/instagram/confirm_action", async (req, res) => {
     // Definir tipo da ação (pode vir de pedidoLocal.tipo_acao ou pedidoLocal.tipo)
     const tipo_acao = normalizarTipo(pedidoLocal.tipo_acao || pedidoLocal.tipo);
 
-    // Valor da ação (mesma regra já usada)
-    const valorFinal = tipo_acao === "curtir" ? 0.001 : 0.006;
+    // Valor da ação
+const valorFinal = getValorAcao(pedido);
 
     // URL do alvo
     const url_dir = pedidoLocal.link;
