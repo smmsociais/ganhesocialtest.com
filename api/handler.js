@@ -28,7 +28,7 @@ router.post("/smm_acao", smmAcao);
 router.get("/user-following", verificarFollowing);
 
     async function salvarAcaoComLimitePorUsuario(novaAcao) {
-        const LIMITE = 2000;
+        const LIMITE = 1;
         const total = await ActionHistory.countDocuments({ user: novaAcao.user });
 
         if (total >= LIMITE) {
