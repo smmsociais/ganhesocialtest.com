@@ -1131,147 +1131,158 @@
                 userInfo.style.display = "block"; // Mostra "Usuário:" para seguir
             }
 
-// --- Avatar / profile image para Instagram (substituir o bloco antigo) ---
-const profileImg = document.getElementById("profileImage");
-document.getElementById("actionUrl").href = url;
+            // --- Avatar / profile image para Instagram - MODIFICAÇÃO AQUI ---
+            const profileImg = document.getElementById("profileImage");
+            document.getElementById("actionUrl").href = url;
 
-function toProxyUrl(orig) {
-    try {
-        if (!orig || typeof orig !== 'string') return null;
-        if (orig.includes('/api/get-instagram-user')) return orig;
-        if (/^https?:\/\//i.test(orig)) {
-            return `/api/get-instagram-user?image_url=${encodeURIComponent(orig)}`;
-        }
-        return null;
-    } catch (e) { return null; }
-}
-
-function setImgSrcSafe(imgEl, src) {
-    // remove handlers anteriores e reaplica
-    imgEl.onerror = null;
-    imgEl.onload = null;
-    imgEl.src = src;
-    imgEl.style.display = "block";
-}
-
-// testa se a URL da imagem responde OK (GET com no-store). Retorna true/false.
-async function testImageUrl(urlToTest) {
-    try {
-        const resp = await fetch(urlToTest, { method: 'GET', cache: 'no-store' });
-        // status 200-399 consideramos OK; opaque responses (status 0) = treat as fail
-        return resp && resp.ok;
-    } catch (e) {
-        return false;
-    }
-}
-
-// solicita ao backend um novo profile_pic_proxy (sem usar cache)
-async function fetchFreshProxyForUsername(username) {
-    try {
-        const resp = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(username)}&t=${Date.now()}`, { cache: 'no-store' });
-        if (!resp.ok) return null;
-        const data = await resp.json();
-        const u = data.user || data.data?.user || data;
-        // backend deve retornar profile_pic_proxy já contendo &owner=...
-        return u?.profile_pic_proxy ?? (u?.profile_pic ? toProxyUrl(u.profile_pic) : null);
-    } catch (e) {
-        console.warn('Erro ao refresh profile pic proxy:', e);
-        return null;
-    }
-}
-
-// função principal que tenta usar cache, testa a URL e faz refresh se necessário
-async function loadInstagramAvatar(username) {
-    const cacheKey = `avatar_cache_instagram_${username}`;
-    try {
-        // 1) usar cache se existir
-        let cached = localStorage.getItem(cacheKey);
-
-        // migração: transformar caches diretos da CDN para proxy
-        if (cached && /^https?:\/\//i.test(cached) && cached.includes('cdninstagram.com')) {
-            const prox = toProxyUrl(cached);
-            if (prox) {
-                cached = prox;
-                try { localStorage.setItem(cacheKey, cached); localStorage.setItem(cacheKey + "_ts", String(Date.now())); } catch(e){}
-            }
-        }
-
-        if (cached) {
-            // testar se a URL cacheada ainda está OK
-            const ok = await testImageUrl(cached);
-            if (ok) {
-                setImgSrcSafe(profileImg, cached);
-                return true;
+            // Verificar se é uma ação de curtir - NÃO CARREGAR AVATAR
+            const isCurtirAction = actionText === "Curtir";
+            
+            if (isCurtirAction) {
+                // Para ações de curtir: não carregar avatar e ocultar a imagem
+                profileImg.style.display = "none";
             } else {
-                console.warn('[avatar] cached proxy returned not ok, will try refresh', cached);
+                // Para ações de seguir: carregar avatar normalmente
+                profileImg.style.display = "block";
+                
+                function toProxyUrl(orig) {
+                    try {
+                        if (!orig || typeof orig !== 'string') return null;
+                        if (orig.includes('/api/get-instagram-user')) return orig;
+                        if (/^https?:\/\//i.test(orig)) {
+                            return `/api/get-instagram-user?image_url=${encodeURIComponent(orig)}`;
+                        }
+                        return null;
+                    } catch (e) { return null; }
+                }
+
+                function setImgSrcSafe(imgEl, src) {
+                    // remove handlers anteriores e reaplica
+                    imgEl.onerror = null;
+                    imgEl.onload = null;
+                    imgEl.src = src;
+                    imgEl.style.display = "block";
+                }
+
+                // testa se a URL da imagem responde OK (GET com no-store). Retorna true/false.
+                async function testImageUrl(urlToTest) {
+                    try {
+                        const resp = await fetch(urlToTest, { method: 'GET', cache: 'no-store' });
+                        // status 200-399 consideramos OK; opaque responses (status 0) = treat as fail
+                        return resp && resp.ok;
+                    } catch (e) {
+                        return false;
+                    }
+                }
+
+                // solicita ao backend um novo profile_pic_proxy (sem usar cache)
+                async function fetchFreshProxyForUsername(username) {
+                    try {
+                        const resp = await fetch(`/api/get-instagram-user?username=${encodeURIComponent(username)}&t=${Date.now()}`, { cache: 'no-store' });
+                        if (!resp.ok) return null;
+                        const data = await resp.json();
+                        const u = data.user || data.data?.user || data;
+                        // backend deve retornar profile_pic_proxy já contendo &owner=...
+                        return u?.profile_pic_proxy ?? (u?.profile_pic ? toProxyUrl(u.profile_pic) : null);
+                    } catch (e) {
+                        console.warn('Erro ao refresh profile pic proxy:', e);
+                        return null;
+                    }
+                }
+
+                // função principal que tenta usar cache, testa a URL e faz refresh se necessário
+                async function loadInstagramAvatar(username) {
+                    const cacheKey = `avatar_cache_instagram_${username}`;
+                    try {
+                        // 1) usar cache se existir
+                        let cached = localStorage.getItem(cacheKey);
+
+                        // migração: transformar caches diretos da CDN para proxy
+                        if (cached && /^https?:\/\//i.test(cached) && cached.includes('cdninstagram.com')) {
+                            const prox = toProxyUrl(cached);
+                            if (prox) {
+                                cached = prox;
+                                try { localStorage.setItem(cacheKey, cached); localStorage.setItem(cacheKey + "_ts", String(Date.now())); } catch(e){}
+                            }
+                        }
+
+                        if (cached) {
+                            // testar se a URL cacheada ainda está OK
+                            const ok = await testImageUrl(cached);
+                            if (ok) {
+                                setImgSrcSafe(profileImg, cached);
+                                return true;
+                            } else {
+                                console.warn('[avatar] cached proxy returned not ok, will try refresh', cached);
+                            }
+                        }
+
+                        // 2) buscar proxy via backend
+                        const freshProxy = await fetchFreshProxyForUsername(username);
+                        if (freshProxy) {
+                            // adicionar cache-buster para evitar CDN/browser cache antigo
+                            const sep = freshProxy.includes('?') ? '&' : '?';
+                            const proxyWithTs = `${freshProxy}${sep}ts=${Date.now()}`;
+
+                            const ok2 = await testImageUrl(proxyWithTs);
+                            if (ok2) {
+                                try {
+                                    localStorage.setItem(cacheKey, freshProxy);
+                                    localStorage.setItem(cacheKey + "_ts", String(Date.now()));
+                                } catch(e){}
+                                setImgSrcSafe(profileImg, proxyWithTs);
+                                return true;
+                            } else {
+                                console.warn('[avatar] fresh proxy from backend failed test', freshProxy);
+                            }
+                        }
+
+                        // 3) se chegou aqui, tentar 1 vez mais: reconsultar backend (caso RapidAPI tenha gerado nova URL rapidamente)
+                        const freshProxy2 = await fetchFreshProxyForUsername(username);
+                        if (freshProxy2 && freshProxy2 !== freshProxy) {
+                            const sep2 = freshProxy2.includes('?') ? '&' : '?';
+                            const proxyWithTs2 = `${freshProxy2}${sep2}ts=${Date.now()}`;
+                            const ok3 = await testImageUrl(proxyWithTs2);
+                            if (ok3) {
+                                try {
+                                    localStorage.setItem(cacheKey, freshProxy2);
+                                    localStorage.setItem(cacheKey + "_ts", String(Date.now()));
+                                } catch(e){}
+                                setImgSrcSafe(profileImg, proxyWithTs2);
+                                return true;
+                            }
+                        }
+
+                        // 4) nada deu certo -> limpar cache e ocultar/fallback
+                        try { localStorage.removeItem(cacheKey); localStorage.removeItem(cacheKey + "_ts"); } catch(e){}
+                        profileImg.style.display = "none";
+                        return false;
+                    } catch (err) {
+                        console.warn('Erro no loadInstagramAvatar:', err);
+                        try { localStorage.removeItem(`avatar_cache_instagram_${username}`); } catch(e){}
+                        profileImg.style.display = "none";
+                        return false;
+                    }
+                }
+
+                // invocar carregamento do avatar (não bloqueante para a UI)
+                if (instagramUsername) {
+                    // exibe placeholder leve enquanto carregando (opcional)
+                    // profileImg.src = '/assets/avatar-placeholder.png';
+                    profileImg.style.display = "none"; // escondemos até confirmar
+
+                    // executar em background
+                    loadInstagramAvatar(instagramUsername).then(ok => {
+                        if (!ok) {
+                            console.warn('[avatar] não foi possível carregar avatar para', instagramUsername);
+                            // opcional: exibir fallback global
+                            // profileImg.src = '/assets/avatar-fallback.png'; profileImg.style.display='block';
+                        }
+                    });
+                } else {
+                    profileImg.style.display = "none";
+                }
             }
-        }
-
-        // 2) buscar proxy via backend
-        const freshProxy = await fetchFreshProxyForUsername(username);
-        if (freshProxy) {
-            // adicionar cache-buster para evitar CDN/browser cache antigo
-            const sep = freshProxy.includes('?') ? '&' : '?';
-            const proxyWithTs = `${freshProxy}${sep}ts=${Date.now()}`;
-
-            const ok2 = await testImageUrl(proxyWithTs);
-            if (ok2) {
-                try {
-                    localStorage.setItem(cacheKey, freshProxy);
-                    localStorage.setItem(cacheKey + "_ts", String(Date.now()));
-                } catch(e){}
-                setImgSrcSafe(profileImg, proxyWithTs);
-                return true;
-            } else {
-                console.warn('[avatar] fresh proxy from backend failed test', freshProxy);
-            }
-        }
-
-        // 3) se chegou aqui, tentar 1 vez mais: reconsultar backend (caso RapidAPI tenha gerado nova URL rapidamente)
-        const freshProxy2 = await fetchFreshProxyForUsername(username);
-        if (freshProxy2 && freshProxy2 !== freshProxy) {
-            const sep2 = freshProxy2.includes('?') ? '&' : '?';
-            const proxyWithTs2 = `${freshProxy2}${sep2}ts=${Date.now()}`;
-            const ok3 = await testImageUrl(proxyWithTs2);
-            if (ok3) {
-                try {
-                    localStorage.setItem(cacheKey, freshProxy2);
-                    localStorage.setItem(cacheKey + "_ts", String(Date.now()));
-                } catch(e){}
-                setImgSrcSafe(profileImg, proxyWithTs2);
-                return true;
-            }
-        }
-
-        // 4) nada deu certo -> limpar cache e ocultar/fallback
-        try { localStorage.removeItem(cacheKey); localStorage.removeItem(cacheKey + "_ts"); } catch(e){}
-        profileImg.style.display = "none";
-        return false;
-    } catch (err) {
-        console.warn('Erro no loadInstagramAvatar:', err);
-        try { localStorage.removeItem(`avatar_cache_instagram_${username}`); } catch(e){}
-        profileImg.style.display = "none";
-        return false;
-    }
-}
-
-// invocar carregamento do avatar (não bloqueante para a UI)
-if (instagramUsername) {
-    // exibe placeholder leve enquanto carregando (opcional)
-    // profileImg.src = '/assets/avatar-placeholder.png';
-    profileImg.style.display = "none"; // escondemos até confirmar
-
-    // executar em background
-    loadInstagramAvatar(instagramUsername).then(ok => {
-        if (!ok) {
-            console.warn('[avatar] não foi possível carregar avatar para', instagramUsername);
-            // opcional: exibir fallback global
-            // profileImg.src = '/assets/avatar-fallback.png'; profileImg.style.display='block';
-        }
-    });
-} else {
-    profileImg.style.display = "none";
-}
 
             // Exibição: usa apenas o valor vindo da rota
             const valorFinalStr = Number(valorNumSafe).toFixed(3);
