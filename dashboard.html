@@ -9,23 +9,90 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-dark: #121212;
-            --text-dark: #e0e0e0;
-            --container-dark: #1e1e1e;
-            --button-dark: #1a73e8;
-            --success-dark: #34a853;
-            --pending-dark: #f9ab00;
-            --failed-dark: #ea4335;
-            --border-dark: #333333;
-            --hover-dark: #2d2d2d;
-            --shadow-dark: rgba(0, 0, 0, 0.3);
+            /* Tema claro - Mesma estrutura do primeiro HTML */
+            --bg-light: #f8f9fa;
+            --text-light: #000000;
+            --container-light: #ffffff;
+            --button-light: #1a73e8;
+            --success-color: #28a745;
+            --pending-color: #ffc107;
+            --failed-color: #dc3545;
+            --border-light: #e0e0e0;
+            --hover-light: #f1f1f1;
+            --shadow-light: rgba(0, 0, 0, 0.08);
             --card-radius: 12px;
             --transition: all 0.3s ease;
+            --hover-blue: #0069d9;
+            /* CORES ADICIONADAS */
+            --gray-dark: #6c757d;
+        }
+
+        /* REGRA GLOBAL PARA GARANTIR TEXTO PRETO */
+        * {
+            color: #000000 !important;
+        }
+
+        /* Exceções para elementos que devem ter texto branco */
+        .header,
+        .container-header,
+        .container-header *,
+        .balance-chip,
+        .telegram-button {
+            color: rgb(0, 0, 0) !important;
+        }
+
+        /* CORES ESPECÍFICAS CONFORME SOLICITADO */
+        /* Ícones do Saldo Disponível e Pendente = cinza escuro */
+        .balance-title i.fa-wallet,
+        .balance-title i.fa-clock,
+        .balance-footer i.fa-info-circle {
+            color: var(--gray-dark) !important;
+        }
+
+        /* Texto Saldo Disponível e Pendente = cinza escuro */
+        .balance-title {
+            color: var(--gray-dark) !important;
+        }
+
+        /* Texto "Valor disponível para saque" e "Valor em processamento" + ícone = cinza escuro */
+        .balance-footer {
+            color: var(--gray-dark) !important;
+        }
+
+        .balance-footer i {
+            color: var(--gray-dark) !important;
+        }
+
+        /* Texto Ranking Diário + ícone = cinza escuro (NO HEADER) */
+        .container-header .ranking-title,
+        .container-header .ranking-title i.fa-trophy {
+            color: rgb(87, 87, 87) !important;
+            /* Mantém branco no header */
+        }
+
+        /* Apenas o título Ranking Diário na tabela será cinza */
+        .ranking-table th {
+            color: var(--gray-dark) !important;
+        }
+
+        /* Valores do ranking = verde */
+        .ranking-value {
+            color: var(--success-color) !important;
+        }
+
+        /* Ícones do menu (exceto sair) = preto */
+        .menu-item i:not(.fa-sign-out-alt) {
+            color: #000000 !important;
+        }
+
+        /* Texto do menu (exceto sair) = preto */
+        .menu-item:not(.menu-logout) {
+            color: #000000 !important;
         }
 
         body {
-            background-color: var(--bg-dark);
-            color: var(--text-dark);
+            background-color: var(--bg-light);
+            color: #000000 !important;
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 0;
@@ -35,10 +102,10 @@
         }
 
         .menu-item[href="dashboard"] {
-            color: white;
+            color: rgb(0, 0, 0) !important;
             font-weight: bold;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-left: 3px solid white;
+            background-color: rgba(146, 146, 146, 0.1);
+            border-left: 3px solid var(--button-light);
         }
 
         /* Header Styles */
@@ -47,9 +114,9 @@
             justify-content: space-between;
             align-items: center;
             padding: 15px 25px;
-            background: var(--primary-gradient-dark);
-            color: white;
-            box-shadow: 0 2px 10px var(--shadow-dark);
+            background: var(--primary-gradient);
+            color: white !important;
+            box-shadow: 0 2px 10px var(--shadow-light);
             position: relative;
             z-index: 10;
         }
@@ -72,7 +139,7 @@
         }
 
         .balance-chip {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.2);
             padding: 8px 15px;
             border-radius: 20px;
             font-weight: 600;
@@ -81,10 +148,11 @@
             gap: 8px;
             backdrop-filter: blur(5px);
             transition: var(--transition);
+            color: white !important;
         }
 
         .balance-chip:hover {
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.3);
         }
 
         .balance-amount {
@@ -99,27 +167,27 @@
         }
 
         .container {
-            background: var(--container-dark);
+            background: var(--container-light);
             border-radius: var(--card-radius);
-            box-shadow: 0 4px 20px var(--shadow-dark);
+            box-shadow: 0 4px 20px var(--shadow-light);
             overflow: hidden;
             transition: var(--transition);
             margin-bottom: 30px;
-            border: 1px solid var(--border-dark);
+            border: 1px solid var(--border-light);
         }
 
         .container-header {
             padding: 20px;
-            border-bottom: 1px solid var(--border-dark);
-            background: var(--primary-gradient-dark);
-            color: white;
+            border-bottom: 1px solid var(--border-light);
+            background: var(--primary-gradient);
+            color: white !important;
         }
 
         .container-header h2 {
             margin: 0;
             font-size: 1rem;
             font-weight: 600;
-            color: #dbdbdb;
+            color: white !important;
         }
 
         .container-body {
@@ -135,22 +203,27 @@
         }
 
         .balance-card {
-            background: var(--container-dark);
+            background: var(--container-light);
             border-radius: var(--card-radius);
             padding: 20px;
-            box-shadow: 0 2px 10px var(--shadow-dark);
+            box-shadow: 0 2px 10px var(--shadow-light);
             transition: var(--transition);
+            border: 1px solid var(--border-light);
         }
 
         .balance-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 25px var(--shadow-dark);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
         }
 
         .balance-title {
             font-size: 1rem;
-            color: #6c757d;
+            color: var(--gray-dark) !important;
+            /* Aplicado cinza escuro */
             margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .balance-value {
@@ -160,32 +233,34 @@
         }
 
         .balance-available {
-            color: var(--success-dark);
+            color: var(--success-color) !important;
         }
 
         .balance-pending {
-            color: var(--pending-dark);
+            color: var(--pending-color) !important;
         }
 
         .balance-footer {
             font-size: 0.85rem;
-            color: #6c757d;
+            color: var(--gray-dark) !important;
+            /* Aplicado cinza escuro */
             display: flex;
             align-items: center;
             gap: 5px;
+            margin-top: 10px;
         }
 
         .ranking-title {
             font-size: 1rem;
             display: flex;
             align-items: center;
-            color: #dbdbdb;
+            color: white !important;
         }
 
         .ranking-title i {
             font-size: 1rem;
             margin-right: 8px;
-            color: #dbdbdb;
+            color: white !important;
         }
 
         /* Ranking Table */
@@ -203,12 +278,13 @@
         }
 
         .ranking-table thead th {
-            background-color: rgba(255, 255, 255, 0.05);
-            color: var(--text-dark);
+            background-color: rgba(0, 0, 0, 0.05);
+            color: var(--gray-dark) !important;
+            /* Aplicado cinza escuro */
             font-weight: 600;
             padding: 15px;
             text-align: left;
-            border-bottom: 2px solid var(--border-dark);
+            border-bottom: 2px solid var(--border-light);
             position: sticky;
             top: 0;
             backdrop-filter: blur(5px);
@@ -219,13 +295,14 @@
         }
 
         .ranking-table tbody tr:hover {
-            background-color: var(--hover-dark);
+            background-color: var(--hover-light);
         }
 
         .ranking-table td {
             padding: 15px;
-            border-bottom: 1px solid var(--border-dark);
+            border-bottom: 1px solid var(--border-light);
             vertical-align: middle;
+            color: #000000 !important;
         }
 
         .ranking-table tr:last-child td {
@@ -236,22 +313,24 @@
             font-weight: bold;
             width: 50px;
             text-align: left;
+            color: #000000 !important;
         }
 
         .ranking-user {
             width: 60%;
+            color: #000000 !important;
         }
 
         .ranking-value {
             text-align: left;
             font-weight: bold;
-            color: var(--success-dark);
+            color: var(--success-color) !important;
             padding-left: 0;
             white-space: nowrap;
         }
 
         .highlight-row {
-            background-color: rgba(52, 168, 83, 0.1) !important;
+            background-color: rgba(40, 167, 69, 0.1) !important;
             font-weight: bold;
         }
 
@@ -259,10 +338,11 @@
         .telegram-container {
             text-align: center;
             padding: 30px;
-            background: var(--container-dark);
+            background: var(--container-light);
             border-radius: var(--card-radius);
-            box-shadow: 0 2px 10px var(--shadow-dark);
+            box-shadow: 0 2px 10px var(--shadow-light);
             margin-top: 30px;
+            border: 1px solid var(--border-light);
         }
 
         .telegram-image {
@@ -271,22 +351,22 @@
         }
 
         .telegram-link {
-            color: var(--button-dark);
+            color: var(--button-light) !important;
             text-decoration: none;
             font-weight: 600;
             transition: var(--transition);
         }
 
         .telegram-link:hover {
-            color: #8ab4f8;
+            color: #0056b3 !important;
             text-decoration: underline;
         }
 
         /* Botão Entrar */
         .telegram-button {
             display: inline-block;
-            background-color: #1a73e8;
-            color: white;
+            background-color: var(--button-light);
+            color: white !important;
             padding: 12px 24px;
             border-radius: 8px;
             text-decoration: none;
@@ -299,9 +379,9 @@
         }
 
         .telegram-button:hover {
-            background-color: #1669d6;
+            background-color: var(--hover-blue);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
         }
 
         /* Menu Styles */
@@ -318,7 +398,7 @@
             display: block;
             height: 3px;
             width: 100%;
-            background-color: white;
+            background-color: white !important;
             border-radius: 3px;
             transition: var(--transition);
         }
@@ -341,14 +421,15 @@
             left: -300px;
             width: 280px;
             height: 100%;
-            background: var(--container-dark);
-            box-shadow: 2px 0 15px var(--shadow-dark);
+            background: var(--container-light);
+            box-shadow: 2px 0 15px var(--shadow-light);
             transition: var(--transition);
             padding: 20px 0;
             z-index: 1001;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
+            border-right: 1px solid var(--border-light);
         }
 
         .menu-content.active {
@@ -362,7 +443,7 @@
         .menu-item {
             padding: 15px 25px;
             cursor: pointer;
-            color: var(--text-dark);
+            color: #000000 !important;
             font-size: 16px;
             text-decoration: none;
             transition: var(--transition);
@@ -374,22 +455,23 @@
         .menu-item i {
             width: 24px;
             text-align: center;
+            color: var(--button-light) !important;
         }
 
         .menu-item:hover {
-            background-color: var(--hover-dark);
+            background-color: var(--hover-light);
         }
 
         .menu-footer {
             margin-top: auto;
             padding: 25px 0;
-            border-top: 1px solid var(--border-dark);
+            border-top: 1px solid var(--border-light);
         }
 
         .menu-logout {
             padding: 15px 25px;
             cursor: pointer;
-            color: #ea4335;
+            color: #dc3545 !important;
             font-size: 16px;
             text-decoration: none;
             display: flex;
@@ -398,8 +480,12 @@
             transition: var(--transition);
         }
 
+        .menu-logout i {
+            color: #dc3545 !important;
+        }
+
         .menu-logout:hover {
-            background-color: rgba(234, 67, 53, 0.1);
+            background-color: rgba(220, 53, 69, 0.1);
         }
 
         /* Responsive Styles */
@@ -424,13 +510,13 @@
 
             .container-header h2 {
                 font-size: 1rem;
-                color: #dbdbdb;
+                color: white !important;
             }
 
             .container-header h2 i {
                 font-size: 1rem;
                 margin-right: 8px;
-                color: #dbdbdb;
+                color: white !important;
             }
 
             .container-body {
@@ -518,14 +604,14 @@
                 right: 15px;
                 background: none;
                 border: none;
-                color: #afaeae;
+                color: #6c757d !important;
                 font-size: 1.5rem;
                 cursor: pointer;
                 z-index: 1002;
             }
 
             .menu-close-btn:hover {
-                color: #ea4335;
+                color: #dc3545 !important;
             }
         }
 
@@ -536,6 +622,38 @@
 
         body.loaded {
             visibility: visible;
+        }
+
+        /* Dark Mode Styles (opcional - mantido para compatibilidade) */
+        @media (prefers-color-scheme: dark) {
+            * {
+                color: #000000 !important;
+            }
+
+            body {
+                background-color: #f8f9fa;
+            }
+
+            .container {
+                background: #ffffff;
+                border-color: #e0e0e0;
+            }
+
+            .balance-card {
+                background: #ffffff;
+                border-color: #e0e0e0;
+            }
+
+            .menu-content {
+                background: #ffffff;
+            }
+
+            .ranking-table thead th,
+            .ranking-table td,
+            .balance-title,
+            .balance-footer {
+                color: #000000 !important;
+            }
         }
     </style>
 </head>
@@ -548,7 +666,8 @@
 
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
-                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+                <img src="https://raw.githubusercontent.com/smmsociais/ganhesocialtest.com/refs/heads/main/1764621628851.jpg"
+                    alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -579,7 +698,8 @@
             </div>
             <!-- Logo para mobile (no header) -->
             <a href="dashboard" class="logo-mobile">
-                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+                <img src="https://raw.githubusercontent.com/smmsociais/ganhesocialtest.com/refs/heads/main/1764621628851.jpg"
+                    alt="Logo GanheSocial" class="logo">
             </a>
         </div>
     </div>
