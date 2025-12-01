@@ -27,40 +27,6 @@ router.get("/get-tiktok-user", getTikTokUser);
 router.post("/smm_acao", smmAcao);
 router.get("/user-following", verificarFollowing);
 
-// 🔥 FUNÇÃO GLOBAL COM SUPORTE A VARIÁVEIS DE AMBIENTE
-export function getValorAcao(pedidoOuTipo, rede = "TikTok") {
-
-  // Se veio o pedido completo com valor, usa primeiro
-  if (pedidoOuTipo && typeof pedidoOuTipo === "object") {
-    if (pedidoOuTipo.valor !== undefined && pedidoOuTipo.valor !== null) {
-      return String(pedidoOuTipo.valor);
-    }
-  }
-
-  // Tipo pode vir do pedido ou do argumento
-  const tipo = typeof pedidoOuTipo === "object"
-    ? String(pedidoOuTipo.tipo).toLowerCase()
-    : String(pedidoOuTipo).toLowerCase();
-
-  const redeNorm = String(rede).toLowerCase();
-
-  // 🔍 tenta carregar valor por rede
-  const envKey = `VALOR_${redeNorm.toUpperCase()}_${tipo.toUpperCase()}`;
-  const valorEnv = process.env[envKey];
-
-  if (valorEnv) {
-    return String(valorEnv);
-  }
-
-  // 🔍 tenta valores gerais
-  if (tipo === "curtir" && process.env.VALOR_CURTIR) {
-    return String(process.env.VALOR_CURTIR);
-  }
-  if (tipo === "seguir" && process.env.VALOR_SEGUIR) {
-    return String(process.env.VALOR_SEGUIR);
-  }
-}
-
     async function salvarAcaoComLimitePorUsuario(novaAcao) {
         const LIMITE = 2000;
         const total = await ActionHistory.countDocuments({ user: novaAcao.user });
@@ -75,6 +41,48 @@ export function getValorAcao(pedidoOuTipo, rede = "TikTok") {
 
         await novaAcao.save();
     }
+
+// 🔥 FUNÇÃO GLOBAL COM SUPORTE A VARIÁVEIS DE AMBIENTE
+export function getValorAcao(pedidoOuTipo, rede = "TikTok") {
+
+  // Se veio o pedido completo com valor explícito, usa ele
+  if (pedidoOuTipo && typeof pedidoOuTipo === "object") {
+    if (pedidoOuTipo.valor !== undefined && pedidoOuTipo.valor !== null) {
+      return String(pedidoOuTipo.valor);
+    }
+  }
+
+  // Tipo pode vir do pedido ou da string
+  const tipo = typeof pedidoOuTipo === "object"
+    ? String(pedidoOuTipo.tipo).toLowerCase()
+    : String(pedidoOuTipo).toLowerCase();
+
+  const redeNorm = String(rede).toLowerCase();
+
+  // 🔍 Primeiro tenta ENV específico por rede e tipo (ex: VALOR_TIKTOK_CURTIR)
+  const envKey = `VALOR_${redeNorm.toUpperCase()}_${tipo.toUpperCase()}`;
+  const valorEnv = process.env[envKey];
+  if (valorEnv) return String(valorEnv);
+
+  // 🔍 Depois tenta ENV genérico
+  if (tipo === "curtir" && process.env.VALOR_CURTIR) return String(process.env.VALOR_CURTIR);
+  if (tipo === "seguir" && process.env.VALOR_SEGUIR) return String(process.env.VALOR_SEGUIR);
+
+}
+
+// 📌 ROTA PARA CONSULTAR VALORES DAS AÇÕES
+router.get("/valor_acao", (req, res) => {
+  const { tipo = "seguir", rede = "TikTok" } = req.query;
+
+  const valor = getValorAcao(tipo, rede);
+
+  return res.json({
+    status: "success",
+    tipo,
+    rede,
+    valor
+  });
+});
 
 // Rota: /api/contas_tiktok (POST, GET, DELETE)
 function getTokenFromHeader(req) {
