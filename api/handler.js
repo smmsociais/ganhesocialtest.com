@@ -1819,7 +1819,7 @@ router.post("/instagram/confirm_action", async (req, res) => {
       nome_usuario,
       tipo_acao,
       tipo: tipo_acao,
-      quantidade_pontos: valorFinal,
+      valor: valorFinal,
       rede_social: "Instagram",
       url: url_dir,
       id_action: String(pedidoLocal._id),
