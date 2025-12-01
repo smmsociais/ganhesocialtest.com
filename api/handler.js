@@ -28,7 +28,7 @@ router.post("/smm_acao", smmAcao);
 router.get("/user-following", verificarFollowing);
 
 async function salvarAcaoComLimitePorUsuario(novaAcao) {
-    const LIMITE = 1;
+    const LIMITE = 10000;
 
     // Conta apenas ações válidas e inválidas
     const totalValidasOuInvalidas = await ActionHistory.countDocuments({
