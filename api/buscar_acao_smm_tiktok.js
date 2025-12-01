@@ -1,7 +1,8 @@
-// api/buscar_acao_smm_tiktok.js (sem reservadas)
+// api/buscar_acao_smm_tiktok.js
 import connectDB from './db.js';
 import mongoose from 'mongoose';
 import { User, ActionHistory, Pedido } from "./schema.js";
+import { getValorAcao } from "./handler.js";
 
 const handler = async (req, res) => {
   if (req.method !== "GET") {
@@ -159,30 +160,7 @@ const handler = async (req, res) => {
         }
       }
 
-      // determina valor padrão por tipo (seguir -> 0.006, curtir -> 0.001)
-      const tipoPedido = (pedido.tipo || "").toString().toLowerCase();
-      let valorParaEnviar = 0;
-      if (typeof pedido.valor === "number" && pedido.valor > 0) {
-        valorParaEnviar = Number(pedido.valor);
-      } else {
-        if (tipoPedido === "seguir") {
-          valorParaEnviar = 0.006;
-        } else if (tipoPedido === "curtir") {
-          valorParaEnviar = 0.001;
-        } else if (tipoPedido === "seguir_curtir") {
-          valorParaEnviar = 0.006;
-        } else {
-          valorParaEnviar = 0.006;
-        }
-      }
-      valorParaEnviar = Number(valorParaEnviar.toFixed(3));
-
-      // 5) Não criamos mais reserva no backend — retornamos a ação para o frontend e o frontend deve
-      //    salvar/registrar no backend APENAS após o usuário confirmar que fez a ação.
-      //    Isso reduz gravações prematuras; porém, sem reserva existe a possibilidade de duas
-      //    instâncias pegarem a mesma ação quase simultaneamente. Se quiser evitar essa race
-      //    condition, implemente no futuro um endpoint de "lock"/"confirm" ou use decremento
-      //    atômico em Pedido.
+const valorParaEnviar = Number(getValorAcao(pedido, "TikTok"));
 
       return res.json({
         status: "ENCONTRADA",
@@ -207,46 +185,3 @@ const handler = async (req, res) => {
 };
 
 export default handler;
-
-/*
-  NOTAS IMPORTANTES (aplique no schema e no fluxo do frontend):
-
-  1) Agora o backend NÃO cria mais documentos com status "reservada". O frontend deve:
-     - pedir a ação (/api/buscar_acao_smm_tiktok?nome_usuario=...)
-     - exibir a ação ao usuário
-     - quando o usuário confirmar, chamar um endpoint POST /api/confirmar_acao (ou similar)
-       que cria o documento ActionHistory com status: "pendente" (ou realiza validação imediata
-       e marca "valida" quando apropriado).
-
-  2) Ajuste as queries de contagem para considerar apenas os status relevantes ("pendente","valida").
-
-  3) Índices parciais recomendados no schema ActionHistory para evitar duplicidade por conta+pedido
-     (defesa em profundidade):
-
-     ActionHistorySchema.index(
-       { id_action: 1, nome_usuario: 1 },
-       { unique: true, partialFilterExpression: {
-           $or: [
-             { status: { $in: ["pendente","valida"] } },
-             { acao_validada: { $in: ["pendente","valida"] } }
-           ]
-         }
-       }
-     );
-
-     ActionHistorySchema.index(
-       { id_pedido: 1, nome_usuario: 1 },
-       { unique: true, partialFilterExpression: {
-           $or: [
-             { status: { $in: ["pendente","valida"] } },
-             { acao_validada: { $in: ["pendente","valida"] } }
-           ]
-         }
-       }
-     );
-
-  4) Se você quer evitar completamente race conditions sem reservas, estude uma operação
-     atômica que decremente `Pedido.quantidade` e registre o ActionHistory em uma mesma
-     transação/operação atômica — mas isso exige atenção (transações Mongo, ou uso de campos
-     lock/ttl, etc.).
-*/
