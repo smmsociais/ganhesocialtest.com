@@ -1717,10 +1717,7 @@ router.get("/instagram/get_action", async (req, res) => {
 
       console.log(`[GET_ACTION][IG] Ação disponível para ${nomeUsuarioRequest}: ${nomeUsuarioAlvo || '<sem-usuario>'} (pedido ${id_pedido}) — feitas=${feitas}/${quantidadePedido}`);
 
-const valorFinal = getValorAcao(
-  { tipo: tipo_acao, valor: pedidoLocal.valor },
-  "Instagram"
-);
+const valorFinal = getValorAcao(pedido, "Instagram");
 
       // retorno diferenciado para seguir x curtir
       if (pedido.tipo === "seguir") {
