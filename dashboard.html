@@ -30,7 +30,7 @@
             --success-color: #28a745;
             --pending-color: #ffc107;
             --failed-color: #dc3545;
-            --border-light: #e0e0e0;
+            --border-light: #ffffff;
             --hover-light: #f1f1f1;
             --shadow-light: rgba(0, 0, 0, 0.08);
 
@@ -38,7 +38,7 @@
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #4285f4;
+            --button-dark: #ebebeb;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
@@ -155,33 +155,6 @@
             font-weight: 700;
         }
 
-        /* Botão de alternar tema */
-        .theme-toggle {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            border-radius: 20px;
-            padding: 8px 15px;
-            color: white !important;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            transition: var(--transition);
-            backdrop-filter: blur(5px);
-        }
-
-        .theme-toggle:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .theme-icon-sun {
-            display: none;
-        }
-
-        .theme-icon-moon {
-            display: inline-block;
-        }
 
         html[data-tema="escuro"] .theme-icon-sun {
             display: inline-block;
@@ -219,7 +192,7 @@
             margin: 0;
             font-size: 1rem;
             font-weight: 600;
-            color: white !important;
+            color: rgb(236, 236, 236) !important;
         }
 
         .container-body {
@@ -290,7 +263,7 @@
         .ranking-title i {
             font-size: 1rem;
             margin-right: 8px;
-            color: white !important;
+            color: rgb(236, 236, 236) !important;
         }
 
         /* Ranking Table - REESCRITO PARA GARANTIR FUNCIONAMENTO */
@@ -330,14 +303,6 @@
         .ranking-table tbody tr:hover {
             background-color: var(--hover);
         }
-
-        /* REMOVA esta regra se existir - ela está sobrescrevendo as cores */
-        /* .ranking-table td {
-    padding: 15px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: middle;
-    color: var(--text);
-} */
 
         /* Em vez disso, defina explicitamente para cada célula: */
         .ranking-table td {
@@ -423,7 +388,7 @@
         /* Botão Entrar */
         .telegram-button {
             display: inline-block;
-            background-color: var(--button);
+            background-color: var(--button-light);
             color: white !important;
             padding: 12px 24px;
             border-radius: 8px;
