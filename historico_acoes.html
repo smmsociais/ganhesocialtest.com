@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-tema="claro">
 
 <head>
     <meta charset="UTF-8">
@@ -9,36 +9,74 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
+            /* Tema claro - padrão */
             --bg-light: #f8f9fa;
             --text-light: #212529;
             --container-light: #ffffff;
-            --button-light: #007bff;
+            --button-light: #1a73e8;
             --success-color: #28a745;
-            --valid-color: #28a745;
             --pending-color: #ffc107;
-            --invalid-color: #dc3545;
-            --border-light: #dee2e6;
+            --failed-color: #dc3545;
+            --border-light: #e0e0e0;
             --hover-light: #f1f1f1;
-            --shadow-light: rgba(0, 0, 0, 0.1);
+            --shadow-light: rgba(0, 0, 0, 0.08);
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
+            /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #1a73e8;
+            --button-dark: #4285f4;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
             --border-dark: #333333;
             --hover-dark: #2d2d2d;
             --shadow-dark: rgba(0, 0, 0, 0.3);
+            --primary-gradient-dark: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
+            /* Variáveis comuns */
             --card-radius: 12px;
             --transition: all 0.3s ease;
+            --hover-blue: #0069d9;
+            --gray-dark: #6c757d;
+            --label-color: #6c757d;
+        }
+
+        /* Variáveis dinâmicas baseadas no tema */
+        html[data-tema="claro"] {
+            --bg: var(--bg-light);
+            --text: var(--text-light);
+            --container: var(--container-light);
+            --button: var(--button-light);
+            --success: var(--success-color);
+            --pending: var(--pending-color);
+            --failed: var(--failed-color);
+            --border: var(--border-light);
+            --hover: var(--hover-light);
+            --shadow: var(--shadow-light);
+            --primary-gradient: var(--primary-gradient);
+        }
+
+        html[data-tema="escuro"] {
+            --bg: var(--bg-dark);
+            --text: var(--text-dark);
+            --container: var(--container-dark);
+            --button: var(--button-dark);
+            --success: var(--success-dark);
+            --pending: var(--pending-dark);
+            --failed: var(--failed-dark);
+            --border: var(--border-dark);
+            --hover: var(--hover-dark);
+            --shadow: var(--shadow-dark);
+            --primary-gradient: var(--primary-gradient-dark);
+            --gray-dark: #8b949e;
+            --label-color: #8b949e;
         }
 
         body {
-            background-color: var(--bg-light);
-            color: var(--text-light);
+            background-color: var(--bg);
+            color: var(--text);
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 0;
@@ -48,54 +86,64 @@
         }
 
         .menu-item[href="historico_acoes"] {
-            color: white;
+            color: white !important;
             font-weight: bold;
             background-color: rgba(255, 255, 255, 0.1);
             border-left: 3px solid white;
         }
 
+        /* Header Styles */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 15px 20px;
-            background-color: var(--container-light);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            background: var(--primary-gradient);
+            color: white !important;
+            box-shadow: 0 2px 10px var(--shadow);
+            position: relative;
+            z-index: 10;
         }
 
         .left-header {
             display: flex;
             align-items: center;
-            gap: 30px;
+            gap: 20px;
         }
 
         .right-header {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
         }
 
         .logo {
             height: 32px;
-            margin-right: 29px;
+            margin-right: 10px;
         }
 
+        /* Main Container */
         .container {
-            background: var(--container-light);
+            background: var(--container);
             padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 20px var(--shadow);
             width: 90%;
             max-width: 1700px;
             margin: 30px auto;
-            transition: background 0.3s;
+            transition: var(--transition);
+            border: 1px solid var(--border);
         }
 
         h2 {
             text-align: left;
             margin-bottom: 10px;
-            color: rgb(233, 233, 233);
+            color: var(--text);
             font-size: 1.0em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         /* Container da tabela com cabeçalho fixo */
@@ -103,7 +151,7 @@
             max-height: 70vh;
             overflow-y: auto;
             border-radius: 8px;
-            border: 1px solid #dee2e6;
+            border: 1px solid var(--border);
             margin-bottom: 20px;
             position: relative;
         }
@@ -122,60 +170,70 @@
         }
 
         .history-table th {
-            background-color: #f8f9fa;
-            color: #212529;
+            background-color: var(--container);
+            color: var(--text);
             text-align: left;
             padding: 12px 15px;
             font-weight: 600;
-            border-bottom: 2px solid #dee2e6;
+            border-bottom: 2px solid var(--border);
             position: sticky;
             top: 0;
         }
 
         .history-table td {
             padding: 12px 15px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
         }
 
         .history-table tr:nth-child(even) {
-            background-color: #f8f9fa;
+            background-color: var(--hover);
         }
 
         .history-table tr:hover {
-            background-color: #e9ecef;
+            background-color: var(--hover);
+            transform: translateX(2px);
+            transition: var(--transition);
         }
 
+        /* Status Styles */
         .status-valid {
-            color: var(--valid-color);
+            color: var(--success);
             font-weight: bold;
         }
 
         .status-invalid {
-            color: var(--invalid-color);
+            color: var(--failed);
             font-weight: bold;
         }
 
         .status-pendente {
-            color: var(--pending-color);
+            color: var(--pending);
             font-weight: bold;
         }
 
+        /* Action Link */
         .action-link {
-            color: var(--button-light);
+            color: var(--button);
             text-decoration: none;
             font-weight: bold;
+            transition: var(--transition);
         }
 
         .action-link:hover {
             text-decoration: underline;
+            opacity: 0.8;
         }
 
+        /* Empty/No Actions */
         .no-actions {
             text-align: center;
             padding: 20px;
-            color: #666;
+            color: var(--gray-dark);
+            font-style: italic;
         }
 
+        /* Pagination */
         .pagination {
             display: flex;
             justify-content: center;
@@ -187,22 +245,23 @@
 
         .pagination button {
             padding: 8px 12px;
-            border: 1px solid #dee2e6;
-            background-color: white;
-            color: var(--text-light);
+            border: 1px solid var(--border);
+            background-color: var(--container);
+            color: var(--text);
             border-radius: 4px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: var(--transition);
         }
 
         .pagination button:hover {
-            background-color: var(--pagination-hover);
+            background-color: var(--hover);
+            transform: translateY(-1px);
         }
 
         .pagination button.active {
-            background-color: var(--pagination-active);
+            background-color: var(--button);
             color: white;
-            border-color: var(--pagination-active);
+            border-color: var(--button);
         }
 
         .pagination button:disabled {
@@ -213,11 +272,11 @@
         .pagination-info {
             text-align: center;
             margin-top: 10px;
-            color: #666;
+            color: var(--gray-dark);
             font-size: 0.9em;
         }
 
-        /* Estilos do menu hamburguer */
+        /* Menu Styles */
         .menu-toggle {
             width: 30px;
             height: 30px;
@@ -231,9 +290,9 @@
             display: block;
             height: 3px;
             width: 100%;
-            background-color: var(--text-light);
+            background-color: var(--text);
             border-radius: 3px;
-            transition: all 0.3s ease;
+            transition: var(--transition);
         }
 
         .menu-overlay {
@@ -245,22 +304,24 @@
             background-color: rgba(0, 0, 0, 0.5);
             z-index: 1000;
             display: none;
+            backdrop-filter: blur(3px);
         }
 
         .menu-content {
             position: fixed;
             top: 0;
             left: -300px;
-            width: 250px;
+            width: 280px;
             height: 100%;
-            background: var(--container-light);
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
-            transition: left 0.3s ease;
+            background: var(--container);
+            box-shadow: 2px 0 15px var(--shadow);
+            transition: var(--transition);
             padding: 20px 0;
             z-index: 1001;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
+            border-right: 1px solid var(--border);
         }
 
         .menu-content.active {
@@ -274,10 +335,10 @@
         .menu-item {
             padding: 15px 25px;
             cursor: pointer;
-            color: var(--text-light);
+            color: var(--text);
             font-size: 16px;
             text-decoration: none;
-            transition: background-color 0.2s;
+            transition: var(--transition);
             display: flex;
             align-items: center;
             gap: 12px;
@@ -286,114 +347,37 @@
         .menu-item i {
             width: 24px;
             text-align: center;
+            color: var(--button);
         }
 
         .menu-item:hover {
-            background-color: rgba(0, 0, 0, 0.05);
+            background-color: var(--hover);
         }
 
         .menu-footer {
             margin-top: auto;
             padding: 25px 0;
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            border-top: 1px solid var(--border);
         }
 
         .menu-logout {
             padding: 15px 25px;
             cursor: pointer;
-            color: #dc3545;
+            color: var(--failed);
             font-size: 16px;
             text-decoration: none;
             display: flex;
             align-items: center;
             gap: 12px;
+            transition: var(--transition);
         }
 
-        @media (prefers-color-scheme: dark) {
-            body {
-                background-color: var(--bg-dark);
-                color: var(--text-dark);
-            }
+        .menu-logout i {
+            color: var(--failed);
+        }
 
-            .header,
-            .container {
-                background: var(--container-dark);
-                box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
-                border: 1px solid var(--border-dark);
-            }
-
-            .status-pendente {
-                color: var(--pending-color);
-            }
-
-            .history-table th {
-                background-color: #1e1e1e;
-                color: var(--text-dark);
-                border-bottom: 2px solid var(--border-dark);
-            }
-
-            .history-table tr:nth-child(even) {
-                background-color: var(--container-dark);
-            }
-
-            .history-table tr:hover {
-                background-color: #343a40;
-            }
-
-            .history-table td {
-                border-bottom: 1px solid var(--border-dark);
-            }
-
-            .action-link {
-                color: var(--button-dark);
-            }
-
-            .no-actions {
-                color: #aaa;
-            }
-
-            .table-container {
-                border: 1px solid var(--border-dark);
-            }
-
-            .pagination button {
-                background-color: var(--container-dark);
-                color: var(--text-dark);
-                border-color: var(--border-dark);
-            }
-
-            .pagination button:hover {
-                background-color: #343a40;
-            }
-
-            .pagination button.active {
-                background-color: var(--button-dark);
-                color: white;
-            }
-
-            .pagination-info {
-                color: #aaa;
-            }
-
-            .menu-toggle span {
-                background-color: var(--text-dark);
-            }
-
-            .menu-content {
-                background: var(--container-dark);
-            }
-
-            .menu-item {
-                color: var(--text-dark);
-            }
-
-            .menu-item:hover {
-                background-color: rgba(255, 255, 255, 0.05);
-            }
-
-            .menu-footer {
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-            }
+        .menu-logout:hover {
+            background-color: rgba(220, 53, 69, 0.1);
         }
 
         /* Desktop Menu */
@@ -428,50 +412,15 @@
             }
         }
 
-        /* Estilos para desktop */
-        @media (min-width: 992px) {
-            .desktop-header {
-                display: none;
-            }
-
-            body {
-                padding-left: 250px;
-            }
-
-            .menu-toggle {
-                display: none;
-            }
-
-            .menu-content {
-                left: 0;
-                box-shadow: none;
-            }
-
-            .menu-overlay {
-                display: none !important;
-            }
-
-            .logo-mobile {
-                display: none;
-            }
-        }
-
         @media (max-width: 991px) {
             .logo-mobile {
                 display: block;
             }
 
-            /* Esconde o header quando o menu está aberto */
             body.menu-open .header {
                 display: none;
             }
 
-            /* Ajusta o z-index do cabeçalho da tabela quando o menu está aberto */
-            body.menu-open .history-table th {
-                z-index: 5;
-            }
-
-            /* Estilos para o botão de fechar no mobile */
             .menu-close-btn {
                 display: block;
                 position: absolute;
@@ -479,21 +428,23 @@
                 right: 15px;
                 background: none;
                 border: none;
-                color: #afaeae;
+                color: var(--gray-dark) !important;
                 font-size: 1.5rem;
                 cursor: pointer;
                 z-index: 1002;
             }
 
             .menu-close-btn:hover {
-                color: #dc3545;
+                color: var(--failed);
             }
         }
 
+        /* Responsive Styles */
         @media (max-width: 768px) {
             .container {
-                width: 90%;
+                width: calc(100% - 30px);
                 padding: 15px;
+                margin: 20px auto;
             }
 
             .history-table {
@@ -513,8 +464,49 @@
                 padding: 6px 8px;
                 font-size: 0.8em;
             }
+
+            .table-container {
+                max-height: 60vh;
+            }
         }
 
+        @media (max-width: 576px) {
+            .header {
+                padding: 12px 15px;
+            }
+
+            .pagination {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .pagination button {
+                width: 100%;
+            }
+
+            .history-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Initial Load */
         body {
             visibility: hidden;
         }
@@ -526,6 +518,20 @@
 </head>
 
 <body>
+    <!-- Aplica tema imediatamente antes do paint para evitar flash -->
+    <script>
+        (function () {
+            try {
+                var temaLocal = localStorage.getItem('tema');
+                if (temaLocal) {
+                    document.documentElement.setAttribute('data-tema', temaLocal);
+                }
+            } catch (e) {
+                console.warn("Erro ao aplicar tema do localStorage:", e);
+            }
+        })();
+    </script>
+
     <!-- Menu Lateral para Desktop -->
     <div class="menu-content" id="menuContent">
         <button class="menu-close-btn" id="menuCloseBtn">&times;</button>
@@ -565,8 +571,8 @@
     </div>
 
     <!-- Conteúdo Principal -->
-    <div class="container">
-        <h2 id="pageTitle"></i> Histórico de Ações</h2>
+    <div class="container fade-in">
+        <h2><i class="fas fa-history"></i> Histórico de Ações</h2>
         <div class="table-container">
             <table class="history-table" id="historyTable">
                 <thead>
@@ -596,30 +602,28 @@
     <div class="menu-overlay" id="menuOverlay"></div>
 
     <script>
+        /* === FUNÇÕES DE LOGOUT === */
         function logout() {
             localStorage.removeItem("token");
             window.location.href = "https://ganhesocialtest.com";
         }
 
+        /* === INICIALIZAÇÃO PRINCIPAL === */
         document.addEventListener("DOMContentLoaded", function () {
             const token = localStorage.getItem("token");
 
             if (!token) {
-                setTimeout(() => {
-                    window.location.href = "https://ganhesocialtest.com/login";
-                },);
+                window.location.href = "https://ganhesocialtest.com/login";
                 return;
             }
-            const urlParams = new URLSearchParams(window.location.search);
-            const nomeUsuario = urlParams.get('usuario');
 
-            // Controle do menu hamburguer
+            // Configuração do menu
             const menuToggle = document.getElementById('menuToggle');
             const menuOverlay = document.getElementById('menuOverlay');
             const menuContent = document.getElementById('menuContent');
             const menuCloseBtn = document.getElementById('menuCloseBtn');
 
-            menuToggle.addEventListener('click', function () {
+            function toggleMenu() {
                 menuContent.classList.toggle('active');
                 menuOverlay.classList.toggle('active');
 
@@ -633,16 +637,7 @@
                     spans[1].style.opacity = '1';
                     spans[2].style.transform = 'none';
                 }
-            });
-
-            menuOverlay.addEventListener('click', function () {
-                menuContent.classList.remove('active');
-                menuOverlay.classList.remove('active');
-                const spans = menuToggle.querySelectorAll('span');
-                spans[0].style.transform = 'none';
-                spans[1].style.opacity = '1';
-                spans[2].style.transform = 'none';
-            });
+            }
 
             function closeMenu() {
                 menuContent.classList.remove('active');
@@ -653,6 +648,7 @@
                 spans[2].style.transform = 'none';
             }
 
+            menuToggle.addEventListener('click', toggleMenu);
             menuCloseBtn.addEventListener('click', closeMenu);
             menuOverlay.addEventListener('click', closeMenu);
 
@@ -667,11 +663,14 @@
             async function loadData(page = 1) {
                 try {
                     currentPage = page;
+                    const historyList = document.getElementById('historyList');
+                    const paginationInfo = document.getElementById('paginationInfo');
+                    
                     historyList.innerHTML = '<tr><td colspan="7" class="no-actions">Carregando...</td></tr>';
 
                     // Se ainda não carregamos todos os dados, buscar da API
                     if (allActions.length === 0) {
-                        const response = await fetch("/api/historico_acoes", {
+                        const response = await fetch("https://ganhesocialtest.com/api/historico_acoes", {
                             headers: {
                                 'Authorization': `Bearer ${token}`
                             }
@@ -697,6 +696,7 @@
 
                 } catch (error) {
                     console.error("Erro ao carregar histórico:", error);
+                    const historyList = document.getElementById('historyList');
                     historyList.innerHTML = '<tr><td colspan="7" class="no-actions">Erro ao carregar histórico de ações.</td></tr>';
                 }
             }
@@ -705,6 +705,7 @@
                 const startIndex = (currentPage - 1) * itemsPerPage;
                 const endIndex = Math.min(startIndex + itemsPerPage, allActions.length);
                 const pageActions = allActions.slice(startIndex, endIndex);
+                const historyList = document.getElementById('historyList');
 
                 if (pageActions.length === 0) {
                     historyList.innerHTML = '<tr><td colspan="7" class="no-actions">Nenhuma ação encontrada.</td></tr>';
@@ -729,25 +730,25 @@
                         `<a href="${action.url}" class="action-link" target="_blank">Ver</a>` : "";
 
                     row.innerHTML = `
-                    <td>${new Date(action.data).toLocaleString()}</td>
-                    <td>${action.rede_social}</td>    
-                    <td><a class="action-link" href="detail_account?usuario=${encodeURIComponent(action.nome_usuario)}">${action.nome_usuario}</a></td>  
-                    <td>${action.tipo_acao ? action.tipo_acao.charAt(0).toUpperCase() + action.tipo_acao.slice(1) : "Desconhecido"}</td>       
-                    <td>R$ ${(action.valor)}</td>
-                    <td>
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <span class="${statusClass}">${statusText}</span>
-                            ${actionLink}
-                        </div>
-                    </td>
-                    <td></td>
-                `;
+                        <td>${new Date(action.data).toLocaleString()}</td>
+                        <td>${action.rede_social}</td>    
+                        <td><a class="action-link" href="detail_account?usuario=${encodeURIComponent(action.nome_usuario)}">${action.nome_usuario}</a></td>  
+                        <td>${action.tipo_acao ? action.tipo_acao.charAt(0).toUpperCase() + action.tipo_acao.slice(1) : "Desconhecido"}</td>       
+                        <td>R$ ${(action.valor)}</td>
+                        <td>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <span class="${statusClass}">${statusText}</span>
+                                ${actionLink}
+                            </div>
+                        </td>
+                    `;
                     historyList.appendChild(row);
                 });
             }
 
             // Atualizar informações de paginação
             function updatePaginationInfo() {
+                const paginationInfo = document.getElementById('paginationInfo');
                 const startItem = (currentPage - 1) * itemsPerPage + 1;
                 const endItem = Math.min(currentPage * itemsPerPage, allActions.length);
                 paginationInfo.textContent = `Mostrando ${startItem}-${endItem} de ${allActions.length} ações`;
@@ -755,6 +756,7 @@
 
             // Gerar controles de paginação
             function generatePagination() {
+                const pagination = document.getElementById('pagination');
                 pagination.innerHTML = '';
 
                 // Botão Anterior
