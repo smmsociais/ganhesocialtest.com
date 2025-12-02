@@ -661,7 +661,7 @@ function trocarTema() {
     let novoTema = temaAtual === "claro" ? "escuro" : "claro";
 
     localStorage.setItem("tema", novoTema);
-    document.getElementById("tema-css").href = `/css/${novoTema}/dashboard.css`;
+    document.getElementById("tema-css").href = `/css/${novoTema}/profile.css`;
     atualizarTextoBotaoTema(novoTema);
 }
 
