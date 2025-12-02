@@ -1097,6 +1097,56 @@ async function carregarSaldos() {
             });
         }
 
+function aplicarCacheImediato() {
+    try {
+        // TEMA
+        const temaLocal = localStorage.getItem('tema');
+        if (temaLocal) {
+            document.documentElement.setAttribute('data-tema', temaLocal);
+            // Atualiza texto do botão se existir
+            const themeText = document.getElementById('themeText');
+            if (themeText) themeText.textContent = (temaLocal === 'claro') ? 'Tema Escuro' : 'Tema Claro';
+        }
+
+        // SALDOS
+        const saldoDisponivelEl = document.getElementById("saldoDisponivel");
+        const saldoPendenteEl = document.getElementById("saldoPendente");
+        const cachedSaldoDisponivel = localStorage.getItem("saldoDisponivel");
+        const cachedSaldoPendente = localStorage.getItem("saldoPendente");
+
+        if (saldoDisponivelEl && cachedSaldoDisponivel !== null) {
+            const v = Number(cachedSaldoDisponivel) || 0;
+            saldoDisponivelEl.textContent =
+                `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            saldoDisponivelEl.style.display = "block";
+        }
+        if (saldoPendenteEl && cachedSaldoPendente !== null) {
+            const p = Number(cachedSaldoPendente) || 0;
+            saldoPendenteEl.textContent =
+                `R$ ${p.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            saldoPendenteEl.style.display = "block";
+        }
+
+        // RANKING
+        const cachedRanking = localStorage.getItem("rankingCache");
+        if (cachedRanking) {
+            try {
+                const rankingData = JSON.parse(cachedRanking);
+                // populateRankingTable deve existir; checamos antes de chamar
+                if (typeof populateRankingTable === "function") {
+                    populateRankingTable(rankingData);
+                } else {
+                    console.warn("populateRankingTable não definida — cache do ranking não será aplicada agora.");
+                }
+            } catch (e) {
+                console.warn("Cache de ranking corrompido:", e);
+            }
+        }
+    } catch (e) {
+        console.warn("Erro em aplicarCacheImediato:", e);
+    }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     const token = localStorage.getItem("token");
     if (!token) {
