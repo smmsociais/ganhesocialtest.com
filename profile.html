@@ -9,28 +9,45 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-color: #121212;
-            --text-color: #e0e0e0;
-            --container-color: #1e1e1e;
-            --button-color: #1a73e8;
+            /* Tema claro - Padrão inicial */
+            --bg-light: #f8f9fa;
+            --text-light: #000000;
+            --container-light: #ffffff;
+            --button-light: #1a73e8;
+            --success-color: #28a745;
+            --pending-color: #ffc107;
+            --failed-color: #dc3545;
+            --border-light: #e0e0e0;
+            --hover-light: #f1f1f1;
+            --shadow-light: rgba(0, 0, 0, 0.08);
+            --card-radius: 12px;
+            --transition: all 0.3s ease;
+            --hover-blue: #0069d9;
+            --gray-dark: #6c757d;
+            --label-color: #6c757d;
+            --input-bg: #ffffff;
+        }
+
+        /* Variáveis para tema escuro */
+        :root[data-tema="escuro"] {
+            --bg-light: #121212;
+            --text-light: #e0e0e0;
+            --container-light: #1e1e1e;
+            --button-light: #4285f4;
             --success-color: #34a853;
             --pending-color: #f9ab00;
             --failed-color: #ea4335;
-            --border-color: #333333;
-            --hover-color: #2d2d2d;
-            --shadow-color: rgba(0, 0, 0, 0.3);
+            --border-light: #333333;
+            --hover-light: #2d2d2d;
+            --shadow-light: rgba(0, 0, 0, 0.3);
+            --gray-dark: #8b949e;
             --label-color: #8b949e;
-            --positive-color: #27ae60;
-            --negative-color: #c0392b;
-            --neutral-color: #2980b9;
-            --error-color: #f85149;
-            --card-radius: 12px;
-            --transition: all 0.3s ease;
+            --input-bg: #2d2d2d;
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background-color: var(--bg-light);
+            color: var(--text-light);
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 0;
@@ -40,10 +57,10 @@
         }
 
         .menu-item[href="profile"] {
-            color: white;
+            color: var(--text-light) !important;
             font-weight: bold;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-left: 3px solid white;
+            background-color: rgba(146, 146, 146, 0.1);
+            border-left: 3px solid var(--button-light);
         }
 
         /* Header Styles */
@@ -52,9 +69,9 @@
             justify-content: space-between;
             align-items: center;
             padding: 15px 25px;
-            background: var(--primary-gradient);
-            color: white;
-            box-shadow: 0 2px 10px var(--shadow-color);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            box-shadow: 0 2px 10px var(--shadow-light);
             position: relative;
             z-index: 10;
         }
@@ -77,13 +94,13 @@
         }
 
         .container {
-            background: var(--container-color);
+            background: var(--container-light);
             border-radius: var(--card-radius);
-            box-shadow: 0 4px 20px var(--shadow-color);
+            box-shadow: 0 4px 20px var(--shadow-light);
             overflow: hidden;
             transition: var(--transition);
             margin-bottom: 30px;
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--border-light);
             width: 100%;
             max-width: 1100px;
             margin: 30px auto;
@@ -92,15 +109,16 @@
 
         .container-header {
             padding: 20px;
-            border-bottom: 1px solid var(--border-color);
-            background: var(--primary-gradient);
-            color: white;
+            border-bottom: 1px solid var(--border-light);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
         }
 
         .container-header h2 {
             margin: 0;
             font-size: 1.5rem;
             font-weight: 600;
+            color: white !important;
         }
 
         .container-body {
@@ -117,31 +135,36 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: var(--text-color);
+            color: var(--gray-dark) !important;
         }
 
         .input-box {
             width: 100%;
             padding: 12px 15px;
             border-radius: 6px;
-            border: 1px solid var(--border-color);
-            background: var(--container-color);
-            color: var(--text-color);
+            border: 1px solid var(--border-light);
+            background: var(--input-bg);
+            color: var(--text-light);
             transition: var(--transition);
             box-sizing: border-box;
             font-size: 1rem;
         }
 
         .input-box:focus {
-            border-color: var(--button-color);
+            border-color: var(--button-light);
             outline: none;
             box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
         }
 
         .input-box[readonly] {
-            background-color: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color);
+            background-color: rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-light);
             cursor: not-allowed;
+            color: var(--gray-dark) !important;
+        }
+
+        :root[data-tema="escuro"] .input-box[readonly] {
+            background-color: rgba(255, 255, 255, 0.05);
         }
 
         .token-container {
@@ -153,21 +176,21 @@
         .copy-icon {
             margin-left: 10px;
             cursor: pointer;
-            color: var(--label-color);
+            color: var(--gray-dark) !important;
             font-size: 18px;
             transition: var(--transition);
         }
 
         .copy-icon:hover {
-            color: var(--button-color);
+            color: var(--button-light) !important;
         }
 
         .copy-notification {
             position: absolute;
             right: 0;
             top: -30px;
-            background: var(--text-color);
-            color: var(--container-color);
+            background: var(--text-light);
+            color: var(--container-light);
             padding: 5px 10px;
             border-radius: 4px;
             font-size: 12px;
@@ -182,7 +205,7 @@
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            color: white;
+            color: white !important;
             font-size: 16px;
             background: var(--success-color);
             transition: var(--transition);
@@ -191,8 +214,13 @@
 
         .save-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px var(--shadow-color);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+            background: #218838;
+        }
+
+        :root[data-tema="escuro"] .save-button:hover {
             background: #2a8a42;
+            box-shadow: 0 4px 12px rgba(52, 168, 83, 0.2);
         }
 
         .message {
@@ -205,23 +233,84 @@
         }
 
         .error-message {
-            background-color: rgba(234, 67, 53, 0.1);
-            color: var(--failed-color);
-            border: 1px solid rgba(234, 67, 53, 0.2);
+            background-color: rgba(220, 53, 69, 0.1);
+            color: var(--failed-color) !important;
+            border: 1px solid rgba(220, 53, 69, 0.2);
         }
 
         .success-message {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--success-color) !important;
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+
+        :root[data-tema="escuro"] .error-message {
+            background-color: rgba(234, 67, 53, 0.1);
+        }
+
+        :root[data-tema="escuro"] .success-message {
             background-color: rgba(52, 168, 83, 0.1);
-            color: var(--success-color);
-            border: 1px solid rgba(52, 168, 83, 0.2);
         }
 
         .page-title {
             text-align: left;
             margin-bottom: 25px;
-            color: var(--text-color);
+            color: var(--gray-dark) !important;
             font-size: 1.0rem;
             font-weight: 600;
+        }
+
+        /* Botão de Tema */
+        .theme-toggle-container {
+            text-align: center;
+            margin: 25px 0 15px 0;
+        }
+
+        .theme-toggle-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 24px;
+            background: var(--button-light);
+            color: white !important;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: var(--transition);
+            min-width: 160px;
+        }
+
+        .theme-toggle-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);
+            background: var(--hover-blue);
+        }
+
+        :root[data-tema="escuro"] .theme-toggle-button:hover {
+            background: #5a95f5;
+        }
+
+        .theme-toggle-button i {
+            font-size: 16px;
+        }
+
+        .theme-icon-sun {
+            display: none;
+        }
+
+        .theme-icon-moon {
+            display: inline-block;
+        }
+
+        :root[data-tema="escuro"] .theme-icon-sun {
+            display: inline-block;
+        }
+
+        :root[data-tema="escuro"] .theme-icon-moon {
+            display: none;
         }
 
         /* Menu Styles */
@@ -261,14 +350,15 @@
             left: -300px;
             width: 280px;
             height: 100%;
-            background: var(--container-color);
-            box-shadow: 2px 0 15px var(--shadow-color);
+            background: var(--container-light);
+            box-shadow: 2px 0 15px var(--shadow-light);
             transition: var(--transition);
             padding: 20px 0;
             z-index: 1001;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
+            border-right: 1px solid var(--border-light);
         }
 
         .menu-content.active {
@@ -282,7 +372,7 @@
         .menu-item {
             padding: 15px 25px;
             cursor: pointer;
-            color: var(--text-color);
+            color: var(--text-light) !important;
             font-size: 16px;
             text-decoration: none;
             transition: var(--transition);
@@ -294,22 +384,23 @@
         .menu-item i {
             width: 24px;
             text-align: center;
+            color: var(--button-light) !important;
         }
 
         .menu-item:hover {
-            background-color: var(--hover-color);
+            background-color: var(--hover-light);
         }
 
         .menu-footer {
             margin-top: auto;
             padding: 25px 0;
-            border-top: 1px solid var(--border-color);
+            border-top: 1px solid var(--border-light);
         }
 
         .menu-logout {
             padding: 15px 25px;
             cursor: pointer;
-            color: #ea4335;
+            color: #dc3545 !important;
             font-size: 16px;
             text-decoration: none;
             display: flex;
@@ -318,7 +409,23 @@
             transition: var(--transition);
         }
 
+        .menu-logout i {
+            color: #dc3545 !important;
+        }
+
         .menu-logout:hover {
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        :root[data-tema="escuro"] .menu-logout {
+            color: #ea4335 !important;
+        }
+
+        :root[data-tema="escuro"] .menu-logout i {
+            color: #ea4335 !important;
+        }
+
+        :root[data-tema="escuro"] .menu-logout:hover {
             background-color: rgba(234, 67, 53, 0.1);
         }
 
@@ -359,12 +466,10 @@
                 display: block;
             }
 
-            /* Esconde o header quando o menu está aberto */
             body.menu-open .header {
                 display: none;
             }
 
-            /* Estilos para o botão de fechar no mobile */
             .menu-close-btn {
                 display: block;
                 position: absolute;
@@ -372,14 +477,14 @@
                 right: 15px;
                 background: none;
                 border: none;
-                color: #afaeae;
+                color: var(--gray-dark) !important;
                 font-size: 1.5rem;
                 cursor: pointer;
                 z-index: 1002;
             }
 
             .menu-close-btn:hover {
-                color: #ea4335;
+                color: #dc3545 !important;
             }
         }
 
@@ -396,6 +501,11 @@
 
             .page-title {
                 font-size: 1.0rem;
+            }
+
+            .theme-toggle-button {
+                padding: 10px 20px;
+                min-width: 140px;
             }
         }
 
@@ -416,6 +526,12 @@
             .input-box {
                 padding: 10px 12px;
             }
+
+            .theme-toggle-button {
+                padding: 10px 16px;
+                font-size: 13px;
+                min-width: 130px;
+            }
         }
 
         /* Animation */
@@ -435,6 +551,7 @@
             animation: fadeIn 0.5s ease forwards;
         }
 
+        /* Initial Load */
         body {
             visibility: hidden;
         }
@@ -492,7 +609,7 @@
     <!-- Conteúdo Principal -->
     <div class="main-container">
         <div class="container fade-in">
-            <h2 class="page-title"></i> Seu Perfil</h2>
+            <h2 class="page-title"><i class="fas fa-user-cog"></i> Seu Perfil</h2>
 
             <div id="errorMessage" class="message error-message"></div>
             <div id="successMessage" class="message success-message"></div>
@@ -527,11 +644,43 @@
                 <input type="password" id="confirmPassword" class="input-box">
             </div>
 
-            <button class="save-button" onclick="saveProfile()"><i class=""></i> Salvar Alterações</button>
+            <!-- Botão de Toggle de Tema -->
+            <div class="theme-toggle-container">
+                <button class="theme-toggle-button" onclick="trocarTema()">
+                    <i class="fas fa-moon theme-icon-moon"></i>
+                    <i class="fas fa-sun theme-icon-sun"></i>
+                    <span class="theme-text">Tema Escuro</span>
+                </button>
+            </div>
+
+            <button class="save-button" onclick="saveProfile()"><i class="fas fa-save"></i> Salvar Alterações</button>
         </div>
     </div>
 
     <script>
+        // Funções para controle de tema
+        function carregarTema() {
+            let tema = localStorage.getItem("tema") || "claro";
+            document.documentElement.setAttribute("data-tema", tema);
+            atualizarTextoBotaoTema(tema);
+        }
+
+        function atualizarTextoBotaoTema(tema) {
+            const botao = document.querySelector('.theme-text');
+            if (botao) {
+                botao.textContent = tema === "claro" ? "Tema Escuro" : "Tema Claro";
+            }
+        }
+
+        function trocarTema() {
+            let temaAtual = localStorage.getItem("tema") || "claro";
+            let novoTema = temaAtual === "claro" ? "escuro" : "claro";
+            
+            localStorage.setItem("tema", novoTema);
+            document.documentElement.setAttribute("data-tema", novoTema);
+            atualizarTextoBotaoTema(novoTema);
+        }
+
         async function loadProfile() {
             const token = localStorage.getItem("token");
 
@@ -659,6 +808,9 @@
         }
 
         document.addEventListener("DOMContentLoaded", async function () {
+            // Carregar tema salvo
+            carregarTema();
+
             const token = localStorage.getItem("token");
 
             // Controle do menu hamburguer
