@@ -33,6 +33,8 @@
             --border-light: #e0e0e0;
             --hover-light: #f1f1f1;
             --shadow-light: rgba(0, 0, 0, 0.08);
+            --logo-light: url('https://i.imgur.com/dioL5B7.png');
+            --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
 
             /* Tema escuro */
             --bg-dark: #121212;
@@ -45,6 +47,8 @@
             --border-dark: #333333;
             --hover-dark: #2d2d2d;
             --shadow-dark: rgba(0, 0, 0, 0.3);
+            --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
+            --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
 
             --ranking-color-light: #28a745;
             --ranking-color-dark: #34a853;
@@ -71,6 +75,8 @@
             --shadow: var(--shadow-light);
             --primary-gradient: var(--primary-gradient);
             --ranking-color: var(--ranking-color-light);
+            --logo: var(--logo-light);
+            --logo-mobile: var(--logo-mobile-light);
         }
 
         html[data-tema="escuro"] {
@@ -88,6 +94,8 @@
             --gray-dark: #8b949e;
             --label-color: #8b949e;
             --ranking-color: var(--ranking-color-dark);
+            --logo: var(--logo-dark);
+            --logo-mobile: var(--logo-mobile-dark);
         }
 
         /* Estilos base usando variáveis dinâmicas */
@@ -130,6 +138,18 @@
         .logo {
             height: 32px;
             margin-right: 10px;
+            transition: var(--transition);
+        }
+
+        /* Logo com imagem baseada em variável CSS */
+        .logo-desktop img {
+            content: var(--logo);
+            transition: var(--transition);
+        }
+
+        .logo-mobile img {
+            content: var(--logo-mobile);
+            transition: var(--transition);
         }
 
         .balance-chip {
@@ -698,8 +718,8 @@
 
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
-                <img src="https://raw.githubusercontent.com/smmsociais/ganhesocialtest.com/refs/heads/main/1764713804343.png"
-                    alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+                <!-- A imagem será trocada via CSS baseado no tema -->
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -730,10 +750,10 @@
             </div>
             <!-- Logo para mobile (no header) -->
             <a href="dashboard" class="logo-mobile">
-                <img src="https://raw.githubusercontent.com/smmsociais/ganhesocialtest.com/refs/heads/main/1764713804343.png" alt="Logo GanheSocial" class="logo">
+                <!-- A imagem será trocada via CSS baseado no tema -->
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
         </div>
-    </div>
     </div>
 
     <!-- Conteúdo Principal -->
@@ -867,9 +887,43 @@
             // Configura o menu
             configurarMenu();
 
+            // Atualiza as logos baseado no tema atual
+            atualizarLogosPorTema();
+
             // Marca página como carregada
             document.body.classList.add('loaded');
+
+            // Observador para mudanças de tema
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.attributeName === 'data-tema') {
+                        atualizarLogosPorTema();
+                    }
+                });
+            });
+            observer.observe(document.documentElement, { attributes: true });
         });
+
+        /* === ATUALIZAR LOGOS POR TEMA === */
+        function atualizarLogosPorTema() {
+            const tema = document.documentElement.getAttribute('data-tema');
+            const logoDesktop = document.getElementById('logoDesktop');
+            const logoMobile = document.getElementById('logoMobile');
+            
+            // URLs das logos para cada tema
+            const logoClaro = 'https://i.imgur.com/dioL5B7.png';
+            const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
+            
+            const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
+            
+            if (logoDesktop) {
+                logoDesktop.src = logoURL;
+            }
+            
+            if (logoMobile) {
+                logoMobile.src = logoURL;
+            }
+        }
 
         /* === CONTROLE DO MENU HAMBURGUER === */
         function configurarMenu() {
