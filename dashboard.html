@@ -20,26 +20,27 @@
             --border-light: #e0e0e0;
             --hover-light: #f1f1f1;
             --shadow-light: rgba(0, 0, 0, 0.08);
-            --primary-gradient: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
-            
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
             /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #1a73e8;
+            --button-dark: #4285f4;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
             --border-dark: #333333;
             --hover-dark: #2d2d2d;
             --shadow-dark: rgba(0, 0, 0, 0.3);
-            --primary-gradient-dark: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
-            
+            --primary-gradient-dark: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
             /* Variáveis comuns */
             --card-radius: 12px;
             --transition: all 0.3s ease;
             --hover-blue: #0069d9;
             --gray-dark: #6c757d;
+            --label-color: #6c757d;
         }
 
         /* Variáveis dinâmicas baseadas no tema */
@@ -69,6 +70,8 @@
             --hover: var(--hover-dark);
             --shadow: var(--shadow-dark);
             --primary-gradient: var(--primary-gradient-dark);
+            --gray-dark: #8b949e;
+            --label-color: #8b949e;
         }
 
         /* Estilos base usando variáveis dinâmicas */
@@ -90,7 +93,7 @@
             align-items: center;
             padding: 15px 25px;
             background: var(--primary-gradient);
-            color: white;
+            color: white !important;
             box-shadow: 0 2px 10px var(--shadow);
             position: relative;
             z-index: 10;
@@ -123,7 +126,7 @@
             gap: 8px;
             backdrop-filter: blur(5px);
             transition: var(--transition);
-            color: white;
+            color: white !important;
         }
 
         .balance-chip:hover {
@@ -140,7 +143,7 @@
             border: none;
             border-radius: 20px;
             padding: 8px 15px;
-            color: white;
+            color: white !important;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -152,6 +155,22 @@
 
         .theme-toggle:hover {
             background: rgba(255, 255, 255, 0.3);
+        }
+
+        .theme-icon-sun {
+            display: none;
+        }
+
+        .theme-icon-moon {
+            display: inline-block;
+        }
+
+        html[data-tema="escuro"] .theme-icon-sun {
+            display: inline-block;
+        }
+
+        html[data-tema="escuro"] .theme-icon-moon {
+            display: none;
         }
 
         /* Main Container */
@@ -175,14 +194,14 @@
             padding: 20px;
             border-bottom: 1px solid var(--border);
             background: var(--primary-gradient);
-            color: white;
+            color: white !important;
         }
 
         .container-header h2 {
             margin: 0;
             font-size: 1rem;
             font-weight: 600;
-            color: white;
+            color: white !important;
         }
 
         .container-body {
@@ -213,7 +232,7 @@
 
         .balance-title {
             font-size: 1rem;
-            color: var(--gray-dark);
+            color: var(--gray-dark) !important;
             margin-bottom: 10px;
             display: flex;
             align-items: center;
@@ -236,7 +255,7 @@
 
         .balance-footer {
             font-size: 0.85rem;
-            color: var(--gray-dark);
+            color: var(--gray-dark) !important;
             display: flex;
             align-items: center;
             gap: 5px;
@@ -247,13 +266,13 @@
             font-size: 1rem;
             display: flex;
             align-items: center;
-            color: white;
+            color: white !important;
         }
 
         .ranking-title i {
             font-size: 1rem;
             margin-right: 8px;
-            color: white;
+            color: white !important;
         }
 
         /* Ranking Table */
@@ -272,7 +291,7 @@
 
         .ranking-table thead th {
             background-color: rgba(0, 0, 0, 0.05);
-            color: var(--gray-dark);
+            color: var(--gray-dark) !important;
             font-weight: 600;
             padding: 15px;
             text-align: left;
@@ -362,7 +381,7 @@
         .telegram-button {
             display: inline-block;
             background-color: var(--button);
-            color: white;
+            color: white !important;
             padding: 12px 24px;
             border-radius: 8px;
             text-decoration: none;
@@ -490,79 +509,6 @@
             background-color: rgba(220, 53, 69, 0.1);
         }
 
-        /* Responsive Styles */
-        @media (max-width: 992px) {
-            .main-container {
-                padding: 20px;
-            }
-
-            .container-header h2 {
-                font-size: 1.3rem;
-            }
-
-            .balance-cards {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .main-container {
-                padding: 15px;
-            }
-
-            .container-header h2 {
-                font-size: 1rem;
-                color: white;
-            }
-
-            .container-header h2 i {
-                font-size: 1rem;
-                margin-right: 8px;
-                color: white;
-            }
-
-            .container-body {
-                padding: 15px;
-            }
-
-            .balance-value {
-                font-size: 1.5rem;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .header {
-                padding: 12px 15px;
-            }
-
-            .balance-chip {
-                padding: 6px 12px;
-                font-size: 0.9rem;
-            }
-
-            .theme-toggle {
-                padding: 6px 12px;
-                font-size: 0.9rem;
-            }
-        }
-
-        /* Animation */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease forwards;
-        }
-
         /* Desktop Menu */
         @media (min-width: 992px) {
             body {
@@ -611,7 +557,7 @@
                 right: 15px;
                 background: none;
                 border: none;
-                color: var(--gray-dark);
+                color: var(--gray-dark) !important;
                 font-size: 1.5rem;
                 cursor: pointer;
                 z-index: 1002;
@@ -620,6 +566,88 @@
             .menu-close-btn:hover {
                 color: var(--failed);
             }
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 20px;
+            }
+
+            .container {
+                padding: 20px;
+                width: calc(100% - 40px);
+            }
+
+            .container-header h2 {
+                font-size: 1rem;
+                color: white !important;
+            }
+
+            .container-header h2 i {
+                font-size: 1rem;
+                margin-right: 8px;
+                color: white !important;
+            }
+
+            .container-body {
+                padding: 15px;
+            }
+
+            .balance-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .balance-value {
+                font-size: 1.5rem;
+            }
+
+            .theme-toggle {
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .header {
+                padding: 12px 15px;
+            }
+
+            .main-container {
+                padding: 15px;
+            }
+
+            .container {
+                padding: 15px;
+                width: calc(100% - 30px);
+            }
+
+            .balance-chip {
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+
+            .theme-toggle {
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
         }
 
         /* Initial Load */
@@ -679,9 +707,10 @@
         </div>
         <div class="right-header">
             <!-- Botão de alternar tema -->
-            <button class="theme-toggle" id="themeToggle">
-                <i class="fas fa-moon"></i>
-                <span>Escuro</span>
+            <button class="theme-toggle" id="themeToggle" onclick="trocarTema()">
+                <i class="fas fa-moon theme-icon-moon"></i>
+                <i class="fas fa-sun theme-icon-sun"></i>
+                <span id="themeText">Escuro</span>
             </button>
         </div>
     </div>
@@ -798,32 +827,7 @@
     </div>
 
     <script>
-        /* === INICIALIZAÇÃO UNIFICADA === */
-        document.addEventListener("DOMContentLoaded", async function () {
-            const token = localStorage.getItem("token");
-
-            if (!token) {
-                window.location.href = "https://ganhesocialtest.com/login";
-                return;
-            }
-
-            // Carrega o tema primeiro
-            await carregarTema();
-
-            // Carrega saldo
-            await carregarSaldos();
-
-            // Atualiza o ranking ao carregar
-            await carregarRanking();
-
-            // Inicializa o botão de tema
-            inicializarTemaToggle();
-
-            // Marca página como carregada
-            document.body.classList.add('loaded');
-        });
-
-        /* === FUNÇÃO PARA CARREGAR TEMA DO BANCO === */
+        /* === FUNÇÕES DE TEMA === */
         async function carregarTema() {
             const token = localStorage.getItem("token");
             if (!token) return;
@@ -848,96 +852,101 @@
             }
         }
 
-        /* === ATUALIZAR TEXTO DO BOTÃO DE TEMA === */
         function atualizarTextoBotaoTema(tema) {
-            const themeToggle = document.getElementById("themeToggle");
-            if (!themeToggle) return;
-
-            const icon = themeToggle.querySelector("i");
-            const text = themeToggle.querySelector("span");
-
-            if (tema === "escuro") {
-                icon.className = "fas fa-sun";
-                text.textContent = "Claro";
-            } else {
-                icon.className = "fas fa-moon";
-                text.textContent = "Escuro";
+            const botao = document.getElementById('themeText');
+            if (botao) {
+                botao.textContent = tema === "claro" ? "Tema Escuro" : "Tema Claro";
             }
         }
 
-        /* === INICIALIZAR BOTÃO DE ALTERNAR TEMA === */
-        function inicializarTemaToggle() {
-            const themeToggle = document.getElementById("themeToggle");
-            if (!themeToggle) return;
+        async function trocarTema() {
+            let temaAtual = localStorage.getItem("tema") || "claro";
+            let novoTema = temaAtual === "claro" ? "escuro" : "claro";
 
-            themeToggle.addEventListener("click", async () => {
-                const temaAtual = document.documentElement.getAttribute("data-tema");
-                const novoTema = temaAtual === "claro" ? "escuro" : "claro";
+            localStorage.setItem("tema", novoTema);
+            document.documentElement.setAttribute("data-tema", novoTema);
+            atualizarTextoBotaoTema(novoTema);
 
-                // Atualiza visualmente
-                document.documentElement.setAttribute("data-tema", novoTema);
-                atualizarTextoBotaoTema(novoTema);
-
-                // Salva no localStorage
-                localStorage.setItem("tema", novoTema);
-
-                // Tenta salvar no servidor
-                await salvarTemaNoServidor(novoTema);
-            });
-        }
-
-        /* === SALVAR TEMA NO SERVIDOR === */
-        async function salvarTemaNoServidor(tema) {
+            // Envia para o backend
             const token = localStorage.getItem("token");
             if (!token) return;
 
             try {
                 await fetch("https://ganhesocialtest.com/api/theme", {
-                    method: "POST",
+                    method: "PUT",
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${token}`
                     },
-                    body: JSON.stringify({ tema })
+                    body: JSON.stringify({ tema: novoTema })
                 });
-            } catch (e) {
-                console.warn("Não foi possível salvar o tema no servidor:", e);
+            } catch (error) {
+                console.error("Erro ao salvar tema:", error);
             }
         }
 
-        /* === CONTROLE DO MENU HAMBURGUER === */
-        const menuToggle = document.getElementById('menuToggle');
-        const menuOverlay = document.getElementById('menuOverlay');
-        const menuContent = document.getElementById('menuContent');
-        const menuCloseBtn = document.getElementById('menuCloseBtn');
+        /* === INICIALIZAÇÃO UNIFICADA === */
+        document.addEventListener("DOMContentLoaded", async function () {
+            const token = localStorage.getItem("token");
 
-        function toggleMenu() {
-            menuContent.classList.toggle('active');
-            menuOverlay.classList.toggle('active');
-            const spans = menuToggle.querySelectorAll('span');
-            if (menuContent.classList.contains('active')) {
-                spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
-                spans[1].style.opacity = '0';
-                spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
-            } else {
+            if (!token) {
+                window.location.href = "https://ganhesocialtest.com/login";
+                return;
+            }
+
+            // Carrega tema salvo
+            await carregarTema();
+
+            // Carrega saldo
+            await carregarSaldos();
+
+            // Atualiza o ranking ao carregar
+            await carregarRanking();
+
+            // Configura o menu
+            configurarMenu();
+
+            // Marca página como carregada
+            document.body.classList.add('loaded');
+        });
+
+        /* === CONTROLE DO MENU HAMBURGUER === */
+        function configurarMenu() {
+            const menuToggle = document.getElementById('menuToggle');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuContent = document.getElementById('menuContent');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+            if (!menuToggle || !menuOverlay || !menuContent) return;
+
+            function toggleMenu() {
+                menuContent.classList.toggle('active');
+                menuOverlay.classList.toggle('active');
+                const spans = menuToggle.querySelectorAll('span');
+                if (menuContent.classList.contains('active')) {
+                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                    spans[1].style.opacity = '0';
+                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+                } else {
+                    spans[0].style.transform = 'none';
+                    spans[1].style.opacity = '1';
+                    spans[2].style.transform = 'none';
+                }
+            }
+
+            function closeMenu() {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
                 spans[0].style.transform = 'none';
                 spans[1].style.opacity = '1';
                 spans[2].style.transform = 'none';
             }
-        }
 
-        function closeMenu() {
-            menuContent.classList.remove('active');
-            menuOverlay.classList.remove('active');
-            const spans = menuToggle.querySelectorAll('span');
-            spans[0].style.transform = 'none';
-            spans[1].style.opacity = '1';
-            spans[2].style.transform = 'none';
+            menuToggle.addEventListener('click', toggleMenu);
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
         }
-
-        if (menuToggle) menuToggle.addEventListener('click', toggleMenu);
-        if (menuCloseBtn) menuCloseBtn.addEventListener('click', closeMenu);
-        if (menuOverlay) menuOverlay.addEventListener('click', closeMenu);
 
         /* === CARREGAR SALDOS === */
         async function carregarSaldos() {
