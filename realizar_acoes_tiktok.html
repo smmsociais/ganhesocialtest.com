@@ -780,7 +780,106 @@
         </div>
     </div>
 
+    <!-- Aplica tema imediatamente antes do paint para evitar flash -->
     <script>
+        (function () {
+            try {
+                // 1) aplica localStorage (mais rápido que fetch)
+                var temaLocal = localStorage.getItem('tema');
+                if (temaLocal) {
+                    document.documentElement.setAttribute('data-tema', temaLocal);
+                }
+                // 2) se não existir local, aplica um tema neutro enquanto faz fetch (opcional)
+                // document.documentElement.setAttribute('data-tema', temaLocal || 'claro');
+            } catch (e) {
+                // ignore
+                console.warn("Erro ao aplicar tema do localStorage:", e);
+            }
+        })();
+    </script>
+
+    <script>
+        /* === FUNÇÕES DE TEMA === */
+        async function carregarTema() {
+            const token = localStorage.getItem("token");
+            // já aplicamos localStorage no head para evitar FOUC; aqui só sincronizamos com o backend
+            if (!token) return;
+
+            try {
+                const response = await fetch("https://ganhesocialtest.com/api/theme", {
+                    method: "GET",
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                // debug útil durante testes
+                console.debug("GET /api/theme status:", response.status);
+
+                if (!response.ok) {
+                    // não quebra a página se a rota falhar
+                    console.warn("Falha ao obter tema do backend:", await response.text());
+                    return;
+                }
+
+                const data = await response.json();
+                const tema = data.tema || "claro";
+
+                // se diferente do local, atualiza e aplica (forçando re-render se necessário)
+                const temaLocal = localStorage.getItem("tema");
+                if (temaLocal !== tema) {
+                    localStorage.setItem("tema", tema);
+                    document.documentElement.setAttribute("data-tema", tema);
+                    atualizarTextoBotaoTema(tema);
+                    console.info("Tema sincronizado com backend:", tema);
+                } else {
+                    // garante que o texto do botão esteja correto
+                    atualizarTextoBotaoTema(tema);
+                }
+            } catch (e) {
+                console.error("Erro ao carregar tema:", e);
+                // fallback: mantém o que já foi aplicado (localStorage)
+                const tema = localStorage.getItem("tema") || "claro";
+                document.documentElement.setAttribute("data-tema", tema);
+                atualizarTextoBotaoTema(tema);
+            }
+        }
+
+        function atualizarTextoBotaoTema(tema) {
+            const botao = document.getElementById('themeText');
+            if (botao) {
+                botao.textContent = tema === "claro" ? "Tema Escuro" : "Tema Claro";
+            }
+        }
+
+        async function trocarTema() {
+            let temaAtual = localStorage.getItem("tema") || "claro";
+            let novoTema = temaAtual === "claro" ? "escuro" : "claro";
+
+            // aplica imediatamente
+            localStorage.setItem("tema", novoTema);
+            document.documentElement.setAttribute("data-tema", novoTema);
+            atualizarTextoBotaoTema(novoTema);
+
+            // tenta salvar no backend (não bloqueia a UI)
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
+            try {
+                const res = await fetch("https://ganhesocialtest.com/api/theme", {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ tema: novoTema })
+                });
+                if (!res.ok) {
+                    console.warn("PUT /api/theme retornou:", res.status, await res.text());
+                }
+            } catch (err) {
+                console.error("Erro ao salvar tema no backend:", err);
+            }
+        }
+        
         /* === INICIALIZAÇÃO === */
         document.addEventListener("DOMContentLoaded", async function () {
             const token = localStorage.getItem("token");
