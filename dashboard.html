@@ -255,14 +255,34 @@
             font-size: 1rem;
             display: flex;
             align-items: center;
-            color: var(--gray-dark) !important;
-            /* Cinza escuro no claro, cinza médio no escuro */
+        }
+
+        /* Tema claro - cinza escuro */
+        html[data-tema="claro"] .ranking-title {
+            color: #2d2d2d !important;
+            /* Cinza escuro */
+        }
+
+        /* Tema escuro - cinza claro */
+        html[data-tema="escuro"] .ranking-title {
+            color: #e4e4e4 !important;
+            /* Cinza claro */
         }
 
         .ranking-title i {
             font-size: 1rem;
             margin-right: 8px;
             color: var(--gray-dark) !important;
+            /* Mesma cor do texto */
+        }
+
+        html[data-tema="claro"] .ranking-title i {
+            color: #2d2d2d !important;
+            /* Mesma cor do texto */
+        }
+
+        html[data-tema="escuro"] .ranking-title i {
+            color: #e4e4e4 !important;
             /* Mesma cor do texto */
         }
 
