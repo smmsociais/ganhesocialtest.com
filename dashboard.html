@@ -33,7 +33,6 @@
             --border-light: #e0e0e0;
             --hover-light: #f1f1f1;
             --shadow-light: rgba(0, 0, 0, 0.08);
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
             /* Tema escuro */
             --bg-dark: #121212;
@@ -46,7 +45,11 @@
             --border-dark: #333333;
             --hover-dark: #2d2d2d;
             --shadow-dark: rgba(0, 0, 0, 0.3);
-            --primary-gradient-dark: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+            --ranking-color-light: #28a745;
+            /* Verde para tema claro */
+            --ranking-color-dark: #34a853;
+            /* Verde para tema escuro */
 
             /* Variáveis comuns */
             --card-radius: 12px;
@@ -69,6 +72,7 @@
             --hover: var(--hover-light);
             --shadow: var(--shadow-light);
             --primary-gradient: var(--primary-gradient);
+            --ranking-color: var(--ranking-color-light);
         }
 
         html[data-tema="escuro"] {
@@ -85,6 +89,7 @@
             --primary-gradient: var(--primary-gradient-dark);
             --gray-dark: #8b949e;
             --label-color: #8b949e;
+            --ranking-color: var(--ranking-color-dark);
         }
 
         /* Estilos base usando variáveis dinâmicas */
@@ -279,7 +284,7 @@
             font-size: 1rem;
             display: flex;
             align-items: center;
-            color: white !important;
+            color: rgb(179, 178, 178) !important;
         }
 
         .ranking-title i {
@@ -288,7 +293,7 @@
             color: white !important;
         }
 
-        /* Ranking Table */
+        /* Ranking Table - REESCRITO PARA GARANTIR FUNCIONAMENTO */
         .ranking-container {
             width: 100%;
             overflow-x: auto;
@@ -326,35 +331,60 @@
             background-color: var(--hover);
         }
 
+        /* REMOVA esta regra se existir - ela está sobrescrevendo as cores */
+        /* .ranking-table td {
+    padding: 15px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    color: var(--text);
+} */
+
+        /* Em vez disso, defina explicitamente para cada célula: */
         .ranking-table td {
             padding: 15px;
             border-bottom: 1px solid var(--border);
             vertical-align: middle;
-            color: var(--text);
         }
 
         .ranking-table tr:last-child td {
             border-bottom: none;
         }
 
+        /* POSIÇÃO - cor do texto normal */
         .ranking-position {
             font-weight: bold;
             width: 50px;
             text-align: left;
-            color: var(--text);
+            color: var(--text) !important;
+            /* FORÇA a cor do texto */
         }
 
+        /* USUÁRIO - cor do texto normal */
         .ranking-user {
             width: 60%;
-            color: var(--text);
+            color: var(--text) !important;
+            /* FORÇA a cor do texto */
         }
 
+        /* VALOR - APENAS ESTE deve ser verde */
         .ranking-value {
             text-align: left;
             font-weight: bold;
-            color: var(--success);
+            color: var(--ranking-color) !important;
+            /* FORÇA verde */
             padding-left: 0;
             white-space: nowrap;
+        }
+
+        /* Se ainda estiver branco, use cores fixas como fallback */
+        html[data-tema="claro"] .ranking-value {
+            color: #28a745 !important;
+            /* Verde fixo para tema claro */
+        }
+
+        html[data-tema="escuro"] .ranking-value {
+            color: #34a853 !important;
+            /* Verde fixo para tema escuro */
         }
 
         .highlight-row {
