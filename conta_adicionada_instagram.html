@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-tema="claro">
 
 <head>
     <meta charset="UTF-8">
@@ -9,33 +9,74 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
+            /* Tema claro - padrão */
             --bg-light: #f8f9fa;
             --text-light: #212529;
             --container-light: #ffffff;
+            --button-light: #1a73e8;
             --success-color: #28a745;
-            --pending-color: #1e1e1e;
+            --pending-color: #ffc107;
             --failed-color: #dc3545;
             --border-light: #dee2e6;
             --hover-light: #f1f1f1;
             --shadow-light: rgba(0, 0, 0, 0.1);
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+            /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #1a73e8;
+            --button-dark: #4285f4;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
             --border-dark: #333333;
             --hover-dark: #2d2d2d;
             --shadow-dark: rgba(0, 0, 0, 0.3);
+            --primary-gradient-dark: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
+            /* Variáveis comuns */
             --card-radius: 12px;
             --transition: all 0.3s ease;
+            --hover-blue: #0069d9;
+            --gray-dark: #6c757d;
+            --label-color: #6c757d;
+        }
+
+        /* Variáveis dinâmicas baseadas no tema */
+        html[data-tema="claro"] {
+            --bg: var(--bg-light);
+            --text: var(--text-light);
+            --container: var(--container-light);
+            --button: var(--button-light);
+            --success: var(--success-color);
+            --pending: var(--pending-color);
+            --failed: var(--failed-color);
+            --border: var(--border-light);
+            --hover: var(--hover-light);
+            --shadow: var(--shadow-light);
+            --primary-gradient: var(--primary-gradient);
+        }
+
+        html[data-tema="escuro"] {
+            --bg: var(--bg-dark);
+            --text: var(--text-dark);
+            --container: var(--container-dark);
+            --button: var(--button-dark);
+            --success: var(--success-dark);
+            --pending: var(--pending-dark);
+            --failed: var(--failed-dark);
+            --border: var(--border-dark);
+            --hover: var(--hover-dark);
+            --shadow: var(--shadow-dark);
+            --primary-gradient: var(--primary-gradient-dark);
+            --gray-dark: #8b949e;
+            --label-color: #8b949e;
         }
 
         body {
-            background-color: var(--bg-light);
-            color: var(--text-light);
+            background-color: var(--bg);
+            color: var(--text);
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 0;
@@ -45,7 +86,7 @@
         }
 
         .menu-item[href="adicionar_conta"] {
-            color: white;
+            color: white !important;
             font-weight: bold;
             background-color: rgba(255, 255, 255, 0.1);
             border-left: 3px solid white;
@@ -58,8 +99,8 @@
             align-items: center;
             padding: 15px 25px;
             background: var(--primary-gradient);
-            color: white;
-            box-shadow: 0 2px 10px var(--shadow-light);
+            color: white !important;
+            box-shadow: 0 2px 10px var(--shadow);
             position: relative;
             z-index: 10;
         }
@@ -89,20 +130,20 @@
         }
 
         .container {
-            background: var(--container-light);
+            background: var(--container);
             border-radius: var(--card-radius);
-            box-shadow: 0 4px 20px var(--shadow-light);
+            box-shadow: 0 4px 20px var(--shadow);
             overflow: hidden;
             transition: var(--transition);
             margin-bottom: 300px;
-            border: 1px solid var(--border-light);
+            border: 1px solid var(--border);
         }
 
         .container-header {
             padding: 20px;
-            border-bottom: 1px solid var(--border-light);
+            border-bottom: 1px solid var(--border);
             background: var(--primary-gradient);
-            color: white;
+            color: white !important;
         }
 
         .container-header h2 {
@@ -112,6 +153,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            color: white !important;
         }
 
         .container-body {
@@ -122,7 +164,7 @@
         /* Success Box */
         .success-box {
             background-color: rgba(40, 167, 69, 0.1);
-            border-left: 4px solid var(--success-color);
+            border-left: 4px solid var(--success);
             padding: 20px;
             margin-bottom: 25px;
             border-radius: 4px;
@@ -131,7 +173,7 @@
 
         .success-box h3 {
             margin-top: 0;
-            color: var(--success-color);
+            color: var(--success);
             font-size: 18px;
             margin-bottom: 15px;
             display: flex;
@@ -142,7 +184,7 @@
 
         .success-icon {
             font-size: 48px;
-            color: var(--success-color);
+            color: var(--success);
             margin-bottom: 20px;
         }
 
@@ -161,7 +203,7 @@
 
         /* Button Styles */
         .btn-primary {
-            background: var(--success-color);
+            background: var(--success);
             color: white;
             border: none;
             padding: 12px 20px;
@@ -178,7 +220,7 @@
         }
 
         .btn-secondary {
-            background: #6c757d;
+            background: var(--gray-dark);
             color: white;
             border: none;
             padding: 12px 20px;
@@ -197,11 +239,13 @@
         .btn-primary:hover {
             background: #218838;
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
         }
 
         .btn-secondary:hover {
             background: #5a6268;
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
         }
 
         .button-group {
@@ -247,14 +291,15 @@
             left: -300px;
             width: 280px;
             height: 100%;
-            background: var(--container-light);
-            box-shadow: 2px 0 15px var(--shadow-light);
+            background: var(--container);
+            box-shadow: 2px 0 15px var(--shadow);
             transition: var(--transition);
             padding: 20px 0;
             z-index: 1001;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
+            border-right: 1px solid var(--border);
         }
 
         .menu-content.active {
@@ -268,7 +313,7 @@
         .menu-item {
             padding: 15px 25px;
             cursor: pointer;
-            color: var(--text-light);
+            color: var(--text);
             font-size: 16px;
             text-decoration: none;
             transition: var(--transition);
@@ -280,22 +325,23 @@
         .menu-item i {
             width: 24px;
             text-align: center;
+            color: var(--button);
         }
 
         .menu-item:hover {
-            background-color: var(--hover-light);
+            background-color: var(--hover);
         }
 
         .menu-footer {
             margin-top: auto;
             padding: 25px 0;
-            border-top: 1px solid var(--border-light);
+            border-top: 1px solid var(--border);
         }
 
         .menu-logout {
             padding: 15px 25px;
             cursor: pointer;
-            color: #dc3545;
+            color: var(--failed);
             font-size: 16px;
             text-decoration: none;
             display: flex;
@@ -304,73 +350,12 @@
             transition: var(--transition);
         }
 
-        .menu-logout:hover {
-            background-color: rgba(220, 53, 69, 0.1);
+        .menu-logout i {
+            color: var(--failed);
         }
 
-        /* Dark Mode Styles */
-        @media (prefers-color-scheme: dark) {
-            body {
-                background-color: var(--bg-dark);
-                color: var(--text-dark);
-            }
-
-            .header {
-                background: var(--primary-gradient-dark);
-            }
-
-            .container {
-                background: var(--container-dark);
-                box-shadow: 0 4px 20px var(--shadow-dark);
-                border-color: var(--border-dark);
-            }
-
-            .container-header {
-                background: var(--primary-gradient-dark);
-                border-color: var(--border-dark);
-            }
-
-            .success-box {
-                background-color: rgba(52, 168, 83, 0.1);
-                border-left-color: var(--success-dark);
-            }
-
-            .success-box h3 {
-                color: var(--success-dark);
-            }
-
-            .success-icon {
-                color: var(--success-dark);
-            }
-
-            .account-details {
-                background: rgba(255, 255, 255, 0.05);
-            }
-
-            .btn-primary {
-                background: var(--success-dark);
-            }
-
-            .btn-primary:hover {
-                background: #2d8e4a;
-            }
-
-            .menu-content {
-                background: var(--container-dark);
-                box-shadow: 2px 0 15px var(--shadow-dark);
-            }
-
-            .menu-item {
-                color: var(--text-dark);
-            }
-
-            .menu-item:hover {
-                background-color: var(--hover-dark);
-            }
-
-            .menu-footer {
-                border-color: var(--border-dark);
-            }
+        .menu-logout:hover {
+            background-color: rgba(220, 53, 69, 0.1);
         }
 
         /* Responsive Styles */
@@ -490,14 +475,14 @@
                 right: 15px;
                 background: none;
                 border: none;
-                color: #afaeae;
+                color: var(--gray-dark) !important;
                 font-size: 1.5rem;
                 cursor: pointer;
                 z-index: 1002;
             }
 
             .menu-close-btn:hover {
-                color: #dc3545;
+                color: var(--failed);
             }
         }
 
@@ -513,6 +498,20 @@
 </head>
 
 <body>
+    <!-- Aplica tema imediatamente antes do paint para evitar flash -->
+    <script>
+        (function () {
+            try {
+                var temaLocal = localStorage.getItem('tema');
+                if (temaLocal) {
+                    document.documentElement.setAttribute('data-tema', temaLocal);
+                }
+            } catch (e) {
+                console.warn("Erro ao aplicar tema do localStorage:", e);
+            }
+        })();
+    </script>
+
     <!-- Menu Lateral para Desktop -->
     <div class="menu-content" id="menuContent">
         <!-- Botão de fechar (visível apenas no mobile) -->
@@ -560,7 +559,7 @@
     <div class="main-container">
         <div class="container fade-in">
             <div class="container-header">
-                <h2></i> Conta Adicionada com Sucesso</h2>
+                <h2><i class="fas fa-check-circle"></i> Conta Adicionada com Sucesso</h2>
             </div>
             <div class="container-body">
                 <div class="success-box bounce-in">
@@ -592,6 +591,13 @@
 
         // Preencher dados da conta quando a página carregar
         document.addEventListener('DOMContentLoaded', function () {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                window.location.href = "https://ganhesocialtest.com/login";
+                return;
+            }
+
             const username = getUrlParameter('username');
             if (username) {
                 // Atualiza a mensagem de sucesso com o nome de usuário
@@ -599,23 +605,7 @@
                 successMessage.textContent = `Sua conta do Instagram (@${username}) foi adicionada com sucesso!`;
             }
 
-        });
-
-        function logout() {
-            localStorage.removeItem("token");
-            window.location.href = "https://ganhesocialtest.com";
-        }
-
-        document.addEventListener("DOMContentLoaded", function () {
-            const token = localStorage.getItem("token");
-
-            if (!token) {
-                setTimeout(() => {
-                    window.location.href = "https://ganhesocialtest.com/login";
-                },);
-                return;
-            }
-
+            // Configura o menu
             const menuToggle = document.getElementById('menuToggle');
             const menuOverlay = document.getElementById('menuOverlay');
             const menuContent = document.getElementById('menuContent');
@@ -650,8 +640,14 @@
             menuCloseBtn.addEventListener('click', closeMenu);
             menuOverlay.addEventListener('click', closeMenu);
 
+            // Marca página como carregada
             document.body.classList.add('loaded');
         });
+
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocialtest.com";
+        }
     </script>
 </body>
 
