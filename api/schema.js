@@ -53,14 +53,16 @@ const UserSchema = new mongoose.Schema({
   contas: [ContaSchema],
   historico_acoes: [{ type: mongoose.Schema.Types.ObjectId, ref: "ActionHistory" }],
   saques: [WithdrawSchema],
-
   // 🔹 Campos de afiliados
   codigo_afiliado: { type: String, default: null },
   indicado_por: { type: String, default: null },
-
   // 🔹 Campos de status para afiliados
   status: { type: String, default: "ativo" }, // usado para validar indicados ativos
   ativo_ate: { type: Date, default: null },   // indica até quando o usuário é considerado ativo
+tema: {
+    type: String,
+    default: "claro"
+}
 });
 
 // índice parcial — enforce uniqueness only when codigo_afiliado is a string
