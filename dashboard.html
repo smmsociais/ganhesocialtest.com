@@ -840,49 +840,85 @@
     </div>
 
     <script>
-        /* === FUNÇÕES DE TEMA === */
-        async function carregarTema() {
-            const token = localStorage.getItem("token");
-            // já aplicamos localStorage no head para evitar FOUC; aqui só sincronizamos com o backend
-            if (!token) return;
 
-            try {
-                const response = await fetch("https://ganhesocialtest.com/api/theme", {
-                    method: "GET",
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
-
-                // debug útil durante testes
-                console.debug("GET /api/theme status:", response.status);
-
-                if (!response.ok) {
-                    // não quebra a página se a rota falhar
-                    console.warn("Falha ao obter tema do backend:", await response.text());
-                    return;
-                }
-
-                const data = await response.json();
-                const tema = data.tema || "claro";
-
-                // se diferente do local, atualiza e aplica (forçando re-render se necessário)
-                const temaLocal = localStorage.getItem("tema");
-                if (temaLocal !== tema) {
-                    localStorage.setItem("tema", tema);
-                    document.documentElement.setAttribute("data-tema", tema);
-                    atualizarTextoBotaoTema(tema);
-                    console.info("Tema sincronizado com backend:", tema);
-                } else {
-                    // garante que o texto do botão esteja correto
-                    atualizarTextoBotaoTema(tema);
-                }
-            } catch (e) {
-                console.error("Erro ao carregar tema:", e);
-                // fallback: mantém o que já foi aplicado (localStorage)
-                const tema = localStorage.getItem("tema") || "claro";
-                document.documentElement.setAttribute("data-tema", tema);
-                atualizarTextoBotaoTema(tema);
+// fetch wrapper com timeout e retries
+async function fetchWithTimeoutAndRetries(url, options = {}, retries = 2, timeout = 5000, backoff = 500) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        try {
+            const res = await fetch(url, { ...options, signal: controller.signal });
+            clearTimeout(id);
+            return res; // caller trata status / content-type
+        } catch (err) {
+            clearTimeout(id);
+            // se abort ou network error, tenta novamente com backoff
+            if (attempt < retries) {
+                await new Promise(r => setTimeout(r, backoff * (attempt + 1)));
+                continue;
             }
+            throw err;
         }
+    }
+}
+
+async function safeParseJsonResponse(response) {
+    const contentType = response.headers.get("content-type") || "";
+    const text = await response.text(); // já lemos o body como texto
+    if (!contentType.includes("application/json")) {
+        // retorna objeto com erro legível para o frontend
+        return { __parseError: true, text };
+    }
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        return { __parseError: true, text };
+    }
+}
+
+        /* === FUNÇÕES DE TEMA === */
+async function carregarTema() {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+        const res = await fetchWithTimeoutAndRetries("https://ganhesocialtest.com/api/theme", {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        }, 2, 4000, 400);
+
+        if (!res.ok) {
+            console.warn("GET /api/theme status:", res.status);
+            // tenta ler body com segurança
+            const body = await res.text().catch(() => "");
+            console.warn("Resposta /theme:", body.slice(0, 200));
+            return; // mantém o tema do localStorage aplicado
+        }
+
+        const data = await safeParseJsonResponse(res);
+        if (data.__parseError) {
+            console.warn("GET /api/theme retornou conteúdo não-JSON:", data.text.slice(0, 200));
+            return;
+        }
+
+        const tema = data.tema || "claro";
+        const temaLocal = localStorage.getItem("tema");
+        if (temaLocal !== tema) {
+            localStorage.setItem("tema", tema);
+            document.documentElement.setAttribute("data-tema", tema);
+            atualizarTextoBotaoTema(tema);
+            console.info("Tema sincronizado com backend:", tema);
+        } else {
+            atualizarTextoBotaoTema(tema);
+        }
+    } catch (err) {
+        console.warn("Erro fetch /api/theme:", err);
+        // fallback: mantém localStorage
+        const tema = localStorage.getItem("tema") || "claro";
+        document.documentElement.setAttribute("data-tema", tema);
+        atualizarTextoBotaoTema(tema);
+    }
+}
 
         function atualizarTextoBotaoTema(tema) {
             const botao = document.getElementById('themeText');
@@ -963,28 +999,45 @@ async function carregarSaldos() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    // Mostra cache se houver
-    const cachedSaldoDisponivel = localStorage.getItem("saldoDisponivel");
-    const cachedSaldoPendente = localStorage.getItem("saldoPendente");
-    if (cachedSaldoDisponivel !== null) {
-        const v = Number(cachedSaldoDisponivel) || 0;
-        document.getElementById("saldoDisponivel").textContent =
-            `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        document.getElementById("saldoDisponivel").style.display = "block";
-    }
-    if (cachedSaldoPendente !== null) {
-        const p = Number(cachedSaldoPendente) || 0;
-        document.getElementById("saldoPendente").textContent =
-            `R$ ${p.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        document.getElementById("saldoPendente").style.display = "block";
-    }
-
-    // Revalida em background (fetch real)
+    // Mostra cache imediatamente
     try {
-        const response = await fetch(`https://ganhesocialtest.com/api/get_saldo?token=${token}`);
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Erro ao buscar saldo.");
+        const cachedSaldoDisponivel = localStorage.getItem("saldoDisponivel");
+        const cachedSaldoPendente = localStorage.getItem("saldoPendente");
+        if (cachedSaldoDisponivel !== null) {
+            const v = Number(cachedSaldoDisponivel) || 0;
+            document.getElementById("saldoDisponivel").textContent =
+                `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById("saldoDisponivel").style.display = "block";
+        }
+        if (cachedSaldoPendente !== null) {
+            const p = Number(cachedSaldoPendente) || 0;
+            document.getElementById("saldoPendente").textContent =
+                `R$ ${p.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById("saldoPendente").style.display = "block";
+        }
+    } catch(e) {
+        console.warn("Erro lendo cache saldos:", e);
+    }
 
+    // Revalida em background com retries
+    try {
+        const url = `https://ganhesocialtest.com/api/get_saldo?token=${token}`;
+        const res = await fetchWithTimeoutAndRetries(url, {}, 2, 5000, 500);
+
+        if (!res.ok) {
+            console.warn("GET /api/get_saldo status:", res.status);
+            const text = await res.text().catch(() => "");
+            console.warn("Resposta /get_saldo:", text.slice(0, 200));
+            return; // mantém cache na UI
+        }
+
+        const parsed = await safeParseJsonResponse(res);
+        if (parsed.__parseError) {
+            console.warn("GET /api/get_saldo retornou não-JSON:", parsed.text.slice(0, 200));
+            return;
+        }
+
+        const data = parsed;
         const saldoDisponivel = parseFloat(data.saldo_disponivel || 0);
         const saldoPendente = parseFloat(data.saldo_pendente || 0);
 
@@ -995,17 +1048,18 @@ async function carregarSaldos() {
             `R$ ${saldoDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         document.getElementById("saldoPendente").textContent =
             `R$ ${saldoPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    } catch (error) {
-        console.warn("Erro ao buscar saldo (revalidação):", error);
-        // mantém valores em cache (se existirem)
+    } catch (err) {
+        console.warn("Erro ao buscar saldo (revalidação):", err);
+        // mantém cache se houver
     }
 }
+
         /* === RANKING === */
- async function carregarRanking(parcial = false) {
+async function carregarRanking(parcial = false) {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    // Exibe ranking em cache imediatamente
+    // Exibir cache imediatamente
     try {
         const cached = localStorage.getItem("rankingCache");
         if (cached) {
@@ -1018,21 +1072,34 @@ async function carregarSaldos() {
 
     // Revalida em background
     try {
-        const response = await fetch("https://ganhesocialtest.com/api/ranking_diario", {
+        const res = await fetchWithTimeoutAndRetries("https://ganhesocialtest.com/api/ranking_diario", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
             },
             body: JSON.stringify({ token })
-        });
+        }, 2, 7000, 700);
 
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Erro ao buscar ranking.");
+        if (!res.ok) {
+            console.warn("POST /api/ranking_diario status:", res.status);
+            const text = await res.text().catch(() => "");
+            console.warn("Resposta /ranking_diario:", text.slice(0,200));
+            return;
+        }
 
+        const parsed = await safeParseJsonResponse(res);
+        if (parsed.__parseError) {
+            console.warn("POST /api/ranking_diario retornou não-JSON:", parsed.text.slice(0,200));
+            return;
+        }
+
+        const data = parsed;
         if (data.ranking && Array.isArray(data.ranking)) {
             localStorage.setItem("rankingCache", JSON.stringify(data.ranking));
             populateRankingTable(data.ranking);
+        } else {
+            console.warn("ranking vazio ou com formato inesperado:", data);
         }
     } catch (err) {
         console.warn("Erro ao carregar ranking (revalidação):", err);
