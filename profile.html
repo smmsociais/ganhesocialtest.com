@@ -35,12 +35,14 @@
             --shadow-light: rgba(0, 0, 0, 0.08);
             --logo-light: url('https://i.imgur.com/dioL5B7.png');
             --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
+            --header-text-light: #495057;
+            /* Cinza escuro para tema claro */
 
             /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #ebebeb;
+            --button-dark: #1a73e8;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
@@ -49,9 +51,8 @@
             --shadow-dark: rgba(0, 0, 0, 0.3);
             --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
             --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
-
-            --ranking-color-light: #28a745;
-            --ranking-color-dark: #34a853;
+            --header-text-dark: #ffffff;
+            /* Branco para tema escuro */
 
             /* Variáveis comuns */
             --card-radius: 12px;
@@ -77,7 +78,8 @@
             --ranking-color: var(--ranking-color-light);
             --logo: var(--logo-light);
             --logo-mobile: var(--logo-mobile-light);
-            --input-bg: #ffffff;
+            --header-text: var(--header-text-light);
+            /* Adicionado */
         }
 
         html[data-tema="escuro"] {
@@ -97,7 +99,8 @@
             --ranking-color: var(--ranking-color-dark);
             --logo: var(--logo-dark);
             --logo-mobile: var(--logo-mobile-dark);
-            --input-bg: #2d2d2d;
+            --header-text: var(--header-text-dark);
+            /* Adicionado */
         }
 
         body {
@@ -159,7 +162,7 @@
             transition: var(--transition);
         }
 
-        /* Botão de alternar tema */
+        /* Botão de alternar tema no header */
         .theme-toggle {
             background: rgba(255, 255, 255, 0.2);
             border: none;
@@ -349,57 +352,74 @@
             gap: 10px;
         }
 
-        /* Botão de Tema */
-        .theme-toggle-container {
-            text-align: center;
-            margin: 25px 0 15px 0;
+        /* Container dos botões de tema (novo) */
+        .theme-buttons-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            z-index: 999;
+            padding: 8px;
+            background: var(--container);
+            border-radius: 40px;
+            box-shadow: 0 4px 20px var(--shadow);
+            border: 1px solid var(--border);
         }
 
-        .theme-toggle-button {
-            display: inline-flex;
+        /* Botões individuais de tema */
+        .theme-button {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            padding: 12px 24px;
-            background: var(--button);
-            color: white !important;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
+            font-size: 18px;
+            background: var(--container);
+            color: var(--text);
             transition: var(--transition);
-            min-width: 160px;
+            position: relative;
+            padding: 0;
         }
 
-        .theme-toggle-button:hover {
+        .theme-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);
-            background: var(--hover-blue);
+            background: var(--hover);
         }
 
-        html[data-tema="escuro"] .theme-toggle-button:hover {
-            background: #5a95f5;
+        .theme-button.active {
+            background: var(--button);
+            color: white;
         }
 
-        .theme-toggle-button i {
-            font-size: 16px;
+        .theme-button.active:hover {
+            background: var(--button);
         }
 
-        .theme-icon-sun {
-            display: none;
+        .theme-button .tooltip {
+            position: absolute;
+            right: 45px;
+            background: var(--container);
+            color: var(--text);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 10px var(--shadow);
+            pointer-events: none;
         }
 
-        .theme-icon-moon {
-            display: inline-block;
-        }
-
-        html[data-tema="escuro"] .theme-icon-sun {
-            display: inline-block;
-        }
-
-        html[data-tema="escuro"] .theme-icon-moon {
-            display: none;
+        .theme-button:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
         }
 
         /* Menu Styles */
@@ -473,7 +493,8 @@
         .menu-item i {
             width: 24px;
             text-align: center;
-            color: var(--gray-dark); /* Ícones em cinza escuro */
+            color: var(--gray-dark);
+            /* Ícones em cinza escuro */
         }
 
         .menu-item:hover {
@@ -567,6 +588,11 @@
             .menu-close-btn:hover {
                 color: var(--failed);
             }
+
+            .theme-buttons-container {
+                bottom: 15px;
+                right: 15px;
+            }
         }
 
         /* Responsive Styles */
@@ -580,9 +606,23 @@
                 font-size: 1.0rem;
             }
 
-            .theme-toggle-button {
-                padding: 10px 20px;
-                min-width: 140px;
+            .theme-buttons-container {
+                bottom: 12px;
+                right: 12px;
+                padding: 6px;
+                gap: 6px;
+            }
+
+            .theme-button {
+                width: 36px;
+                height: 36px;
+                font-size: 16px;
+            }
+
+            .theme-button .tooltip {
+                right: 42px;
+                font-size: 11px;
+                padding: 5px 8px;
             }
         }
 
@@ -600,10 +640,36 @@
                 padding: 10px 12px;
             }
 
-            .theme-toggle-button {
-                padding: 10px 16px;
-                font-size: 13px;
-                min-width: 130px;
+            .theme-buttons-container {
+                bottom: 10px;
+                right: 10px;
+                padding: 5px;
+                gap: 5px;
+            }
+
+            .theme-button {
+                width: 34px;
+                height: 34px;
+                font-size: 15px;
+            }
+
+            .theme-button .tooltip {
+                right: 40px;
+                font-size: 10px;
+                padding: 4px 7px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .theme-buttons-container {
+                bottom: 8px;
+                right: 8px;
+            }
+
+            .theme-button {
+                width: 32px;
+                height: 32px;
+                font-size: 14px;
             }
         }
 
@@ -644,7 +710,8 @@
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
                 <!-- A imagem será trocada via CSS baseado no tema -->
-                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;"
+                    id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -679,19 +746,13 @@
                 <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
         </div>
-        <div class="right-header">
-            <!-- Botão de alternar tema -->
-            <button class="theme-toggle" id="themeToggle">
-                <i class="fas fa-moon"></i>
-                <span>Escuro</span>
-            </button>
-        </div>
+    </div>
     </div>
 
     <!-- Conteúdo Principal -->
     <div class="main-container">
         <div class="container fade-in">
-            <h2 class="page-title"><i class="fas fa-user-cog"></i> Seu Perfil</h2>
+            <h2 class="page-title"></i> Seu Perfil</h2>
 
             <div id="errorMessage" class="message error-message"></div>
             <div id="successMessage" class="message success-message"></div>
@@ -726,17 +787,18 @@
                 <input type="password" id="confirmPassword" class="input-box">
             </div>
 
-            <!-- Botão de Toggle de Tema -->
-            <div class="theme-toggle-container">
-                <button class="theme-toggle-button" onclick="trocarTema()">
-                    <i class="fas fa-moon theme-icon-moon"></i>
-                    <i class="fas fa-sun theme-icon-sun"></i>
-                    <span class="theme-text" id="themeText">Tema Escuro</span>
-                </button>
-            </div>
-
-            <button class="save-button" onclick="saveProfile()"><i class="fas fa-save"></i> Salvar Alterações</button>
+            <button class="save-button" onclick="saveProfile()"></i> Salvar Alterações</button>
         </div>
+    </div>
+
+    <!-- Botões de Tema (Novo) -->
+    <div class="theme-buttons-container" id="themeButtonsContainer">
+        <button class="theme-button" id="themeButtonLight" onclick="setTheme('claro')">
+            <i class="fas fa-sun"></i>
+        </button>
+        <button class="theme-button" id="themeButtonDark" onclick="setTheme('escuro')">
+            <i class="fas fa-moon"></i>
+        </button>
     </div>
 
     <script>
@@ -745,57 +807,45 @@
             const tema = document.documentElement.getAttribute('data-tema');
             const logoDesktop = document.getElementById('logoDesktop');
             const logoMobile = document.getElementById('logoMobile');
-            
+
             // URLs das logos para cada tema
             const logoClaro = 'https://i.imgur.com/dioL5B7.png';
             const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
-            
+
             const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
-            
+
             if (logoDesktop) {
                 logoDesktop.src = logoURL;
             }
-            
+
             if (logoMobile) {
                 logoMobile.src = logoURL;
             }
         }
 
-        /* === CONFIGURAR TOGGLE DE TEMA === */
-        function configurarTemaToggle() {
+        /* === CONFIGURAR TOGGLE DE TEMA NO HEADER === */
+        function configurarTemaToggleHeader() {
             const themeToggle = document.getElementById('themeToggle');
             if (!themeToggle) return;
 
             const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
-            atualizarTextoBotaoTema(temaAtual);
+            atualizarTextoBotaoTemaHeader(temaAtual);
 
-            themeToggle.addEventListener('click', function() {
+            themeToggle.addEventListener('click', function () {
                 const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
                 const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
-                
-                // Atualiza o atributo data-tema
-                document.documentElement.setAttribute('data-tema', novoTema);
-                
-                // Salva no localStorage
-                try {
-                    localStorage.setItem('tema', novoTema);
-                } catch (e) {
-                    console.warn("Erro ao salvar tema no localStorage:", e);
-                }
-                
-                // Atualiza o texto do botão
-                atualizarTextoBotaoTema(novoTema);
+
+                setTheme(novoTema);
             });
         }
 
-        function atualizarTextoBotaoTema(tema) {
+        function atualizarTextoBotaoTemaHeader(tema) {
             const themeToggle = document.getElementById('themeToggle');
-            const themeText = document.getElementById('themeText');
-            
+
             if (themeToggle) {
                 const icon = themeToggle.querySelector('i');
                 const text = themeToggle.querySelector('span');
-                
+
                 if (tema === 'escuro') {
                     icon.className = 'fas fa-sun';
                     text.textContent = 'Claro';
@@ -804,9 +854,43 @@
                     text.textContent = 'Escuro';
                 }
             }
-            
-            if (themeText) {
-                themeText.textContent = tema === "claro" ? "Tema Escuro" : "Tema Claro";
+        }
+
+        /* === FUNÇÃO PRINCIPAL PARA DEFINIR TEMA === */
+        function setTheme(tema) {
+            // Aplica o tema imediatamente
+            document.documentElement.setAttribute('data-tema', tema);
+
+            // Salva no localStorage
+            try {
+                localStorage.setItem('tema', tema);
+            } catch (e) {
+                console.warn("Erro ao salvar tema no localStorage:", e);
+            }
+
+            // Atualiza botões ativos
+            updateThemeButtons(tema);
+
+            // Atualiza texto do botão no header
+            atualizarTextoBotaoTemaHeader(tema);
+
+            // Atualiza logos
+            atualizarLogosPorTema();
+        }
+
+        /* === ATUALIZAR ESTADO DOS BOTÕES DE TEMA === */
+        function updateThemeButtons(temaAtual) {
+            const themeButtonLight = document.getElementById('themeButtonLight');
+            const themeButtonDark = document.getElementById('themeButtonDark');
+
+            if (themeButtonLight && themeButtonDark) {
+                if (temaAtual === 'claro') {
+                    themeButtonLight.classList.add('active');
+                    themeButtonDark.classList.remove('active');
+                } else {
+                    themeButtonLight.classList.remove('active');
+                    themeButtonDark.classList.add('active');
+                }
             }
         }
 
@@ -846,82 +930,6 @@
             menuToggle.addEventListener('click', toggleMenu);
             menuCloseBtn.addEventListener('click', closeMenu);
             menuOverlay.addEventListener('click', closeMenu);
-        }
-
-        /* === FUNÇÕES DE TEMA === */
-        async function carregarTema() {
-            const token = localStorage.getItem("token");
-            // já aplicamos localStorage no head para evitar FOUC; aqui só sincronizamos com o backend
-            if (!token) return;
-
-            try {
-                const response = await fetch("https://ganhesocialtest.com/api/theme", {
-                    method: "GET",
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
-
-                // debug útil durante testes
-                console.debug("GET /api/theme status:", response.status);
-
-                if (!response.ok) {
-                    // não quebra a página se a rota falhar
-                    console.warn("Falha ao obter tema do backend:", await response.text());
-                    return;
-                }
-
-                const data = await response.json();
-                const tema = data.tema || "claro";
-
-                // se diferente do local, atualiza e aplica (forçando re-render se necessário)
-                const temaLocal = localStorage.getItem("tema");
-                if (temaLocal !== tema) {
-                    localStorage.setItem("tema", tema);
-                    document.documentElement.setAttribute("data-tema", tema);
-                    atualizarTextoBotaoTema(tema);
-                    atualizarLogosPorTema();
-                    console.info("Tema sincronizado com backend:", tema);
-                } else {
-                    // garante que o texto do botão esteja correto
-                    atualizarTextoBotaoTema(tema);
-                }
-            } catch (e) {
-                console.error("Erro ao carregar tema:", e);
-                // fallback: mantém o que já foi aplicado (localStorage)
-                const tema = localStorage.getItem("tema") || "claro";
-                document.documentElement.setAttribute("data-tema", tema);
-                atualizarTextoBotaoTema(tema);
-            }
-        }
-
-        async function trocarTema() {
-            let temaAtual = localStorage.getItem("tema") || "claro";
-            let novoTema = temaAtual === "claro" ? "escuro" : "claro";
-
-            // aplica imediatamente
-            localStorage.setItem("tema", novoTema);
-            document.documentElement.setAttribute("data-tema", novoTema);
-            atualizarTextoBotaoTema(novoTema);
-            atualizarLogosPorTema();
-
-            // tenta salvar no backend (não bloqueia a UI)
-            const token = localStorage.getItem("token");
-            if (!token) return;
-
-            try {
-                const res = await fetch("https://ganhesocialtest.com/api/theme", {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ tema: novoTema })
-                });
-                if (!res.ok) {
-                    console.warn("PUT /api/theme retornou:", res.status, await res.text());
-                }
-            } catch (err) {
-                console.error("Erro ao salvar tema no backend:", err);
-            }
         }
 
         /* === FUNÇÕES DO PERFIL === */
@@ -1063,14 +1071,20 @@
             // Configura o menu
             configurarMenu();
 
+            // Obtém tema atual do localStorage ou usa padrão
+            const temaAtual = localStorage.getItem('tema') || 'claro';
+
+            // Aplica tema atual (já foi aplicado no head, mas garante consistência)
+            document.documentElement.setAttribute('data-tema', temaAtual);
+
             // Atualiza as logos baseado no tema atual
             atualizarLogosPorTema();
 
-            // Configurar botão de tema
-            configurarTemaToggle();
+            // Configurar botão de tema no header
+            configurarTemaToggleHeader();
 
-            // Carrega tema salvo
-            await carregarTema();
+            // Atualiza estado dos botões de tema
+            updateThemeButtons(temaAtual);
 
             // Configura cópia do token
             const tokenInput = document.getElementById('authToken');
@@ -1082,12 +1096,14 @@
             // Carrega perfil do usuário
             await loadProfile();
 
-            // Observador para mudanças de tema
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
+            // Observador para mudanças de tema (mantém para atualizações de outros componentes)
+            const observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
                     if (mutation.attributeName === 'data-tema') {
+                        const novoTema = mutation.target.getAttribute('data-tema');
                         atualizarLogosPorTema();
-                        atualizarTextoBotaoTema(mutation.target.getAttribute('data-tema'));
+                        atualizarTextoBotaoTemaHeader(novoTema);
+                        updateThemeButtons(novoTema);
                     }
                 });
             });
@@ -1098,4 +1114,5 @@
         });
     </script>
 </body>
+
 </html>
