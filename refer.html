@@ -36,13 +36,13 @@
             --logo-light: url('https://i.imgur.com/dioL5B7.png');
             --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
             --affiliate-color-light: #6f42c1;
-            --affiliate-title-light: #495057; 
+            --affiliate-title-light: #495057;
 
             /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #ebebeb;
+            --button-dark: #1a73e8;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
@@ -53,6 +53,7 @@
             --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
             --affiliate-color-dark: #8b6cc9;
             --affiliate-title-dark: #ffffff;
+            --earning-title-dark: #949494;
 
             --ranking-color-light: #28a745;
             --ranking-color-dark: #34a853;
@@ -229,18 +230,20 @@
             border: 1px solid var(--border);
         }
 
-.container-header {
-    padding: 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--container);
-    color: var(--affiliate-title) !important;
-}
-.container-header h2 {
-    margin: 0;
-    font-size: 1.0rem;
-    font-weight: 600;
-    color: var(--affiliate-title) !important; /* Alterado aqui */
-}
+        .container-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--container);
+            color: var(--affiliate-title) !important;
+        }
+
+        .container-header h2 {
+            margin: 0;
+            font-size: 1.0rem;
+            font-weight: 600;
+            color: var(--affiliate-title) !important;
+            /* Alterado aqui */
+        }
 
         .container-body {
             padding: 20px;
@@ -278,7 +281,7 @@
         }
 
         .balance-title i {
-            color: var(--button);
+            color: var(--earning-title-dark);
         }
 
         .balance-value {
@@ -308,21 +311,24 @@
         }
 
         .balance-footer i {
-            color: var(--button);
+            color: var(--earning-title-dark);
         }
 
-.affiliate-title {
-    font-size: 1.0rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--affiliate-title) !important; /* Alterado aqui */
-    margin: 0;
-}
+        .affiliate-title {
+            font-size: 1.0rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--affiliate-title) !important;
+            /* Alterado aqui */
+            margin: 0;
+        }
 
-.affiliate-title i {
-    color: var(--affiliate-title) !important; /* Alterado aqui */
-}
+        .affiliate-title i {
+            color: var(--affiliate-title) !important;
+            /* Alterado aqui */
+        }
+
         /* Referral Link Section */
         .referral-container {
             display: flex;
@@ -716,7 +722,7 @@
         <!-- Link de Indicação -->
         <div class="container fade-in">
             <div class="container-header">
-                <h2 class="affiliate-title"><i class="fas fa-user-friends"></i> Afiliados</h2>
+                <h2 class="affiliate-title"></i> Afiliados</h2>
             </div>
             <div class="container-body">
                 <div class="referral-container">
