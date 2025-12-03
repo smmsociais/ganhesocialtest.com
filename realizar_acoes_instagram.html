@@ -21,82 +21,87 @@
         })();
     </script>
     <style>
-        :root {
-            /* Tema claro - padrão */
-            --bg-light: #f8f9fa;
-            --text-light: #000000;
-            --container-light: #ffffff;
-            --button-light: #1a73e8;
-            --success-color: #28a745;
-            --pending-color: #ffc107;
-            --failed-color: #dc3545;
-            --border-light: #e0e0e0;
-            --hover-light: #f1f1f1;
-            --shadow-light: rgba(0, 0, 0, 0.08);
-            --logo-light: url('https://i.imgur.com/dioL5B7.png');
-            --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
 
-            /* Tema escuro */
-            --bg-dark: #121212;
-            --text-dark: #e0e0e0;
-            --container-dark: #1e1e1e;
-            --button-dark: #ebebeb;
-            --success-dark: #34a853;
-            --pending-dark: #f9ab00;
-            --failed-dark: #ea4335;
-            --border-dark: #333333;
-            --hover-dark: #2d2d2d;
-            --shadow-dark: rgba(0, 0, 0, 0.3);
-            --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
-            --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
+:root {
+    /* Tema claro - padrão */
+    --bg-light: #f8f9fa;
+    --text-light: #000000;
+    --container-light: #ffffff;
+    --button-light: #1a73e8;
+    --success-color: #28a745;
+    --pending-color: #ffc107;
+    --failed-color: #dc3545;
+    --border-light: #e0e0e0;
+    --hover-light: #f1f1f1;
+    --shadow-light: rgba(0, 0, 0, 0.08);
+    --logo-light: url('https://i.imgur.com/dioL5B7.png');
+    --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
+    --header-text-light: #495057; /* Cinza escuro para tema claro */
 
-            --ranking-color-light: #28a745;
-            --ranking-color-dark: #34a853;
+    /* Tema escuro */
+    --bg-dark: #121212;
+    --text-dark: #e0e0e0;
+    --container-dark: #1e1e1e;
+    --button-dark: #ebebeb;
+    --success-dark: #34a853;
+    --pending-dark: #f9ab00;
+    --failed-dark: #ea4335;
+    --border-dark: #333333;
+    --hover-dark: #2d2d2d;
+    --shadow-dark: rgba(0, 0, 0, 0.3);
+    --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
+    --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
+    --header-text-dark: #ffffff; /* Branco para tema escuro */
 
-            /* Variáveis comuns */
-            --card-radius: 12px;
-            --transition: all 0.3s ease;
-            --hover-blue: #0069d9;
-            --gray-dark: #6c757d;
-            --label-color: #6c757d;
-        }
+    --ranking-color-light: #28a745;
+    --ranking-color-dark: #34a853;
 
-        /* Variáveis dinâmicas baseadas no tema */
-        html[data-tema="claro"] {
-            --bg: var(--bg-light);
-            --text: var(--text-light);
-            --container: var(--container-light);
-            --button: var(--button-light);
-            --success: var(--success-color);
-            --pending: var(--pending-color);
-            --failed: var(--failed-color);
-            --border: var(--border-light);
-            --hover: var(--hover-light);
-            --shadow: var(--shadow-light);
-            --primary-gradient: var(--primary-gradient);
-            --ranking-color: var(--ranking-color-light);
-            --logo: var(--logo-light);
-            --logo-mobile: var(--logo-mobile-light);
-        }
+    /* Variáveis comuns */
+    --card-radius: 12px;
+    --transition: all 0.3s ease;
+    --hover-blue: #0069d9;
+    --gray-dark: #6c757d;
+    --label-color: #6c757d;
+}
 
-        html[data-tema="escuro"] {
-            --bg: var(--bg-dark);
-            --text: var(--text-dark);
-            --container: var(--container-dark);
-            --button: var(--button-dark);
-            --success: var(--success-dark);
-            --pending: var(--pending-dark);
-            --failed: var(--failed-dark);
-            --border: var(--border-dark);
-            --hover: var(--hover-dark);
-            --shadow: var(--shadow-dark);
-            --primary-gradient: var(--primary-gradient-dark);
-            --gray-dark: #8b949e;
-            --label-color: #8b949e;
-            --ranking-color: var(--ranking-color-dark);
-            --logo: var(--logo-dark);
-            --logo-mobile: var(--logo-mobile-dark);
-        }
+/* Variáveis dinâmicas baseadas no tema */
+html[data-tema="claro"] {
+    --bg: var(--bg-light);
+    --text: var(--text-light);
+    --container: var(--container-light);
+    --button: var(--button-light);
+    --success: var(--success-color);
+    --pending: var(--pending-color);
+    --failed: var(--failed-color);
+    --border: var(--border-light);
+    --hover: var(--hover-light);
+    --shadow: var(--shadow-light);
+    --primary-gradient: var(--primary-gradient);
+    --ranking-color: var(--ranking-color-light);
+    --logo: var(--logo-light);
+    --logo-mobile: var(--logo-mobile-light);
+    --header-text: var(--header-text-light); /* Adicionado */
+}
+
+html[data-tema="escuro"] {
+    --bg: var(--bg-dark);
+    --text: var(--text-dark);
+    --container: var(--container-dark);
+    --button: var(--button-dark);
+    --success: var(--success-dark);
+    --pending: var(--pending-dark);
+    --failed: var(--failed-dark);
+    --border: var(--border-dark);
+    --hover: var(--hover-dark);
+    --shadow: var(--shadow-dark);
+    --primary-gradient: var(--primary-gradient-dark);
+    --gray-dark: #8b949e;
+    --label-color: #8b949e;
+    --ranking-color: var(--ranking-color-dark);
+    --logo: var(--logo-dark);
+    --logo-mobile: var(--logo-mobile-dark);
+    --header-text: var(--header-text-dark); /* Adicionado */
+}
 
         /* Estilos base usando variáveis dinâmicas */
         body {
@@ -212,20 +217,19 @@
             border: 1px solid var(--border);
         }
 
-        .container-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
-            background: var(--primary-gradient);
-            color: rgb(0, 0, 0) !important;
-        }
+.container-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--primary-gradient);
+    color: var(--header-text) !important; /* Alterado de 'rgb(0, 0, 0)' para 'var(--header-text)' */
+}
 
-        .container-header h2 {
-            margin: 0;
-            font-size: 1.0rem;
-            font-weight: 600;
-            color: white !important;
-        }
-
+.container-header h2 {
+    margin: 0;
+    font-size: 1.0rem;
+    font-weight: 600;
+    color: inherit; /* Alterado de 'white !important' para 'inherit' */
+}
         .container-body {
             padding: 20px;
         }
