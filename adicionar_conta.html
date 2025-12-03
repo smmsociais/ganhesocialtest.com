@@ -35,6 +35,10 @@
             --shadow-light: rgba(0, 0, 0, 0.08);
             --logo-light: url('https://i.imgur.com/dioL5B7.png');
             --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
+            
+            /* Logos das redes sociais - tema claro */
+            --instagram-logo-light: url('https://i.imgur.com/iJLCWuJ.png');
+            --tiktok-logo-light: url('https://i.imgur.com/eOQsV5U.png');
 
             /* Tema escuro */
             --bg-dark: #121212;
@@ -49,6 +53,10 @@
             --shadow-dark: rgba(0, 0, 0, 0.3);
             --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
             --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
+            
+            /* Logos das redes sociais - tema escuro */
+            --instagram-logo-dark: url('https://i.imgur.com/7CoB7je.png');
+            --tiktok-logo-dark: url('https://i.imgur.com/6RxMIU9.png');
 
             --ranking-color-light: #28a745;
             --ranking-color-dark: #34a853;
@@ -77,6 +85,8 @@
             --ranking-color: var(--ranking-color-light);
             --logo: var(--logo-light);
             --logo-mobile: var(--logo-mobile-light);
+            --instagram-logo: var(--instagram-logo-light);
+            --tiktok-logo: var(--tiktok-logo-light);
         }
 
         html[data-tema="escuro"] {
@@ -96,6 +106,8 @@
             --ranking-color: var(--ranking-color-dark);
             --logo: var(--logo-dark);
             --logo-mobile: var(--logo-mobile-dark);
+            --instagram-logo: var(--instagram-logo-dark);
+            --tiktok-logo: var(--tiktok-logo-dark);
         }
 
         /* Estilos base usando variáveis dinâmicas */
@@ -157,6 +169,15 @@
         .logo-mobile img {
             content: var(--logo-mobile);
             transition: var(--transition);
+        }
+
+        /* Logos das redes sociais com base no tema */
+        .instagram-logo {
+            content: var(--instagram-logo);
+        }
+
+        .tiktok-logo {
+            content: var(--tiktok-logo);
         }
 
         /* Botão de alternar tema */
@@ -617,17 +638,17 @@
     <!-- Conteúdo Principal -->
     <div class="main-container">
         <div class="container fade-in">
-            <h2 class="container-title"><i class="fas fa-plus-circle"></i> Adicionar Nova Conta</h2>
+            <h2 class="container-title"></i> Adicionar Nova Conta</h2>
             <p class="container-subtitle">Selecione a rede social onde deseja adicionar a nova conta.</p>
 
             <div class="social-networks">
                 <div class="network-item" onclick="redirectToInstagramAccountSelection()">
-                    <img src="https://i.imgur.com/7CoB7je.png" alt="Instagram" class="network-logo">
+                    <img src="https://i.imgur.com/7CoB7je.png" alt="Instagram" class="network-logo" id="instagramLogo">
                     <div class="network-name">Instagram</div>
                 </div>
 
                 <div class="network-item" onclick="redirectToTikTokAccountSelection()">
-                    <img src="https://i.imgur.com/6RxMIU9.png" alt="TikTok" class="network-logo">
+                    <img src="https://i.imgur.com/6RxMIU9.png" alt="TikTok" class="network-logo" id="tiktokLogo">
                     <div class="network-name">TikTok</div>
                 </div>
             </div>
@@ -651,6 +672,33 @@
             window.location.href = "https://ganhesocialtest.com";
         }
 
+        /* === ATUALIZAR LOGOS DAS REDES SOCIAIS === */
+        function atualizarLogosRedesSociais() {
+            const tema = document.documentElement.getAttribute('data-tema');
+            const instagramLogo = document.getElementById('instagramLogo');
+            const tiktokLogo = document.getElementById('tiktokLogo');
+
+            // URLs das logos para cada rede social em ambos os temas
+            const logos = {
+                instagram: {
+                    claro: 'https://i.imgur.com/iJLCWuJ.png',
+                    escuro: 'https://i.imgur.com/7CoB7je.png'
+                },
+                tiktok: {
+                    claro: 'https://i.imgur.com/eOQsV5U.png',
+                    escuro: 'https://i.imgur.com/6RxMIU9.png'
+                }
+            };
+
+            if (instagramLogo) {
+                instagramLogo.src = tema === 'escuro' ? logos.instagram.escuro : logos.instagram.claro;
+            }
+
+            if (tiktokLogo) {
+                tiktokLogo.src = tema === 'escuro' ? logos.tiktok.escuro : logos.tiktok.claro;
+            }
+        }
+
         /* === INICIALIZAÇÃO UNIFICADA === */
         document.addEventListener("DOMContentLoaded", async function () {
             const token = localStorage.getItem("token");
@@ -665,6 +713,7 @@
 
             // Atualiza as logos baseado no tema atual
             atualizarLogosPorTema();
+            atualizarLogosRedesSociais();
 
             // Configurar botão de tema
             configurarTemaToggle();
@@ -677,6 +726,7 @@
                 mutations.forEach(function(mutation) {
                     if (mutation.attributeName === 'data-tema') {
                         atualizarLogosPorTema();
+                        atualizarLogosRedesSociais();
                     }
                 });
             });
