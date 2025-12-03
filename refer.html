@@ -35,13 +35,14 @@
             --shadow-light: rgba(0, 0, 0, 0.08);
             --logo-light: url('https://i.imgur.com/dioL5B7.png');
             --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
-            --affiliate-color-light: #6f42c1;
+            --header-text-light: #495057;
+            /* Cinza escuro para tema claro */
 
             /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #ebebeb;
+            --button-dark: #1a73e8;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
@@ -50,10 +51,8 @@
             --shadow-dark: rgba(0, 0, 0, 0.3);
             --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
             --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
-            --affiliate-color-dark: #8b6cc9;
-
-            --ranking-color-light: #28a745;
-            --ranking-color-dark: #34a853;
+            --header-text-dark: #ffffff;
+            /* Branco para tema escuro */
 
             /* Variáveis comuns */
             --card-radius: 12px;
@@ -79,10 +78,8 @@
             --ranking-color: var(--ranking-color-light);
             --logo: var(--logo-light);
             --logo-mobile: var(--logo-mobile-light);
-            --affiliate-color: var(--affiliate-color-light);
-            --info-text: var(--gray-dark);
-            --balance-chip-bg: rgba(0, 0, 0, 0.05);
-            --how-it-works-bg: #f8f9fa;
+            --header-text: var(--header-text-light);
+            /* Adicionado */
         }
 
         html[data-tema="escuro"] {
@@ -102,10 +99,8 @@
             --ranking-color: var(--ranking-color-dark);
             --logo: var(--logo-dark);
             --logo-mobile: var(--logo-mobile-dark);
-            --affiliate-color: var(--affiliate-color-dark);
-            --info-text: var(--gray-dark);
-            --balance-chip-bg: rgba(255, 255, 255, 0.15);
-            --how-it-works-bg: var(--bg-dark);
+            --header-text: var(--header-text-dark);
+            /* Adicionado */
         }
 
         body {
@@ -229,14 +224,14 @@
             padding: 20px;
             border-bottom: 1px solid var(--border);
             background: var(--primary-gradient);
-            color: white !important;
+            color: var(--header-text) !important;
         }
 
         .container-header h2 {
             margin: 0;
             font-size: 1.0rem;
             font-weight: 600;
-            color: white !important;
+            color: inherit;
         }
 
         .container-body {
@@ -698,12 +693,6 @@
                 <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
         </div>
-        <div class="right-header">
-            <!-- Botão de alternar tema -->
-            <button class="theme-toggle" id="themeToggle">
-                <i class="fas fa-moon"></i>
-                <span>Escuro</span>
-            </button>
         </div>
     </div>
 
@@ -712,7 +701,7 @@
         <!-- Link de Indicação -->
         <div class="container fade-in">
             <div class="container-header">
-                <h2 class="affiliate-title"><i class="fas fa-user-friends"></i> Afiliados</h2>
+                <h2 class="affiliate-title"></i> Afiliados</h2>
             </div>
             <div class="container-body">
                 <div class="referral-container">
