@@ -7,6 +7,19 @@
     <title>Adicionar Conta Instagram - GanheSocial</title>
     <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- HEAD: aplica tema do localStorage imediatamente (evita flash e melhora sensação de velocidade) -->
+    <script>
+        (function () {
+            try {
+                var temaLocal = localStorage.getItem('tema');
+                if (temaLocal) {
+                    document.documentElement.setAttribute('data-tema', temaLocal);
+                }
+            } catch (e) {
+                console.warn("Erro ao aplicar tema do localStorage:", e);
+            }
+        })();
+    </script>
     <style>
         :root {
             /* Tema claro - padrão */
@@ -20,20 +33,25 @@
             --border-light: #e0e0e0;
             --hover-light: #f1f1f1;
             --shadow-light: rgba(0, 0, 0, 0.08);
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --logo-light: url('https://i.imgur.com/dioL5B7.png');
+            --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
 
             /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #4285f4;
+            --button-dark: #ebebeb;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
             --border-dark: #333333;
             --hover-dark: #2d2d2d;
             --shadow-dark: rgba(0, 0, 0, 0.3);
-            --primary-gradient-dark: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
+            --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
+
+            --ranking-color-light: #28a745;
+            --ranking-color-dark: #34a853;
 
             /* Variáveis comuns */
             --card-radius: 12px;
@@ -56,6 +74,9 @@
             --hover: var(--hover-light);
             --shadow: var(--shadow-light);
             --primary-gradient: var(--primary-gradient);
+            --ranking-color: var(--ranking-color-light);
+            --logo: var(--logo-light);
+            --logo-mobile: var(--logo-mobile-light);
         }
 
         html[data-tema="escuro"] {
@@ -72,6 +93,9 @@
             --primary-gradient: var(--primary-gradient-dark);
             --gray-dark: #8b949e;
             --label-color: #8b949e;
+            --ranking-color: var(--ranking-color-dark);
+            --logo: var(--logo-dark);
+            --logo-mobile: var(--logo-mobile-dark);
         }
 
         body {
@@ -86,10 +110,9 @@
         }
 
         .menu-item[href="adicionar_conta"] {
-            color: white !important;
+            color: var(--text) !important;
             font-weight: bold;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-left: 3px solid white;
+            background-color: rgba(146, 146, 146, 0.1);
         }
 
         /* Header Styles */
@@ -120,6 +143,38 @@
         .logo {
             height: 32px;
             margin-right: 10px;
+            transition: var(--transition);
+        }
+
+        /* Logo com imagem baseada em variável CSS */
+        .logo-desktop img {
+            content: var(--logo);
+            transition: var(--transition);
+        }
+
+        .logo-mobile img {
+            content: var(--logo-mobile);
+            transition: var(--transition);
+        }
+
+        /* Botão de alternar tema */
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            color: white !important;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: var(--transition);
+            backdrop-filter: blur(5px);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
 
         /* Main Container */
@@ -209,7 +264,7 @@
 
         .input-box:focus {
             outline: none;
-            box-shadow: 0 0 0 3px rgba(var(--button-rgb, 26, 115, 232), 0.25);
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.25);
             border-color: var(--button);
         }
 
@@ -233,7 +288,7 @@
         }
 
         .btn-primary:hover {
-            background: var(--hover-blue, #1669d6);
+            background: var(--hover-blue);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
         }
@@ -277,17 +332,18 @@
             display: none;
             font-size: 14px;
             transition: var(--transition);
+            border-left: 4px solid transparent;
         }
 
         .error-message {
             background-color: rgba(220, 53, 69, 0.1);
-            border-left: 4px solid var(--failed);
+            border-left-color: var(--failed);
             color: var(--failed);
         }
 
         .success-message {
             background-color: rgba(40, 167, 69, 0.1);
-            border-left: 4px solid var(--success);
+            border-left-color: var(--success);
             color: var(--success);
         }
 
@@ -362,7 +418,7 @@
         .menu-item i {
             width: 24px;
             text-align: center;
-            color: var(--button);
+            color: var(--gray-dark); /* Ícones em cinza escuro */
         }
 
         .menu-item:hover {
@@ -508,20 +564,6 @@
 </head>
 
 <body>
-    <!-- Aplica tema imediatamente antes do paint para evitar flash -->
-    <script>
-        (function () {
-            try {
-                var temaLocal = localStorage.getItem('tema');
-                if (temaLocal) {
-                    document.documentElement.setAttribute('data-tema', temaLocal);
-                }
-            } catch (e) {
-                console.warn("Erro ao aplicar tema do localStorage:", e);
-            }
-        })();
-    </script>
-
     <!-- Menu Lateral para Desktop -->
     <div class="menu-content" id="menuContent">
         <!-- Botão de fechar (visível apenas no mobile) -->
@@ -529,7 +571,8 @@
 
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
-                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+                <!-- A imagem será trocada via CSS baseado no tema -->
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -560,10 +603,17 @@
             </div>
             <!-- Logo para mobile (no header) -->
             <a href="dashboard" class="logo-mobile">
-                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+                <!-- A imagem será trocada via CSS baseado no tema -->
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
         </div>
-        <!-- Removido o right-header já que não tem botão de tema -->
+        <div class="right-header">
+            <!-- Botão de alternar tema -->
+            <button class="theme-toggle" id="themeToggle">
+                <i class="fas fa-moon"></i>
+                <span>Escuro</span>
+            </button>
+        </div>
     </div>
 
     <!-- Conteúdo Principal -->
@@ -594,6 +644,108 @@
     </div>
 
     <script>
+        /* === ATUALIZAR LOGOS POR TEMA === */
+        function atualizarLogosPorTema() {
+            const tema = document.documentElement.getAttribute('data-tema');
+            const logoDesktop = document.getElementById('logoDesktop');
+            const logoMobile = document.getElementById('logoMobile');
+            
+            // URLs das logos para cada tema
+            const logoClaro = 'https://i.imgur.com/dioL5B7.png';
+            const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
+            
+            const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
+            
+            if (logoDesktop) {
+                logoDesktop.src = logoURL;
+            }
+            
+            if (logoMobile) {
+                logoMobile.src = logoURL;
+            }
+        }
+
+        /* === CONFIGURAR TOGGLE DE TEMA === */
+        function configurarTemaToggle() {
+            const themeToggle = document.getElementById('themeToggle');
+            if (!themeToggle) return;
+
+            const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
+            atualizarTextoBotaoTema(temaAtual);
+
+            themeToggle.addEventListener('click', function() {
+                const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
+                const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
+                
+                // Atualiza o atributo data-tema
+                document.documentElement.setAttribute('data-tema', novoTema);
+                
+                // Salva no localStorage
+                try {
+                    localStorage.setItem('tema', novoTema);
+                } catch (e) {
+                    console.warn("Erro ao salvar tema no localStorage:", e);
+                }
+                
+                // Atualiza o texto do botão
+                atualizarTextoBotaoTema(novoTema);
+            });
+        }
+
+        function atualizarTextoBotaoTema(tema) {
+            const themeToggle = document.getElementById('themeToggle');
+            if (!themeToggle) return;
+
+            const icon = themeToggle.querySelector('i');
+            const text = themeToggle.querySelector('span');
+            
+            if (tema === 'escuro') {
+                icon.className = 'fas fa-sun';
+                text.textContent = 'Claro';
+            } else {
+                icon.className = 'fas fa-moon';
+                text.textContent = 'Escuro';
+            }
+        }
+
+        /* === CONTROLE DO MENU HAMBURGUER === */
+        function configurarMenu() {
+            const menuToggle = document.getElementById('menuToggle');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuContent = document.getElementById('menuContent');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+            if (!menuToggle || !menuOverlay || !menuContent) return;
+
+            function toggleMenu() {
+                menuContent.classList.toggle('active');
+                menuOverlay.classList.toggle('active');
+                const spans = menuToggle.querySelectorAll('span');
+                if (menuContent.classList.contains('active')) {
+                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                    spans[1].style.opacity = '0';
+                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+                } else {
+                    spans[0].style.transform = 'none';
+                    spans[1].style.opacity = '1';
+                    spans[2].style.transform = 'none';
+                }
+            }
+
+            function closeMenu() {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
+                spans[0].style.transform = 'none';
+                spans[1].style.opacity = '1';
+                spans[2].style.transform = 'none';
+            }
+
+            menuToggle.addEventListener('click', toggleMenu);
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+        }
+
         /* === FUNÇÕES ESPECÍFICAS DA PÁGINA === */
         function showMessage(message, isError = false) {
             const messageBox = document.getElementById('messageBox');
@@ -669,7 +821,7 @@
         }
 
         /* === INICIALIZAÇÃO UNIFICADA === */
-        document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener("DOMContentLoaded", async function () {
             const token = localStorage.getItem("token");
 
             if (!token) {
@@ -678,44 +830,27 @@
             }
 
             // Configura o menu
-            const menuToggle = document.getElementById('menuToggle');
-            const menuOverlay = document.getElementById('menuOverlay');
-            const menuContent = document.getElementById('menuContent');
-            const menuCloseBtn = document.getElementById('menuCloseBtn');
+            configurarMenu();
 
-            function toggleMenu() {
-                menuContent.classList.toggle('active');
-                menuOverlay.classList.toggle('active');
+            // Atualiza as logos baseado no tema atual
+            atualizarLogosPorTema();
 
-                const spans = menuToggle.querySelectorAll('span');
-                if (menuContent.classList.contains('active')) {
-                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
-                    spans[1].style.opacity = '0';
-                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
-                } else {
-                    spans[0].style.transform = 'none';
-                    spans[1].style.opacity = '1';
-                    spans[2].style.transform = 'none';
-                }
-            }
+            // Configurar botão de tema
+            configurarTemaToggle();
 
-            function closeMenu() {
-                menuContent.classList.remove('active');
-                menuOverlay.classList.remove('active');
-                const spans = menuToggle.querySelectorAll('span');
-                spans[0].style.transform = 'none';
-                spans[1].style.opacity = '1';
-                spans[2].style.transform = 'none';
-            }
-
-            menuToggle.addEventListener('click', toggleMenu);
-            menuCloseBtn.addEventListener('click', closeMenu);
-            menuOverlay.addEventListener('click', closeMenu);
+            // Observador para mudanças de tema
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.attributeName === 'data-tema') {
+                        atualizarLogosPorTema();
+                    }
+                });
+            });
+            observer.observe(document.documentElement, { attributes: true });
 
             // Marca página como carregada
             document.body.classList.add('loaded');
         });
     </script>
 </body>
-
 </html>
