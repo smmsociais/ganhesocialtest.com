@@ -35,12 +35,14 @@
             --shadow-light: rgba(0, 0, 0, 0.08);
             --logo-light: url('https://i.imgur.com/dioL5B7.png');
             --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
+            --header-text-light: #495057;
+            /* Cinza escuro para tema claro */
 
             /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #ebebeb;
+            --button-dark: #1a73e8;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
@@ -49,9 +51,8 @@
             --shadow-dark: rgba(0, 0, 0, 0.3);
             --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
             --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
-
-            --ranking-color-light: #28a745;
-            --ranking-color-dark: #34a853;
+            --header-text-dark: #ffffff;
+            /* Branco para tema escuro */
 
             /* Variáveis comuns */
             --card-radius: 12px;
@@ -77,9 +78,8 @@
             --ranking-color: var(--ranking-color-light);
             --logo: var(--logo-light);
             --logo-mobile: var(--logo-mobile-light);
-            --skeleton-bg: #e0e0e0;
-            --tooltip-bg: #333;
-            --tooltip-text: #fff;
+            --header-text: var(--header-text-light);
+            /* Adicionado */
         }
 
         html[data-tema="escuro"] {
@@ -99,9 +99,8 @@
             --ranking-color: var(--ranking-color-dark);
             --logo: var(--logo-dark);
             --logo-mobile: var(--logo-mobile-dark);
-            --skeleton-bg: #2d2d2d;
-            --tooltip-bg: #555;
-            --tooltip-text: #fff;
+            --header-text: var(--header-text-dark);
+            /* Adicionado */
         }
 
         body {
@@ -205,17 +204,14 @@
             padding: 20px;
             border-bottom: 1px solid var(--border);
             background: var(--primary-gradient);
-            color: white !important;
+            color: var(--header-text) !important;
         }
 
         .container-header h2 {
             margin: 0;
             font-size: 1.0rem;
             font-weight: 600;
-            color: white !important;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            color: inherit;
         }
 
         .container-body {
@@ -705,12 +701,6 @@
                 <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
         </div>
-        <div class="right-header">
-            <!-- Botão de alternar tema -->
-            <button class="theme-toggle" id="themeToggle">
-                <i class="fas fa-moon"></i>
-                <span>Escuro</span>
-            </button>
         </div>
     </div>
 
@@ -718,7 +708,7 @@
     <div class="main-container">
         <div class="container fade-in">
             <div class="container-header">
-                <h2><i class="fas fa-wallet"></i> Histórico de Saques</h2>
+                <h2></i> Histórico de Saques</h2>
             </div>
             <div class="container-body">
                 <!-- Tabela de Saques -->
