@@ -35,12 +35,14 @@
             --shadow-light: rgba(0, 0, 0, 0.08);
             --logo-light: url('https://i.imgur.com/dioL5B7.png');
             --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
+            --header-text-light: #495057;
+            /* Cinza escuro para tema claro */
 
             /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #ebebeb;
+            --button-dark: #1a73e8;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
@@ -49,9 +51,8 @@
             --shadow-dark: rgba(0, 0, 0, 0.3);
             --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
             --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
-
-            --ranking-color-light: #28a745;
-            --ranking-color-dark: #34a853;
+            --header-text-dark: #ffffff;
+            /* Branco para tema escuro */
 
             /* Variáveis comuns */
             --card-radius: 12px;
@@ -77,6 +78,8 @@
             --ranking-color: var(--ranking-color-light);
             --logo: var(--logo-light);
             --logo-mobile: var(--logo-mobile-light);
+            --header-text: var(--header-text-light);
+            /* Adicionado */
         }
 
         html[data-tema="escuro"] {
@@ -96,6 +99,8 @@
             --ranking-color: var(--ranking-color-dark);
             --logo: var(--logo-dark);
             --logo-mobile: var(--logo-mobile-dark);
+            --header-text: var(--header-text-dark);
+            /* Adicionado */
         }
 
         body {
@@ -623,18 +628,12 @@
                 <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
         </div>
-        <div class="right-header">
-            <!-- Botão de alternar tema -->
-            <button class="theme-toggle" id="themeToggle">
-                <i class="fas fa-moon"></i>
-                <span>Escuro</span>
-            </button>
         </div>
     </div>
 
     <!-- Conteúdo Principal -->
     <div class="container fade-in">
-        <h2><i class="fas fa-history"></i> Histórico de Ações</h2>
+        <h2></i> Histórico de Ações</h2>
         <div class="table-container">
             <table class="history-table" id="historyTable">
                 <thead>
