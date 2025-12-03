@@ -478,8 +478,7 @@
         .menu-item i {
             width: 24px;
             text-align: center;
-            color: var(--gray-dark);
-            /* Ícones em cinza escuro */
+            color: var(--gray-dark); /* Ícones em cinza escuro */
         }
 
         .menu-item:hover {
@@ -664,8 +663,7 @@
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
                 <!-- A imagem será trocada via CSS baseado no tema -->
-                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;"
-                    id="logoDesktop">
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -782,17 +780,17 @@
             const tema = document.documentElement.getAttribute('data-tema');
             const logoDesktop = document.getElementById('logoDesktop');
             const logoMobile = document.getElementById('logoMobile');
-
+            
             // URLs das logos para cada tema
             const logoClaro = 'https://i.imgur.com/dioL5B7.png';
             const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
-
+            
             const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
-
+            
             if (logoDesktop) {
                 logoDesktop.src = logoURL;
             }
-
+            
             if (logoMobile) {
                 logoMobile.src = logoURL;
             }
@@ -806,20 +804,20 @@
             const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
             atualizarTextoBotaoTema(temaAtual);
 
-            themeToggle.addEventListener('click', function () {
+            themeToggle.addEventListener('click', function() {
                 const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
                 const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
-
+                
                 // Atualiza o atributo data-tema
                 document.documentElement.setAttribute('data-tema', novoTema);
-
+                
                 // Salva no localStorage
                 try {
                     localStorage.setItem('tema', novoTema);
                 } catch (e) {
                     console.warn("Erro ao salvar tema no localStorage:", e);
                 }
-
+                
                 // Atualiza o texto do botão
                 atualizarTextoBotaoTema(novoTema);
             });
@@ -831,7 +829,7 @@
 
             const icon = themeToggle.querySelector('i');
             const text = themeToggle.querySelector('span');
-
+            
             if (tema === 'escuro') {
                 icon.className = 'fas fa-sun';
                 text.textContent = 'Claro';
@@ -971,8 +969,8 @@
             document.getElementById('copyBtn').addEventListener('click', copiarLink);
 
             // Observador para mudanças de tema
-            const observer = new MutationObserver(function (mutations) {
-                mutations.forEach(function (mutation) {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
                     if (mutation.attributeName === 'data-tema') {
                         atualizarLogosPorTema();
                     }
@@ -984,5 +982,4 @@
         });
     </script>
 </body>
-
 </html>
