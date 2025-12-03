@@ -216,7 +216,7 @@
             padding: 20px;
             border-bottom: 1px solid var(--border);
             background: var(--primary-gradient);
-            color: white !important;
+            color: rgb(0, 0, 0) !important;
         }
 
         .container-header h2 {
@@ -736,7 +736,8 @@
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
                 <!-- A imagem será trocada via CSS baseado no tema -->
-                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;"
+                    id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -784,7 +785,7 @@
     <div class="main-container">
         <div class="container fade-in">
             <div class="container-header">
-                <h2><i class="fab fa-instagram"></i> Realizar Ações Instagram</h2>
+                <h2></i> Realizar Ações Instagram</h2>
             </div>
             <div class="container-body">
                 <div class="form-group">
@@ -871,8 +872,8 @@
             document.body.classList.add('loaded');
 
             // Observador para mudanças de tema
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
+            const observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
                     if (mutation.attributeName === 'data-tema') {
                         atualizarLogosPorTema();
                     }
@@ -886,17 +887,17 @@
             const tema = document.documentElement.getAttribute('data-tema');
             const logoDesktop = document.getElementById('logoDesktop');
             const logoMobile = document.getElementById('logoMobile');
-            
+
             // URLs das logos para cada tema
             const logoClaro = 'https://i.imgur.com/dioL5B7.png';
             const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
-            
+
             const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
-            
+
             if (logoDesktop) {
                 logoDesktop.src = logoURL;
             }
-            
+
             if (logoMobile) {
                 logoMobile.src = logoURL;
             }
@@ -910,20 +911,20 @@
             const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
             atualizarTextoBotaoTema(temaAtual);
 
-            themeToggle.addEventListener('click', function() {
+            themeToggle.addEventListener('click', function () {
                 const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
                 const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
-                
+
                 // Atualiza o atributo data-tema
                 document.documentElement.setAttribute('data-tema', novoTema);
-                
+
                 // Salva no localStorage
                 try {
                     localStorage.setItem('tema', novoTema);
                 } catch (e) {
                     console.warn("Erro ao salvar tema no localStorage:", e);
                 }
-                
+
                 // Atualiza o texto do botão
                 atualizarTextoBotaoTema(novoTema);
             });
@@ -935,7 +936,7 @@
 
             const icon = themeToggle.querySelector('i');
             const text = themeToggle.querySelector('span');
-            
+
             if (tema === 'escuro') {
                 icon.className = 'fas fa-sun';
                 text.textContent = 'Claro';
@@ -982,7 +983,7 @@
             menuCloseBtn.addEventListener('click', closeMenu);
             menuOverlay.addEventListener('click', closeMenu);
         }
-        
+
         // Variáveis globais
         let currentActionData = null;
         let contagemEmAndamento = false;
@@ -1281,14 +1282,14 @@
 
             // Verificar se é uma ação de curtir - NÃO CARREGAR AVATAR
             const isCurtirAction = actionText === "Curtir";
-            
+
             if (isCurtirAction) {
                 // Para ações de curtir: não carregar avatar e ocultar a imagem
                 profileImg.style.display = "none";
             } else {
                 // Para ações de seguir: carregar avatar normalmente
                 profileImg.style.display = "block";
-                
+
                 function toProxyUrl(orig) {
                     try {
                         if (!orig || typeof orig !== 'string') return null;
@@ -1346,7 +1347,7 @@
                             const prox = toProxyUrl(cached);
                             if (prox) {
                                 cached = prox;
-                                try { localStorage.setItem(cacheKey, cached); localStorage.setItem(cacheKey + "_ts", String(Date.now())); } catch(e){}
+                                try { localStorage.setItem(cacheKey, cached); localStorage.setItem(cacheKey + "_ts", String(Date.now())); } catch (e) { }
                             }
                         }
 
@@ -1373,7 +1374,7 @@
                                 try {
                                     localStorage.setItem(cacheKey, freshProxy);
                                     localStorage.setItem(cacheKey + "_ts", String(Date.now()));
-                                } catch(e){}
+                                } catch (e) { }
                                 setImgSrcSafe(profileImg, proxyWithTs);
                                 return true;
                             } else {
@@ -1391,19 +1392,19 @@
                                 try {
                                     localStorage.setItem(cacheKey, freshProxy2);
                                     localStorage.setItem(cacheKey + "_ts", String(Date.now()));
-                                } catch(e){}
+                                } catch (e) { }
                                 setImgSrcSafe(profileImg, proxyWithTs2);
                                 return true;
                             }
                         }
 
                         // 4) nada deu certo -> limpar cache e ocultar/fallback
-                        try { localStorage.removeItem(cacheKey); localStorage.removeItem(cacheKey + "_ts"); } catch(e){}
+                        try { localStorage.removeItem(cacheKey); localStorage.removeItem(cacheKey + "_ts"); } catch (e) { }
                         profileImg.style.display = "none";
                         return false;
                     } catch (err) {
                         console.warn('Erro no loadInstagramAvatar:', err);
-                        try { localStorage.removeItem(`avatar_cache_instagram_${username}`); } catch(e){}
+                        try { localStorage.removeItem(`avatar_cache_instagram_${username}`); } catch (e) { }
                         profileImg.style.display = "none";
                         return false;
                     }
@@ -1653,4 +1654,5 @@
         }   
     </script>
 </body>
+
 </html>
