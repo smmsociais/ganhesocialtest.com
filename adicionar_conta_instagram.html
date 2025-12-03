@@ -21,7 +21,7 @@
         })();
     </script>
     <style>
-        :root {
+         :root {
             /* Tema claro - padrão */
             --bg-light: #f8f9fa;
             --text-light: #000000;
@@ -35,12 +35,14 @@
             --shadow-light: rgba(0, 0, 0, 0.08);
             --logo-light: url('https://i.imgur.com/dioL5B7.png');
             --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
+            --header-text-light: #495057;
+            /* Cinza escuro para tema claro */
 
             /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #ebebeb;
+            --button-dark: #1a73e8;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
@@ -49,9 +51,8 @@
             --shadow-dark: rgba(0, 0, 0, 0.3);
             --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
             --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
-
-            --ranking-color-light: #28a745;
-            --ranking-color-dark: #34a853;
+            --header-text-dark: #ffffff;
+            /* Branco para tema escuro */
 
             /* Variáveis comuns */
             --card-radius: 12px;
@@ -77,6 +78,8 @@
             --ranking-color: var(--ranking-color-light);
             --logo: var(--logo-light);
             --logo-mobile: var(--logo-mobile-light);
+            --header-text: var(--header-text-light);
+            /* Adicionado */
         }
 
         html[data-tema="escuro"] {
@@ -96,6 +99,8 @@
             --ranking-color: var(--ranking-color-dark);
             --logo: var(--logo-dark);
             --logo-mobile: var(--logo-mobile-dark);
+            --header-text: var(--header-text-dark);
+            /* Adicionado */
         }
 
         body {
@@ -198,17 +203,16 @@
             padding: 20px;
             border-bottom: 1px solid var(--border);
             background: var(--primary-gradient);
-            color: white !important;
+            color: var(--header-text) !important;
+            /* Alterado de 'rgb(0, 0, 0)' para 'var(--header-text)' */
         }
 
         .container-header h2 {
             margin: 0;
             font-size: 1.0rem;
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: white !important;
+            color: inherit;
+            /* Alterado de 'white !important' para 'inherit' */
         }
 
         .container-body {
@@ -418,7 +422,8 @@
         .menu-item i {
             width: 24px;
             text-align: center;
-            color: var(--gray-dark); /* Ícones em cinza escuro */
+            color: var(--gray-dark);
+            /* Ícones em cinza escuro */
         }
 
         .menu-item:hover {
@@ -572,7 +577,8 @@
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
                 <!-- A imagem será trocada via CSS baseado no tema -->
-                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;"
+                    id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -607,12 +613,6 @@
                 <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
         </div>
-        <div class="right-header">
-            <!-- Botão de alternar tema -->
-            <button class="theme-toggle" id="themeToggle">
-                <i class="fas fa-moon"></i>
-                <span>Escuro</span>
-            </button>
         </div>
     </div>
 
@@ -620,7 +620,7 @@
     <div class="main-container">
         <div class="container fade-in">
             <div class="container-header">
-                <h2><i class="fas fa-plus-circle"></i> Adicionar Conta Instagram</h2>
+                <h2></i> Adicionar Conta Instagram</h2>
             </div>
             <div class="container-body">
                 <div class="requirements-box">
@@ -649,17 +649,17 @@
             const tema = document.documentElement.getAttribute('data-tema');
             const logoDesktop = document.getElementById('logoDesktop');
             const logoMobile = document.getElementById('logoMobile');
-            
+
             // URLs das logos para cada tema
             const logoClaro = 'https://i.imgur.com/dioL5B7.png';
             const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
-            
+
             const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
-            
+
             if (logoDesktop) {
                 logoDesktop.src = logoURL;
             }
-            
+
             if (logoMobile) {
                 logoMobile.src = logoURL;
             }
@@ -673,20 +673,20 @@
             const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
             atualizarTextoBotaoTema(temaAtual);
 
-            themeToggle.addEventListener('click', function() {
+            themeToggle.addEventListener('click', function () {
                 const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
                 const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
-                
+
                 // Atualiza o atributo data-tema
                 document.documentElement.setAttribute('data-tema', novoTema);
-                
+
                 // Salva no localStorage
                 try {
                     localStorage.setItem('tema', novoTema);
                 } catch (e) {
                     console.warn("Erro ao salvar tema no localStorage:", e);
                 }
-                
+
                 // Atualiza o texto do botão
                 atualizarTextoBotaoTema(novoTema);
             });
@@ -698,7 +698,7 @@
 
             const icon = themeToggle.querySelector('i');
             const text = themeToggle.querySelector('span');
-            
+
             if (tema === 'escuro') {
                 icon.className = 'fas fa-sun';
                 text.textContent = 'Claro';
@@ -839,8 +839,8 @@
             configurarTemaToggle();
 
             // Observador para mudanças de tema
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
+            const observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
                     if (mutation.attributeName === 'data-tema') {
                         atualizarLogosPorTema();
                     }
@@ -853,4 +853,5 @@
         });
     </script>
 </body>
+
 </html>
