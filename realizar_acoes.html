@@ -7,6 +7,19 @@
     <title>Realizar Ações - GanheSocial</title>
     <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- HEAD: aplica tema do localStorage imediatamente (evita flash e melhora sensação de velocidade) -->
+    <script>
+        (function () {
+            try {
+                var temaLocal = localStorage.getItem('tema');
+                if (temaLocal) {
+                    document.documentElement.setAttribute('data-tema', temaLocal);
+                }
+            } catch (e) {
+                console.warn("Erro ao aplicar tema do localStorage:", e);
+            }
+        })();
+    </script>
     <style>
         :root {
             /* Tema claro - padrão */
@@ -20,20 +33,25 @@
             --border-light: #e0e0e0;
             --hover-light: #f1f1f1;
             --shadow-light: rgba(0, 0, 0, 0.08);
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --logo-light: url('https://i.imgur.com/dioL5B7.png');
+            --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
 
             /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #4285f4;
+            --button-dark: #ebebeb;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
             --border-dark: #333333;
             --hover-dark: #2d2d2d;
             --shadow-dark: rgba(0, 0, 0, 0.3);
-            --primary-gradient-dark: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
+            --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
+
+            --ranking-color-light: #28a745;
+            --ranking-color-dark: #34a853;
 
             /* Variáveis comuns */
             --card-radius: 12px;
@@ -56,6 +74,9 @@
             --hover: var(--hover-light);
             --shadow: var(--shadow-light);
             --primary-gradient: var(--primary-gradient);
+            --ranking-color: var(--ranking-color-light);
+            --logo: var(--logo-light);
+            --logo-mobile: var(--logo-mobile-light);
         }
 
         html[data-tema="escuro"] {
@@ -72,8 +93,12 @@
             --primary-gradient: var(--primary-gradient-dark);
             --gray-dark: #8b949e;
             --label-color: #8b949e;
+            --ranking-color: var(--ranking-color-dark);
+            --logo: var(--logo-dark);
+            --logo-mobile: var(--logo-mobile-dark);
         }
 
+        /* Estilos base usando variáveis dinâmicas */
         body {
             background-color: var(--bg);
             color: var(--text);
@@ -87,10 +112,9 @@
 
         /* Menu item ativo */
         .menu-item[href="realizar_acoes"] {
-            color: white !important;
+            color: var(--text) !important;
             font-weight: bold;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-left: 3px solid white;
+            background-color: rgba(146, 146, 146, 0.1);
         }
 
         /* Header Styles */
@@ -121,6 +145,18 @@
         .logo {
             height: 32px;
             margin-right: 10px;
+            transition: var(--transition);
+        }
+
+        /* Logo com imagem baseada em variável CSS */
+        .logo-desktop img {
+            content: var(--logo);
+            transition: var(--transition);
+        }
+
+        .logo-mobile img {
+            content: var(--logo-mobile);
+            transition: var(--transition);
         }
 
         /* Botão de alternar tema */
@@ -350,7 +386,8 @@
         .menu-item i {
             width: 24px;
             text-align: center;
-            color: var(--button);
+            color: var(--gray-dark);
+            /* Ícones em cinza escuro */
         }
 
         .menu-item:hover {
@@ -525,20 +562,6 @@
 </head>
 
 <body>
-    <!-- Aplica tema imediatamente antes do paint para evitar flash -->
-    <script>
-        (function () {
-            try {
-                var temaLocal = localStorage.getItem('tema');
-                if (temaLocal) {
-                    document.documentElement.setAttribute('data-tema', temaLocal);
-                }
-            } catch (e) {
-                console.warn("Erro ao aplicar tema do localStorage:", e);
-            }
-        })();
-    </script>
-
     <!-- Menu Lateral para Desktop -->
     <div class="menu-content" id="menuContent">
         <!-- Botão de fechar (visível apenas no mobile) -->
@@ -546,8 +569,9 @@
 
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
-                <img src="https://raw.githubusercontent.com/smmsociais/ganhesocialtest.com/refs/heads/main/1764621628851.jpg"
-                    alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+                <!-- A imagem será trocada via CSS baseado no tema -->
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;"
+                    id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -578,17 +602,16 @@
             </div>
             <!-- Logo para mobile (no header) -->
             <a href="dashboard" class="logo-mobile">
-                <img src="https://raw.githubusercontent.com/smmsociais/ganhesocialtest.com/refs/heads/main/1764621628851.jpg"
-                    alt="Logo GanheSocial" class="logo">
+                <!-- A imagem será trocada via CSS baseado no tema -->
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
-        </div>
         </div>
     </div>
 
     <!-- Conteúdo Principal -->
     <div class="main-container">
         <div class="container fade-in">
-            <h2 class="container-title"><i class="fas fa-tasks"></i> Realizar Ações</h2>
+            <h2 class="container-title"></i> Realizar Ações</h2>
             <p class="container-subtitle">Selecione a rede social onde deseja realizar as ações.</p>
 
             <div class="social-networks">
@@ -634,9 +657,43 @@
             // Configura o menu
             configurarMenu();
 
+            // Atualiza as logos baseado no tema atual
+            atualizarLogosPorTema();
+
             // Marca página como carregada
             document.body.classList.add('loaded');
+
+            // Observador para mudanças de tema
+            const observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
+                    if (mutation.attributeName === 'data-tema') {
+                        atualizarLogosPorTema();
+                    }
+                });
+            });
+            observer.observe(document.documentElement, { attributes: true });
         });
+
+        /* === ATUALIZAR LOGOS POR TEMA === */
+        function atualizarLogosPorTema() {
+            const tema = document.documentElement.getAttribute('data-tema');
+            const logoDesktop = document.getElementById('logoDesktop');
+            const logoMobile = document.getElementById('logoMobile');
+
+            // URLs das logos para cada tema
+            const logoClaro = 'https://i.imgur.com/dioL5B7.png';
+            const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
+
+            const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
+
+            if (logoDesktop) {
+                logoDesktop.src = logoURL;
+            }
+
+            if (logoMobile) {
+                logoMobile.src = logoURL;
+            }
+        }
 
         /* === CONTROLE DO MENU HAMBURGUER === */
         function configurarMenu() {
