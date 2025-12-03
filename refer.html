@@ -36,6 +36,7 @@
             --logo-light: url('https://i.imgur.com/dioL5B7.png');
             --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
             --affiliate-color-light: #6f42c1;
+            --affiliate-title-light: #495057; 
 
             /* Tema escuro */
             --bg-dark: #121212;
@@ -51,6 +52,7 @@
             --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
             --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
             --affiliate-color-dark: #8b6cc9;
+            --affiliate-title-dark: #ffffff;
 
             --ranking-color-light: #28a745;
             --ranking-color-dark: #34a853;
@@ -83,6 +85,7 @@
             --info-text: var(--gray-dark);
             --balance-chip-bg: rgba(0, 0, 0, 0.05);
             --how-it-works-bg: #f8f9fa;
+            --affiliate-title: var(--affiliate-title-light);
         }
 
         html[data-tema="escuro"] {
@@ -106,6 +109,7 @@
             --info-text: var(--gray-dark);
             --balance-chip-bg: rgba(255, 255, 255, 0.15);
             --how-it-works-bg: var(--bg-dark);
+            --affiliate-title: var(--affiliate-title-dark);
         }
 
         body {
@@ -225,19 +229,18 @@
             border: 1px solid var(--border);
         }
 
-        .container-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
-            background: var(--primary-gradient);
-            color: white !important;
-        }
-
-        .container-header h2 {
-            margin: 0;
-            font-size: 1.0rem;
-            font-weight: 600;
-            color: white !important;
-        }
+.container-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--container);
+    color: var(--affiliate-title) !important;
+}
+.container-header h2 {
+    margin: 0;
+    font-size: 1.0rem;
+    font-weight: 600;
+    color: var(--affiliate-title) !important; /* Alterado aqui */
+}
 
         .container-body {
             padding: 20px;
@@ -308,19 +311,18 @@
             color: var(--button);
         }
 
-        .affiliate-title {
-            font-size: 1.0rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: white !important;
-            margin: 0;
-        }
+.affiliate-title {
+    font-size: 1.0rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--affiliate-title) !important; /* Alterado aqui */
+    margin: 0;
+}
 
-        .affiliate-title i {
-            color: white !important;
-        }
-
+.affiliate-title i {
+    color: var(--affiliate-title) !important; /* Alterado aqui */
+}
         /* Referral Link Section */
         .referral-container {
             display: flex;
@@ -478,7 +480,8 @@
         .menu-item i {
             width: 24px;
             text-align: center;
-            color: var(--gray-dark); /* Ícones em cinza escuro */
+            color: var(--gray-dark);
+            /* Ícones em cinza escuro */
         }
 
         .menu-item:hover {
@@ -663,7 +666,8 @@
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
                 <!-- A imagem será trocada via CSS baseado no tema -->
-                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;"
+                    id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -780,17 +784,17 @@
             const tema = document.documentElement.getAttribute('data-tema');
             const logoDesktop = document.getElementById('logoDesktop');
             const logoMobile = document.getElementById('logoMobile');
-            
+
             // URLs das logos para cada tema
             const logoClaro = 'https://i.imgur.com/dioL5B7.png';
             const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
-            
+
             const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
-            
+
             if (logoDesktop) {
                 logoDesktop.src = logoURL;
             }
-            
+
             if (logoMobile) {
                 logoMobile.src = logoURL;
             }
@@ -804,20 +808,20 @@
             const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
             atualizarTextoBotaoTema(temaAtual);
 
-            themeToggle.addEventListener('click', function() {
+            themeToggle.addEventListener('click', function () {
                 const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
                 const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
-                
+
                 // Atualiza o atributo data-tema
                 document.documentElement.setAttribute('data-tema', novoTema);
-                
+
                 // Salva no localStorage
                 try {
                     localStorage.setItem('tema', novoTema);
                 } catch (e) {
                     console.warn("Erro ao salvar tema no localStorage:", e);
                 }
-                
+
                 // Atualiza o texto do botão
                 atualizarTextoBotaoTema(novoTema);
             });
@@ -829,7 +833,7 @@
 
             const icon = themeToggle.querySelector('i');
             const text = themeToggle.querySelector('span');
-            
+
             if (tema === 'escuro') {
                 icon.className = 'fas fa-sun';
                 text.textContent = 'Claro';
@@ -969,8 +973,8 @@
             document.getElementById('copyBtn').addEventListener('click', copiarLink);
 
             // Observador para mudanças de tema
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
+            const observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
                     if (mutation.attributeName === 'data-tema') {
                         atualizarLogosPorTema();
                     }
@@ -982,4 +986,5 @@
         });
     </script>
 </body>
+
 </html>
