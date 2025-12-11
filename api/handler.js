@@ -2840,59 +2840,8 @@ if (listaComProjetado.length < 10) {
   }
 });
 
-// /api/theme (GET e PUT)
-router.get("/theme", async (req, res) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return res.status(401).json({ error: "Token ausente." });
-        }
-
-        const token = authHeader.split(" ")[1];
-
-        const usuario = await User.findOne({ token });
-        if (!usuario) {
-            return res.status(401).json({ error: "Token inválido." });
-        }
-
-        return res.status(200).json({ tema: usuario.tema || "claro" });
-
-    } catch (error) {
-        console.error("Erro GET /theme:", error);
-        return res.status(500).json({ error: "Erro interno." });
-    }
-});
-
-router.put("/theme", async (req, res) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return res.status(401).json({ error: "Token ausente." });
-        }
-
-        const token = authHeader.split(" ")[1];
-
-        const usuario = await User.findOne({ token });
-        if (!usuario) {
-            return res.status(401).json({ error: "Token inválido." });
-        }
-
-        const { tema } = req.body;
-
-        if (!tema || !["claro", "escuro"].includes(tema)) {
-            return res.status(400).json({ error: "Tema inválido." });
-        }
-
-        usuario.tema = tema;
-        await usuario.save();
-
-        return res.status(200).json({ success: true, tema });
-
-    } catch (error) {
-        console.error("Erro PUT /theme:", error);
-        return res.status(500).json({ error: "Erro interno." });
-    }
-});
-
 export default router;
-
+console.log("ROTAS EXPRESS:");
+router.stack.forEach(r => {
+  if (r.route && r.route.path) console.log(" -", r.route.path);
+});
