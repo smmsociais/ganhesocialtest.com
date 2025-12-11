@@ -27,6 +27,8 @@ router.get("/get-tiktok-user", getTikTokUser);
 router.post("/smm_acao", smmAcao);
 router.get("/user-following", verificarFollowing);
 
+console.log("ROTAS CARREGADAS:", router.stack.map(r => r.route?.path));
+
 async function salvarAcaoComLimitePorUsuario(novaAcao) {
     const LIMITE = 10000;
 
@@ -2893,3 +2895,4 @@ router.put("/theme", async (req, res) => {
 });
 
 export default router;
+
