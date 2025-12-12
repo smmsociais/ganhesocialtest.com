@@ -1,3 +1,4 @@
+//server.js
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -22,7 +23,7 @@ app.get("/", (req, res) => {
 
 // Lista de páginas HTML
 const pages = [
-  "dashboard", "login", "signup", "realizar_acoes",
+  "dashboard", "login", "login-success","signup", "realizar_acoes",
   "realizar_acoes_tiktok", "realizar_acoes_instagram",
   "adicionar_conta", "adicionar_conta_instagram", "adicionar_conta_tiktok",
   "conta_adicionada_instagram", "conta_adicionada_tiktok",
