@@ -1,5 +1,4 @@
 //handler.js
-
 import axios from "axios";
 import https from 'https';
 import { v4 as uuidv4 } from 'uuid';
@@ -9,7 +8,7 @@ import { sendRecoveryEmail } from "./mailer.js";
 import crypto from "crypto";
 import { User, ActionHistory, DailyEarning, Pedido, DailyRanking } from "./schema.js";
 import express from "express";
-import fs from "fs";
+
 // IMPORTAÇÃO DAS ROTAS INDEPENDENTES
 import buscarInstagram from "./buscar_acao_smm_instagram.js";
 import buscarTikTok from "./buscar_acao_smm_tiktok.js";
@@ -17,6 +16,10 @@ import getInstagramUser from "./get-instagram-user.js";
 import getTikTokUser from "./get-tiktok-user.js";
 import smmAcao from "./smm_acao.js";
 import verificarFollowing from "./user-following.js";
+import googleSignup from "./auth/google/signup.js";
+import googleSignupCallback from "./auth/google/signup/callback.js";
+import googleLogin from "./auth/google.js";
+import googleCallback from "./auth/google/callback.js";
 
 const router = express.Router();
 
@@ -26,8 +29,10 @@ router.get("/get-instagram-user", getInstagramUser);
 router.get("/get-tiktok-user", getTikTokUser);
 router.post("/smm_acao", smmAcao);
 router.get("/user-following", verificarFollowing);
-
-console.log("ROTAS CARREGADAS:", router.stack.map(r => r.route?.path));
+router.get("/auth/google", googleLogin);
+router.get("/auth/google/callback", googleCallback);
+router.get("/auth/google/signup", googleSignup);
+router.get("/auth/google/signup/callback", googleSignupCallback);
 
 async function salvarAcaoComLimitePorUsuario(novaAcao) {
     const LIMITE = 10000;
