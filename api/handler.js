@@ -579,19 +579,26 @@ router.post("/signup", async (req, res) => {
   }
 
   try {
+    // 🔥 NOVO: Bloqueia se já existir qualquer usuário no banco
+    const totalUsuarios = await User.countDocuments();
+    if (totalUsuarios >= 1) {
+      return res.status(403).json({
+        error: "O cadastro está fechado. Apenas uma conta é permitida no sistema."
+      });
+    }
 
-    // ✅ Verifica se e-mail já existe
+    // Verifica se email já existe (não é necessário, pois só 1 usuário pode existir,
+    // mas deixei por segurança)
     const emailExiste = await User.findOne({ email });
     if (emailExiste) return res.status(400).json({ error: "E-mail já cadastrado." });
 
-    // ✅ Gera token obrigatório
+    // Gera token
     const token = crypto.randomBytes(32).toString("hex");
 
-    // ✅ Função para gerar código de afiliado numérico (8 dígitos)
+    // Gera código de afiliado
     const gerarCodigo = () =>
       Math.floor(10000000 + Math.random() * 90000000).toString();
 
-    // Retentativa para evitar colisão de código
     const maxRetries = 5;
     let attempt = 0;
     let savedUser = null;
@@ -599,8 +606,8 @@ router.post("/signup", async (req, res) => {
     while (attempt < maxRetries && !savedUser) {
       const codigo_afiliado = gerarCodigo();
 
-      // Novo usuário
-      const ativo_ate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 dias de ativo
+      const ativo_ate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
       const novoUsuario = new User({
         email,
         senha,
@@ -608,7 +615,7 @@ router.post("/signup", async (req, res) => {
         codigo_afiliado,
         status: "ativo",
         ativo_ate,
-        indicado_por: ref || null, // vincula ao código do afiliado, se houver
+        indicado_por: ref || null,
       });
 
       try {
@@ -624,7 +631,9 @@ router.post("/signup", async (req, res) => {
     }
 
     if (!savedUser) {
-      return res.status(500).json({ error: "Não foi possível gerar um código de afiliado único. Tente novamente." });
+      return res.status(500).json({
+        error: "Não foi possível gerar um código de afiliado único. Tente novamente."
+      });
     }
 
     return res.status(201).json({
@@ -636,9 +645,6 @@ router.post("/signup", async (req, res) => {
 
   } catch (error) {
     console.error("Erro ao cadastrar usuário:", error);
-    if (error?.code === 11000 && error.keyPattern?.email) {
-      return res.status(400).json({ error: "E-mail já cadastrado." });
-    }
     return res.status(500).json({ error: "Erro interno ao registrar usuário. Tente novamente mais tarde." });
   }
 });
