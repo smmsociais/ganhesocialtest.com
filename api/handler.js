@@ -583,7 +583,7 @@ router.post("/signup", async (req, res) => {
     const totalUsuarios = await User.countDocuments();
     if (totalUsuarios >= 1) {
       return res.status(403).json({
-        error: "O cadastro está fechado. Apenas uma conta é permitida no sistema."
+        error: "Erro."
       });
     }
 
