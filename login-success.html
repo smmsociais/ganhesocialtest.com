@@ -1,0 +1,15 @@
+<!-- /login-success -->
+<script>
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (token) {
+    localStorage.setItem('token', token);
+    // opcional: limpar query params para UX
+    window.history.replaceState({}, '', '/dashboard');
+    window.location.href = '/dashboard';
+  } else {
+    window.location.href = '/login';
+  }
+})();
+</script>
