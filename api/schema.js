@@ -39,31 +39,44 @@ const WithdrawSchema = new mongoose.Schema({
   timestamps: { createdAt: "data", updatedAt: "updatedAt" }
 });
 
-// 🔹 Schema do Usuário (adicionando campos de afiliado)
+// 🔹 Schema do Usuário
 const UserSchema = new mongoose.Schema({
   nome: { type: String, required: false },
   email: { type: String, required: true, unique: true },
-  senha: { type: String, required: true },
-  token: { type: String, required: true },
+  // senha obrigatória apenas para cadastro tradicional
+  senha: { 
+    type: String,
+    required: function () {
+      return this.provider === "local";
+    }
+  },
+  // NÃO deixe token obrigatório no schema — o JWT não deve ser salvo no DB
+  token: { type: String, required: false },
+  // para saber como o usuário foi criado
+  provider: { 
+    type: String, 
+    enum: ["local", "google"],
+    default: "local"
+  },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
   saldo: { type: Number, default: 0 },
+  // PIX
   pix_key: { type: String, default: null },
   pix_key_type: { type: String, default: null },
+  // contas conectadas
   contas: [ContaSchema],
-  historico_acoes: [{ type: mongoose.Schema.Types.ObjectId, ref: "ActionHistory" }],
+  historico_acoes: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "ActionHistory" }
+  ],
   saques: [WithdrawSchema],
-  // 🔹 Campos de afiliados
+  // afiliados
   codigo_afiliado: { type: String, default: null },
   indicado_por: { type: String, default: null },
-  // 🔹 Campos de status para afiliados
-  status: { type: String, default: "ativo" }, // usado para validar indicados ativos
-  ativo_ate: { type: Date, default: null },   // indica até quando o usuário é considerado ativo
-tema: {
-    type: String,
-    default: "claro"
-}
+  status: { type: String, default: "ativo" },
+  ativo_ate: { type: Date, default: null },
 });
+
 
 // índice parcial — enforce uniqueness only when codigo_afiliado is a string
 UserSchema.index(
