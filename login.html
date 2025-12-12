@@ -36,6 +36,77 @@
             color: white !important;
         }
 
+        /* Estilo para o botão de login com Google */
+        .google-login-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 90%;
+            padding: 12px 14px;
+            background-color: #ffffff;
+            color: #757575 !important;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-top: 15px;
+            border-radius: var(--card-radius);
+        }
+
+        .google-login-btn:hover {
+            background-color: #f8f9fa;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            text-decoration: none;
+            color: #424242 !important;
+            border-color: #c6c6c6;
+        }
+
+        .google-login-btn:active {
+            background-color: #f1f1f1;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .google-login-btn img {
+            width: 18px;
+            height: 18px;
+            margin-right: 12px;
+        }
+
+        .google-login-btn .btn-text {
+            font-family: 'Roboto', Arial, sans-serif;
+            color: #757575 !important;
+        }
+
+        .google-login-btn:hover .btn-text {
+            color: #424242 !important;
+        }
+
+        /* Separador "ou" entre os botões */
+        .login-separator {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: #666 !important;
+        }
+
+        .login-separator::before,
+        .login-separator::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background-color: #ddd;
+        }
+
+        .login-separator span {
+            padding: 0 15px;
+            font-size: 14px;
+            color: #666 !important;
+        }
+
         body {
             background-color: var(--bg-color);
             color: #000000 !important;
@@ -185,6 +256,11 @@
             .logo-login {
                 max-width: 150px;
             }
+
+            .google-login-btn {
+                padding: 10px 20px;
+                font-size: 15px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -196,6 +272,16 @@
             .login-title {
                 font-size: 1.2rem;
                 margin-bottom: 20px;
+            }
+
+            .google-login-btn {
+                padding: 9px 18px;
+                font-size: 14px;
+            }
+
+            .login-separator span {
+                font-size: 13px;
+                padding: 0 10px;
             }
         }
 
@@ -309,6 +395,17 @@
             <button type="submit" class="btn-login" id="loginButton">
                 <span class="btn-text">Entrar</span>
             </button>
+
+            <!-- Separador "ou" -->
+            <div class="login-separator">
+                <span>ou</span>
+            </div>
+
+            <!-- Botão de Login com Google -->
+            <a href="https://ganhesocialtest.com/api/auth/google" class="google-login-btn">
+                <img src="https://www.google.com/favicon.ico" alt="Google">
+                <span class="btn-text">Fazer Login com o Google</span>
+            </a>
         </form>
 
         <a href="https://ganhesocialtest.com/signup" class="signup-link">
@@ -322,11 +419,52 @@
         document.addEventListener("DOMContentLoaded", function () {
             document.body.classList.add('loaded');
 
+            // Verificar se já está logado
             const token = localStorage.getItem("token");
             if (token) {
-                window.location.href = "/dashboard";
+                // Validar token antes de redirecionar
+                fetch("https://ganhesocialtest.com/api/validate-token", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.href = "/dashboard";
+                        } else {
+                            localStorage.removeItem("token");
+                        }
+                    })
+                    .catch(() => {
+                        localStorage.removeItem("token");
+                    });
             }
         });
+
+        // Função wrapper para chamadas à API
+        async function apiFetch(path, options = {}) {
+            const token = localStorage.getItem('token');
+
+            options.headers = Object.assign({
+                "Accept": "application/json"
+            }, options.headers || {});
+
+            if (token) {
+                options.headers["Authorization"] = "Bearer " + token;
+            }
+
+            const res = await fetch(path, options);
+
+            // Tratamento centralizado de 401
+            if (res.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = '/';
+                throw new Error('Não autorizado');
+            }
+
+            return res;
+        }
 
         document.getElementById("loginForm").addEventListener("submit", async function (event) {
             event.preventDefault();
@@ -347,7 +485,7 @@
             }
 
             try {
-                // Show loading state - o texto desaparece imediatamente
+                // Show loading state
                 loginButton.classList.add("loading");
                 loginButton.disabled = true;
 
@@ -360,10 +498,15 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    localStorage.setItem("token", data.token);
-                    window.location.assign("/dashboard");
+                    if (data.token) {
+                        localStorage.setItem("token", data.token);
+                        window.location.assign("/dashboard");
+                    } else {
+                        statusMessage.textContent = "Resposta inesperada do servidor";
+                        statusMessage.classList.add("error-message");
+                    }
                 } else {
-                    statusMessage.textContent = data.error || "Erro ao fazer login";
+                    statusMessage.textContent = data.error || data.message || "Erro ao fazer login";
                     statusMessage.classList.add("error-message");
                 }
             } catch (error) {
@@ -375,6 +518,13 @@
                 loginButton.disabled = false;
             }
         });
+
+        // Chamar o carregamento quando entrar no dashboard
+        if (window.location.pathname === '/dashboard' || window.location.pathname.includes('painel')) {
+            window.addEventListener('DOMContentLoaded', () => {
+                loadUserBalance();
+            });
+        }
     </script>
 </body>
 
