@@ -32,8 +32,7 @@ export default async function handler(req, res) {
           email,
           nome: name,
           provider: "google",
-          senha: "",
-          token
+          senha: ""
         });
       }
 
@@ -74,8 +73,7 @@ export default async function handler(req, res) {
           email,
           nome: name,
           provider: "google",
-          senha: "",
-          token
+          senha: ""
         });
       }
 
