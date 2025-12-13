@@ -2196,7 +2196,7 @@ router.post("/confirmar_acao", async (req, res) => {
 
 // Rota: /api/test/ranking_diario (POST)
 router.post("/ranking_diario", async (req, res) => {
-  const rankingQuery = query || {};
+  const rankingQuery = req.query || {};
   const { token: bodyToken } = req.body || {};
 
   try {
@@ -2221,10 +2221,10 @@ router.post("/ranking_diario", async (req, res) => {
 
     // ---- lista de nomes fornecida (para preencher dailyrankings quando faltar) ----
     const fillerNames = [
-      "Allef 🔥","🤪","-","noname","⚡","💪","-","KingdosMTD🥱🥱","kaduzinho",
+      "-","🤪","-","noname","⚡","💪","-","-","kaduzinho",
       "Rei do ttk 👑","Deus🔥","Mago ✟","-","ldzz tiktok uva🍇","unknown",
-      "vitor das continhas","-","@_01.kaio0","Lipe Rodagem Interna 😄","-","dequelbest 🧙","Luiza","-","xxxxxxxxxx",
-      "Bruno TK","-","[GODZ] MK ☠️","[GODZ] Leozin ☠️","Junior","Metheus Rangel","Hackerzin☯","VIP++++","sagaz🐼","-"
+      "vitor das continhas","-","@_01.kaio0","Lipe Rodagem Interna 😄","-","dequelbest 🧙","-","-","xxxxxxxxxx",
+      "Bruno TK","-","[GODZ] MK ☠️","-","Junior","Metheus Rangel","Hackerzin☯","VIP++++","sagaz🐼","-"
     ];
 
     // função utilitária: normaliza username/token/userId para comparações
@@ -2852,7 +2852,3 @@ if (listaComProjetado.length < 10) {
 });
 
 export default router;
-console.log("ROTAS EXPRESS:");
-router.stack.forEach(r => {
-  if (r.route && r.route.path) console.log(" -", r.route.path);
-});
