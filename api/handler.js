@@ -1189,12 +1189,42 @@ router.get("/get_saldo", async (req, res) => {
   try {
     await connectDB();
 
-    const { token } = req.query;
+    // DEBUG: mostra o que chega (remova/ajuste em produção)
+    console.log("[DEBUG] get_saldo headers.authorization:", req.headers.authorization, "query.token:", req.query.token);
+
+    // 1) pegar token: primeiro query, depois Authorization: Bearer <token>
+    let token = req.query?.token || null;
+    const authHeader = (req.headers.authorization || "").toString();
+    if (!token && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1].trim();
+    }
+
     if (!token) {
       return res.status(400).json({ error: "Token obrigatório." });
     }
 
-    const usuario = await User.findOne({ token }).select("saldo pix_key _id");
+    // 2) tenta interpretar token como JWT (melhor fluxo) — se falhar, fallback para buscar por token no DB
+    let usuario = null;
+
+    // tenta JWT (se JWT_SECRET estiver definido)
+    if (process.env.JWT_SECRET) {
+      try {
+        const payload = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = payload?.id || payload?.sub;
+        if (userId) {
+          usuario = await User.findById(userId).select("saldo pix_key pix_key_type _id ativo_ate indicado_por nome email");
+        }
+      } catch (errJwt) {
+        // não é JWT válido; segue para fallback (não tratar como erro aqui)
+        console.log("[DEBUG] token não é JWT válido / jwt.verify falhou:", errJwt.message);
+      }
+    }
+
+    // fallback: buscar por campo token (compatibilidade com implementação anterior)
+    if (!usuario) {
+      usuario = await User.findOne({ token }).select("saldo pix_key pix_key_type _id ativo_ate indicado_por nome email");
+    }
+
     if (!usuario) {
       return res.status(403).json({ error: "Acesso negado." });
     }
@@ -1210,11 +1240,30 @@ router.get("/get_saldo", async (req, res) => {
       0
     );
 
+    // Normaliza tipo de chave PIX (se existir)
+    let pixKey = usuario.pix_key ?? null;
+    let pixKeyType = usuario.pix_key_type ?? null;
+    if (pixKey && pixKeyType) {
+      pixKeyType = String(pixKeyType).toLowerCase();
+      if (pixKeyType === "cpf" || pixKeyType === "c" || pixKeyType === "cpf_cnpj") {
+        pixKeyType = "cpf";
+        pixKey = String(pixKey).replace(/\D/g, "");
+      } else if (pixKeyType === "cnpj") {
+        pixKeyType = "cnpj";
+        pixKey = String(pixKey).replace(/\D/g, "");
+      } else if (pixKeyType === "phone" || pixKeyType === "celular" || pixKeyType === "telefone") {
+        pixKeyType = "phone";
+        pixKey = String(pixKey).replace(/\D/g, "");
+      } else {
+        pixKeyType = String(pixKeyType);
+      }
+    }
+
     return res.status(200).json({
-      saldo_disponivel:
-        typeof usuario.saldo === "number" ? usuario.saldo : 0,
+      saldo_disponivel: typeof usuario.saldo === "number" ? usuario.saldo : 0,
       saldo_pendente,
-      pix_key: usuario.pix_key
+      pix_key: pixKey,
+      pix_key_type: pixKeyType
     });
   } catch (error) {
     console.error("💥 Erro ao obter saldo:", error);
