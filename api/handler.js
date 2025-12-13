@@ -957,8 +957,52 @@ if (!user) {
       return res.status(400).json({ error: "Saldo insuficiente." });
     }
 
-// === Aceitar qualquer chave PIX sem validação de quantidade de dígitos ===
-// pega tipo enviado pelo frontend (se houver) e normaliza o nome usado internamente
+// === Validação e normalização de chave PIX (aceita CPF, CNPJ, phone, email, random) ===
+function isAllSameDigits(s) {
+  return /^(\d)\1+$/.test(s);
+}
+
+function validateCPFNumber(cpf) {
+  cpf = String(cpf).replace(/\D/g, "");
+  if (cpf.length !== 11) return false;
+  if (isAllSameDigits(cpf)) return false;
+  let sum = 0, remainder;
+  for (let i = 1; i <= 9; i++) sum += parseInt(cpf.substring(i-1, i)) * (11 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10) remainder = 0;
+  if (remainder !== parseInt(cpf.substring(9, 10))) return false;
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum += parseInt(cpf.substring(i-1, i)) * (12 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10) remainder = 0;
+  if (remainder !== parseInt(cpf.substring(10, 11))) return false;
+  return true;
+}
+
+function validateCNPJNumber(cnpj) {
+  cnpj = String(cnpj).replace(/\D/g, "");
+  if (cnpj.length !== 14) return false;
+  if (isAllSameDigits(cnpj)) return false;
+  // validação mais completa do CNPJ pode ser adicionada, mas essa já evita entradas óbvias
+  return true;
+}
+
+function validateEmail(email) {
+  if (!email) return false;
+  // regex simples e prática
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
+}
+
+function validatePhone(numeric) {
+  if (!numeric) return false;
+  return /^[0-9]{10,11}$/.test(numeric);
+}
+
+function isUUID(v) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+}
+
+// aceita variações comuns de nomes vindos do frontend
 const rawType = String((payment_data.pix_key_type || "")).trim().toLowerCase();
 let keyTypeNormalized = null;
 if (["cpf"].includes(rawType)) keyTypeNormalized = "CPF";
@@ -966,20 +1010,58 @@ else if (["cnpj"].includes(rawType)) keyTypeNormalized = "CNPJ";
 else if (["phone", "telefone", "celular", "mobile"].includes(rawType)) keyTypeNormalized = "PHONE";
 else if (["email", "e-mail", "mail"].includes(rawType)) keyTypeNormalized = "EMAIL";
 else if (["random", "aleatoria", "aleatória", "uuid", "evp"].includes(rawType)) keyTypeNormalized = "RANDOM";
-else if (rawType) keyTypeNormalized = rawType.toUpperCase(); // aceita qualquer rótulo enviado
-else keyTypeNormalized = "RANDOM"; // fallback se frontend não enviar tipo
 
-// pega a chave, limpa espaços nas bordas; se for email, coloca em lowercase
-let pixKey = String(payment_data.pix_key || "").trim();
-if (!pixKey) {
-  return res.status(400).json({ error: "Chave PIX inválida (vazia)." });
+// fallback: se frontend não enviou tipo, tentamos deduzir pela chave
+let pixRaw = String(payment_data.pix_key || "").trim();
+if (!keyTypeNormalized) {
+  const onlyDigits = pixRaw.replace(/\D/g, "");
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixRaw)) keyTypeNormalized = "EMAIL";
+  else if (onlyDigits.length === 11 && /^[0-9]+$/.test(onlyDigits) && validateCPFNumber(onlyDigits)) keyTypeNormalized = "CPF";
+  else if (onlyDigits.length === 14) keyTypeNormalized = "CNPJ";
+  else if (onlyDigits.length === 10 || onlyDigits.length === 11 || onlyDigits.length === 12) keyTypeNormalized = "PHONE";
+  else if (isUUID(pixRaw)) keyTypeNormalized = "RANDOM";
+  else keyTypeNormalized = "RANDOM"; // último recurso: trata como chave aleatória
 }
-if (keyTypeNormalized === "EMAIL") pixKey = pixKey.toLowerCase();
 
-// opcional: log útil para debugging
-console.log("[DEBUG] withdraw - pixKey (normalized):", pixKey, "keyTypeNormalized:", keyTypeNormalized);
+// valida e normaliza a chave conforme tipo
+let pixKey = pixRaw;
+switch (keyTypeNormalized) {
+  case "CPF":
+    pixKey = pixRaw.replace(/\D/g, "");
+    if (!validateCPFNumber(pixKey)) {
+      return res.status(400).json({ error: "CPF inválido." });
+    }
+    break;
+  case "CNPJ":
+    pixKey = pixRaw.replace(/\D/g, "");
+    if (!validateCNPJNumber(pixKey)) {
+      return res.status(400).json({ error: "CNPJ inválido." });
+    }
+    break;
+  case "PHONE":
+    pixKey = pixRaw.replace(/\D/g, "");
+    if (!validatePhone(pixKey)) {
+      return res.status(400).json({ error: "Telefone inválido para chave PIX." });
+    }
+    // garante formato com DDI/DDD conforme necessário (você pode normalizar para +55... se quiser)
+    break;
+  case "EMAIL":
+    pixKey = String(pixRaw).trim().toLowerCase();
+    if (!validateEmail(pixKey)) {
+      return res.status(400).json({ error: "E-mail inválido para chave PIX." });
+    }
+    break;
+  case "RANDOM":
+    // aceita UUID ou qualquer string não-vazia
+    if (!pixKey || pixKey.length < 3) {
+      return res.status(400).json({ error: "Chave aleatória inválida." });
+    }
+    break;
+  default:
+    return res.status(400).json({ error: "Tipo de chave PIX não reconhecido." });
+}
 
-// mapeamento simples para o provedor (ajuste se o provedor esperar nomes diferentes)
+// Opcional: mapeamento para os tipos entendidos pelo provedor (se precisar ajustar, troque aqui)
 const providerTypeMap = {
   "CPF": "CPF",
   "CNPJ": "CNPJ",
@@ -987,20 +1069,14 @@ const providerTypeMap = {
   "EMAIL": "EMAIL",
   "RANDOM": "RANDOM"
 };
-
 const providerKeyType = providerTypeMap[keyTypeNormalized] || keyTypeNormalized;
 
-if (!user.pix_key) {
-  user.pix_key = pixKey;
-  user.pix_key_type = keyTypeNormalized;
-}
-
-const externalReference = `saque_${user._id}_${Date.now()}`;
+    const externalReference = `saque_${user._id}_${Date.now()}`;
 
 const novoSaque = {
   valor: amountNum,
   chave_pix: pixKey,
-  tipo_chave: keyTypeNormalized,
+  tipo_chave: keyTypeNormalized,  
   status: "PENDING",
   data: new Date(),
   providerId: null,
@@ -1008,11 +1084,10 @@ const novoSaque = {
   ownerName: user.name || user.nome || "Usuário",
 };
 
-// atualiza saldo e adiciona saque
-user.saldo = (user.saldo ?? 0) - amountNum;
-user.saques = user.saques || [];
-user.saques.push(novoSaque);
-await user.save();
+    user.saldo = (user.saldo ?? 0) - amountNum;
+    user.saques = user.saques || [];
+    user.saques.push(novoSaque);
+    await user.save();
 
     // ===== Comunica com provedor OpenPix =====
     const OPENPIX_API_KEY = process.env.OPENPIX_API_KEY;
@@ -1036,8 +1111,7 @@ await user.save();
       "Idempotency-Key": externalReference
     };
 
-// preparar payload para o provedor usando providerKeyType
-const valueInCents = Math.round(amountNum * 100);
+    const valueInCents = Math.round(amountNum * 100);
 const createPayload = {
   value: valueInCents,
   destinationAlias: pixKey,
@@ -1224,154 +1298,6 @@ const createPayload = {
   } catch (error) {
     console.error("💥 Erro em /withdraw:", error);
     return res.status(500).json({ error: "Erro ao processar saque." });
-  }
-});
-
-// ROTA: /api/get_saldo (GET)
-router.get("/get_saldo", async (req, res) => {
-  try {
-    await connectDB();
-
-    // DEBUG: mostra o que chega (remova/ajuste em produção)
-    console.log("[DEBUG] get_saldo headers.authorization:", req.headers.authorization, "query.token:", req.query.token);
-
-    // 1) pegar token: primeiro query, depois Authorization: Bearer <token>
-    let token = req.query?.token || null;
-    const authHeader = (req.headers.authorization || "").toString();
-    if (!token && authHeader.startsWith("Bearer ")) {
-      token = authHeader.split(" ")[1].trim();
-    }
-
-    if (!token) {
-      return res.status(400).json({ error: "Token obrigatório." });
-    }
-
-    // 2) tenta interpretar token como JWT (melhor fluxo) — se falhar, fallback para buscar por token no DB
-    let usuario = null;
-
-    if (process.env.JWT_SECRET) {
-      try {
-        const payload = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = payload?.id || payload?.sub;
-        if (userId) {
-          // incluir saques para podermos retornar last_saque
-          usuario = await User.findById(userId)
-            .select("saldo pix_key pix_key_type _id ativo_ate indicado_por nome email saques")
-            .lean();
-        }
-      } catch (errJwt) {
-        // não é JWT válido; segue para fallback (não tratar como erro aqui)
-        console.log("[DEBUG] token não é JWT válido / jwt.verify falhou:", errJwt.message);
-      }
-    }
-
-    // fallback: buscar por campo token (compatibilidade com implementação anterior)
-    if (!usuario) {
-      usuario = await User.findOne({ token })
-        .select("saldo pix_key pix_key_type _id ativo_ate indicado_por nome email saques")
-        .lean();
-    }
-
-    if (!usuario) {
-      return res.status(403).json({ error: "Acesso negado." });
-    }
-
-    // Busca ações pendentes (não validadas)
-    const pendentes = await ActionHistory.find({
-      user: usuario._id,
-      acao_validada: "pendente"
-    }).select("valor_confirmacao").lean();
-
-    const saldo_pendente = (pendentes || []).reduce(
-      (soma, acao) => soma + (acao.valor_confirmacao || 0),
-      0
-    );
-
-    // Helper: normaliza tipo e chave
-    function normalizePixPair(rawKey, rawType) {
-      if (!rawKey && !rawType) return { key: null, type: null };
-
-      let key = rawKey ?? null;
-      let type = rawType ?? null;
-      if (type) type = String(type).toLowerCase();
-
-      // normaliza tipo textual
-      if (type === "c" || type === "cpf_cnpj") type = "cpf"; // casos estranhos
-      if (type === "telefone" || type === "celular") type = "phone";
-
-      if (key && typeof key === "string") key = key.trim();
-
-      // aplica limpeza por tipo
-      try {
-        if (type === "cpf") {
-          key = String(key).replace(/\D/g, "");
-        } else if (type === "cnpj") {
-          key = String(key).replace(/\D/g, "");
-        } else if (type === "phone") {
-          key = String(key).replace(/\D/g, "");
-        } else if (type === "email") {
-          key = String(key).toLowerCase();
-        }
-      } catch (e) {
-        // ignore, retornar raw
-      }
-
-      return { key: key || null, type: type || null };
-    }
-
-    // Normaliza usuário.pix_key
-    const userPix = normalizePixPair(usuario.pix_key ?? null, usuario.pix_key_type ?? null);
-
-    // Determina last_saque (mais recente) a partir do array usuario.saques
-    let lastSaque = null;
-    if (Array.isArray(usuario.saques) && usuario.saques.length > 0) {
-      // safe sort: por data -> new Date(...)
-      const copy = usuario.saques.slice();
-      copy.sort((a, b) => {
-        const da = a?.data ? new Date(a.data) : (a?.createdAt ? new Date(a.createdAt) : new Date(0));
-        const db = b?.data ? new Date(b.data) : (b?.createdAt ? new Date(b.createdAt) : new Date(0));
-        return db - da;
-      });
-      const rawLast = copy[0];
-      if (rawLast) {
-        lastSaque = {
-          chave_pix: rawLast.chave_pix ?? rawLast.pix_key ?? rawLast.destination ?? null,
-          tipo_chave: rawLast.tipo_chave ?? rawLast.pix_key_type ?? rawLast.tipo ?? null,
-          valor: rawLast.valor ?? rawLast.amount ?? null,
-          data: rawLast.data ? new Date(rawLast.data).toISOString() : (rawLast.createdAt ? new Date(rawLast.createdAt).toISOString() : null)
-        };
-      }
-    }
-
-    // Normaliza last_saque pix info (se existir)
-    let lastSaquePix = { key: null, type: null };
-    if (lastSaque && lastSaque.chave_pix) {
-      lastSaquePix = normalizePixPair(lastSaque.chave_pix, lastSaque.tipo_chave);
-    }
-
-    // Escolhe a chave efetiva que o frontend pode preferir:
-    // prioriza last_saque quando existir; caso contrário usa user.pix_key
-    const pixKeyEffective = lastSaquePix.key ?? userPix.key ?? null;
-    const pixKeyEffectiveType = lastSaquePix.type ?? userPix.type ?? null;
-
-    // DEBUG: log resumido
-    console.log("[DEBUG] get_saldo - userPix:", userPix, "lastSaquePix:", lastSaquePix, "effective:", { pixKeyEffective, pixKeyEffectiveType });
-
-    return res.status(200).json({
-      saldo_disponivel: typeof usuario.saldo === "number" ? usuario.saldo : 0,
-      saldo_pendente,
-      // mantém os valores do usuário (não sobrescreve DB)
-      pix_key: userPix.key,
-      pix_key_type: userPix.type,
-      // fornece a última operação para UI preferir quando desejar
-      last_saque: lastSaque,
-      // chave efetiva (conveniência para front) — prefira usar esse campo no frontend
-      pix_key_effective: pixKeyEffective,
-      pix_key_effective_type: pixKeyEffectiveType
-    });
-  } catch (error) {
-    console.error("💥 Erro ao obter saldo:", error);
-    return res.status(500).json({ error: "Erro ao buscar saldo." });
   }
 });
 
