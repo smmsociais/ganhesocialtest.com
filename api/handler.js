@@ -1071,18 +1071,26 @@ const providerTypeMap = {
 };
 const providerKeyType = providerTypeMap[keyTypeNormalized] || keyTypeNormalized;
 
+// grava no usuário (se ainda não existia) — armazena tipo em minúsculas para consistência
+if (!user.pix_key) {
+  user.pix_key = pixKey;
+  user.pix_key_type = keyTypeNormalized.toLowerCase();
+} else if (user.pix_key !== pixKey) {
+  return res.status(400).json({ error: "Chave PIX já cadastrada e não pode ser alterada." });
+}
+
     const externalReference = `saque_${user._id}_${Date.now()}`;
 
-    const novoSaque = {
-      valor: amountNum,
-      chave_pix: pixKey,
-      tipo_chave: keyType,
-      status: "PENDING",
-      data: new Date(),
-      providerId: null,
-      externalReference,
-      ownerName: user.name || user.nome || "Usuário",
-    };
+const novoSaque = {
+  valor: amountNum,
+  chave_pix: pixKey,
+  tipo_chave: keyTypeNormalized,  
+  status: "PENDING",
+  data: new Date(),
+  providerId: null,
+  externalReference,
+  ownerName: user.name || user.nome || "Usuário",
+};
 
     user.saldo = (user.saldo ?? 0) - amountNum;
     user.saques = user.saques || [];
