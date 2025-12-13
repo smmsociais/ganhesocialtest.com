@@ -408,7 +408,8 @@
         .menu-item i {
             width: 24px;
             text-align: center;
-            color: var(--gray-dark); /* Ícones em cinza escuro */
+            color: var(--gray-dark);
+            /* Ícones em cinza escuro */
         }
 
         .menu-item:hover {
@@ -586,7 +587,8 @@
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
                 <!-- A imagem será trocada via CSS baseado no tema -->
-                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;"
+                    id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -621,7 +623,7 @@
                 <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
         </div>
-        </div>
+    </div>
     </div>
 
     <!-- Conteúdo Principal -->
@@ -646,7 +648,8 @@
 
                 <div class="info-box">
                     <div class="info-title"></i> Método de Saque</div>
-                    <div class="info-content">Aceitamos todos os tipos de chaves PIX: CPF, CNPJ, E-mail, Telefone e Chave Aleatória.</div>
+                    <div class="info-content">Aceitamos todos os tipos de chaves PIX: CPF, CNPJ, E-mail, Telefone e
+                        Chave Aleatória.</div>
                 </div>
 
                 <div class="form-group">
@@ -656,7 +659,6 @@
                 <div class="form-group">
                     <input type="text" id="pixKey" class="input-box" placeholder="Digite sua chave PIX" maxlength="255">
                     <div id="pixError" class="error-message"></div>
-                    <small class="field-description">Insira CPF, CNPJ, E-mail, Telefone ou Chave Aleatória</small>
                 </div>
 
                 <p class="info-text">Saldo disponível: <strong><span id="availableBalance">R$ 0,00</span></strong></p>
@@ -678,17 +680,17 @@
             const tema = document.documentElement.getAttribute('data-tema');
             const logoDesktop = document.getElementById('logoDesktop');
             const logoMobile = document.getElementById('logoMobile');
-            
+
             // URLs das logos para cada tema
             const logoClaro = 'https://i.imgur.com/dioL5B7.png';
             const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
-            
+
             const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
-            
+
             if (logoDesktop) {
                 logoDesktop.src = logoURL;
             }
-            
+
             if (logoMobile) {
                 logoMobile.src = logoURL;
             }
@@ -702,20 +704,20 @@
             const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
             atualizarTextoBotaoTema(temaAtual);
 
-            themeToggle.addEventListener('click', function() {
+            themeToggle.addEventListener('click', function () {
                 const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
                 const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
-                
+
                 // Atualiza o atributo data-tema
                 document.documentElement.setAttribute('data-tema', novoTema);
-                
+
                 // Salva no localStorage
                 try {
                     localStorage.setItem('tema', novoTema);
                 } catch (e) {
                     console.warn("Erro ao salvar tema no localStorage:", e);
                 }
-                
+
                 // Atualiza o texto do botão
                 atualizarTextoBotaoTema(novoTema);
             });
@@ -727,7 +729,7 @@
 
             const icon = themeToggle.querySelector('i');
             const text = themeToggle.querySelector('span');
-            
+
             if (tema === 'escuro') {
                 icon.className = 'fas fa-sun';
                 text.textContent = 'Claro';
@@ -798,10 +800,10 @@
         /* === FUNÇÕES DE VALIDAÇÃO DE PIX === */
         function detectPixType(pixKey) {
             const value = pixKey.trim();
-            
+
             // Remove caracteres não numéricos para análise
             const numericOnly = value.replace(/\D/g, '');
-            
+
             // Detecção do tipo de chave PIX
             if (numericOnly.length === 11 && /^\d{11}$/.test(numericOnly)) {
                 // CPF - 11 dígitos numéricos
@@ -856,60 +858,60 @@
 
         function validateCPFNumber(cpf) {
             if (cpf.length !== 11) return false;
-            
+
             // Validação simples de CPF
             if (/^(\d)\1{10}$/.test(cpf)) {
                 return false;
             }
-            
+
             // Validação dos dígitos verificadores
             let sum = 0;
             let remainder;
-            
+
             for (let i = 1; i <= 9; i++) {
-                sum = sum + parseInt(cpf.substring(i-1, i)) * (11 - i);
+                sum = sum + parseInt(cpf.substring(i - 1, i)) * (11 - i);
             }
-            
+
             remainder = (sum * 10) % 11;
-            
+
             if (remainder === 10 || remainder === 11) {
                 remainder = 0;
             }
-            
+
             if (remainder !== parseInt(cpf.substring(9, 10))) {
                 return false;
             }
-            
+
             sum = 0;
             for (let i = 1; i <= 10; i++) {
-                sum = sum + parseInt(cpf.substring(i-1, i)) * (12 - i);
+                sum = sum + parseInt(cpf.substring(i - 1, i)) * (12 - i);
             }
-            
+
             remainder = (sum * 10) % 11;
-            
+
             if (remainder === 10 || remainder === 11) {
                 remainder = 0;
             }
-            
+
             if (remainder !== parseInt(cpf.substring(10, 11))) {
                 return false;
             }
-            
+
             return true;
         }
 
         function validatePixKey() {
             const pixKey = document.getElementById('pixKey').value.trim();
             const errorElement = document.getElementById('pixError');
-            
+
             if (!pixKey) {
                 errorElement.textContent = "Por favor, informe sua chave PIX";
                 errorElement.style.display = 'block';
                 return { isValid: false };
             }
-            
+
             const pixInfo = detectPixType(pixKey);
-            
+
             if (!pixInfo.isValid) {
                 if (pixInfo.type === 'cpf') {
                     errorElement.textContent = "CPF inválido. Verifique os dígitos";
@@ -921,7 +923,7 @@
                 errorElement.style.display = 'block';
                 return { isValid: false, pixInfo: pixInfo };
             }
-            
+
             errorElement.style.display = 'none';
             return { isValid: true, pixInfo: pixInfo };
         }
@@ -930,7 +932,7 @@
         function autoMaskPixKey(input) {
             const value = input.value;
             const numericOnly = value.replace(/\D/g, '');
-            
+
             // Se for apenas números e parecer CPF (11 dígitos)
             if (numericOnly.length <= 11 && /^\d*$/.test(value.replace(/\D/g, ''))) {
                 if (numericOnly.length <= 11) {
@@ -972,7 +974,7 @@
                 }
                 input.value = formatted;
             }
-            
+
             // Limpa erro enquanto digita
             document.getElementById('pixError').style.display = 'none';
         }
@@ -983,123 +985,131 @@
             input.value = 'R$ ' + value.replace('.', ',').replace(/(\d)(?=(\d{3})+\,)/g, "$1.");
         }
 
-        /* === FUNÇÕES DE CARREGAMENTO DE DADOS === */
-        async function loadWithdrawData() {
-            const token = localStorage.getItem("token");
+// Helper: retorna token limpo (sem "Bearer " e sem espaços)
+function getCleanToken() {
+    let t = localStorage.getItem("token");
+    if (!t) return null;
+    // remove possíveis aspas e prefixo "Bearer "
+    t = String(t).trim().replace(/^"|"$/g, "");
+    t = t.replace(/^Bearer\s+/i, "").trim();
+    return t || null;
+}
 
-            try {
-                const response = await fetch(`https://ganhesocialtest.com/api/get_saldo?token=${token}`);
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || "Erro ao buscar saldo.");
-                }
+/* === FUNÇÕES DE CARREGAMENTO DE DADOS === */
+async function loadWithdrawData() {
+    const token = getCleanToken();
+    if (!token) {
+        // força logout/redireciona se quiser
+        window.location.href = "https://ganhesocialtest.com/login";
+        return;
+    }
 
-                const saldoDisponivel = parseFloat(data.saldo_disponivel || 0);
-                localStorage.setItem("saldoDisponivel", saldoDisponivel);
-                document.getElementById("availableBalance").textContent = saldoDisponivel.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-                // Verifica se há chave PIX salva
-                if (data.pix_key && data.pix_key_type) {
-                    savedPixKey = data.pix_key;
-                    savedPixType = data.pix_key_type;
-                    
-                    // Preenche o campo
-                    const pixKeyInput = document.getElementById('pixKey');
-                    if (data.pix_key_type === 'cpf') {
-                        // Formata CPF
-                        pixKeyInput.value = data.pix_key.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
-                    } else if (data.pix_key_type === 'cnpj') {
-                        // Formata CNPJ
-                        pixKeyInput.value = data.pix_key.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-                    } else if (data.pix_key_type === 'phone') {
-                        // Formata telefone
-                        const phone = data.pix_key;
-                        if (phone.length === 10) {
-                            pixKeyInput.value = phone.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
-                        } else {
-                            pixKeyInput.value = phone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
-                        }
-                    } else {
-                        pixKeyInput.value = data.pix_key;
-                    }
-                    
-                    // Desabilita a edição se já estiver salva
-                    pixKeyInput.disabled = true;
-                }
-
-            } catch (error) {
-                console.error("Erro ao carregar saldo:", error);
-                showAlert("Erro ao carregar informações da conta. Por favor, tente novamente.");
+    try {
+        // usar header Authorization é mais padrão/seguro do que ?token=...
+        const response = await fetch(`https://ganhesocialtest.com/api/get_saldo`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`
             }
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "Erro ao buscar saldo.");
         }
 
-        /* === FUNÇÃO DE SOLICITAÇÃO DE SAQUE === */
-        async function requestWithdraw() {
-            const rawAmount = document.getElementById('amount').value.replace(/\D/g, '');
-            const amount = parseFloat(rawAmount) / 100;
-            const pixKey = document.getElementById('pixKey').value.trim();
-            const token = localStorage.getItem("token");
-            const saldoDisponivel = parseFloat(localStorage.getItem("saldoDisponivel") || 0);
+        const saldoDisponivel = parseFloat(data.saldo_disponivel || 0);
+        localStorage.setItem("saldoDisponivel", saldoDisponivel);
+        document.getElementById("availableBalance").textContent = saldoDisponivel.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-            // Limpa alertas anteriores
-            document.getElementById("alertBox").style.display = "none";
-
-            // Validações
-            if (!amount || amount < 5) {
-                showAlert("O valor mínimo para saque é de R$ 5,00.");
-                return;
+        // resto do seu código que preenche pix...
+        if (data.pix_key && data.pix_key_type) {
+            savedPixKey = data.pix_key;
+            savedPixType = data.pix_key_type;
+            const pixKeyInput = document.getElementById('pixKey');
+            // formatação conforme tipo (mantive seu comportamento)
+            if (data.pix_key_type === 'cpf') {
+                pixKeyInput.value = data.pix_key.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+            } else if (data.pix_key_type === 'cnpj') {
+                pixKeyInput.value = data.pix_key.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+            } else if (data.pix_key_type === 'phone') {
+                const phone = data.pix_key;
+                if (phone.length === 10) pixKeyInput.value = phone.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+                else pixKeyInput.value = phone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+            } else {
+                pixKeyInput.value = data.pix_key;
             }
-
-            if (amount > saldoDisponivel) {
-                showAlert("Saldo insuficiente para realizar o saque.");
-                return;
-            }
-
-            const validationResult = validatePixKey();
-            if (!validationResult.isValid) {
-                return;
-            }
-
-            const pixInfo = validationResult.pixInfo;
-
-            try {
-                const response = await fetch("https://ganhesocialtest.com/api/withdraw", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        amount: parseFloat(amount),
-                        payment_method: "pix",
-                        payment_data: {
-                            pix_key: pixInfo.cleanKey,
-                            pix_key_type: pixInfo.type
-                        }
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || "Erro ao solicitar saque");
-                }
-
-                // Exibe mensagem de sucesso
-                showAlert("Saque solicitado com sucesso! O pagamento está em processamento.", "success");
-
-                // Limpa o campo de valor
-                document.getElementById('amount').value = '';
-
-                // Atualiza o saldo disponível
-                await loadWithdrawData();
-
-            } catch (error) {
-                console.error("Erro ao solicitar saque:", error);
-                showAlert(error.message || "Erro ao solicitar saque. Tente novamente.");
-            }
+            pixKeyInput.disabled = true;
         }
 
+    } catch (error) {
+        console.error("Erro ao carregar saldo:", error);
+        showAlert("Erro ao carregar informações da conta. Por favor, tente novamente.");
+    }
+}
+
+/* === FUNÇÃO DE SOLICITAÇÃO DE SAQUE === */
+async function requestWithdraw() {
+    const rawAmount = document.getElementById('amount').value.replace(/\D/g, '');
+    const amount = parseFloat(rawAmount) / 100;
+    const pixKey = document.getElementById('pixKey').value.trim();
+    const token = getCleanToken();
+    const saldoDisponivel = parseFloat(localStorage.getItem("saldoDisponivel") || 0);
+
+    document.getElementById("alertBox").style.display = "none";
+
+    if (!amount || amount < 5) {
+        showAlert("O valor mínimo para saque é de R$ 5,00.");
+        return;
+    }
+    if (amount > saldoDisponivel) {
+        showAlert("Saldo insuficiente para realizar o saque.");
+        return;
+    }
+
+    const validationResult = validatePixKey();
+    if (!validationResult.isValid) return;
+    const pixInfo = validationResult.pixInfo;
+
+    if (!token) {
+        showAlert("Sessão expirada. Faça login novamente.");
+        return;
+    }
+
+    try {
+        // DEBUG: log antes de enviar (remova depois)
+        console.log("Enviando withdraw com token:", token);
+
+        const response = await fetch("https://ganhesocialtest.com/api/withdraw", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`   // token limpo aqui
+            },
+            body: JSON.stringify({
+                amount: parseFloat(amount),
+                payment_method: "pix",
+                payment_data: {
+                    pix_key: pixInfo.cleanKey,
+                    pix_key_type: pixInfo.type
+                }
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "Erro ao solicitar saque");
+        }
+
+        showAlert("Saque solicitado com sucesso! O pagamento está em processamento.", "success");
+        document.getElementById('amount').value = '';
+        await loadWithdrawData();
+
+    } catch (error) {
+        console.error("Erro ao solicitar saque:", error);
+        showAlert(error.message || "Erro ao solicitar saque. Tente novamente.");
+    }
+}
         /* === INICIALIZAÇÃO UNIFICADA === */
         document.addEventListener("DOMContentLoaded", async function () {
             const token = localStorage.getItem("token");
@@ -1119,7 +1129,7 @@
             configurarTemaToggle();
 
             // Configura máscara automática no campo PIX
-            document.getElementById('pixKey').addEventListener('input', function(e) {
+            document.getElementById('pixKey').addEventListener('input', function (e) {
                 autoMaskPixKey(e.target);
             });
 
@@ -1134,8 +1144,8 @@
             await loadWithdrawData();
 
             // Observador para mudanças de tema
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
+            const observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
                     if (mutation.attributeName === 'data-tema') {
                         atualizarLogosPorTema();
                     }
@@ -1148,4 +1158,5 @@
         });
     </script>
 </body>
+
 </html>
