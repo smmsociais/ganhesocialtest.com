@@ -957,22 +957,127 @@ if (!user) {
       return res.status(400).json({ error: "Saldo insuficiente." });
     }
 
-    const allowedTypes = ["CPF"]; // ajustar se quiser permitir CNPJ, EMAIL, CELLPHONE etc.
-    const keyType = String((payment_data.pix_key_type || "")).toUpperCase();
-    if (!allowedTypes.includes(keyType)) {
-      return res.status(400).json({ error: "Tipo de chave PIX inválido." });
-    }
+// === Validação e normalização de chave PIX (aceita CPF, CNPJ, phone, email, random) ===
+function isAllSameDigits(s) {
+  return /^(\d)\1+$/.test(s);
+}
 
-    let pixKey = String(payment_data.pix_key || "");
-    if (keyType === "CPF" || keyType === "CNPJ") pixKey = pixKey.replace(/\D/g, "");
+function validateCPFNumber(cpf) {
+  cpf = String(cpf).replace(/\D/g, "");
+  if (cpf.length !== 11) return false;
+  if (isAllSameDigits(cpf)) return false;
+  let sum = 0, remainder;
+  for (let i = 1; i <= 9; i++) sum += parseInt(cpf.substring(i-1, i)) * (11 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10) remainder = 0;
+  if (remainder !== parseInt(cpf.substring(9, 10))) return false;
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum += parseInt(cpf.substring(i-1, i)) * (12 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10) remainder = 0;
+  if (remainder !== parseInt(cpf.substring(10, 11))) return false;
+  return true;
+}
 
-    // salva PIX se não existir — bloqueia alteração caso exista diferente
-    if (!user.pix_key) {
-      user.pix_key = pixKey;
-      user.pix_key_type = keyType;
-    } else if (user.pix_key !== pixKey) {
-      return res.status(400).json({ error: "Chave PIX já cadastrada e não pode ser alterada." });
+function validateCNPJNumber(cnpj) {
+  cnpj = String(cnpj).replace(/\D/g, "");
+  if (cnpj.length !== 14) return false;
+  if (isAllSameDigits(cnpj)) return false;
+  // validação mais completa do CNPJ pode ser adicionada, mas essa já evita entradas óbvias
+  return true;
+}
+
+function validateEmail(email) {
+  if (!email) return false;
+  // regex simples e prática
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
+}
+
+function validatePhone(numeric) {
+  if (!numeric) return false;
+  return /^[0-9]{10,11}$/.test(numeric);
+}
+
+function isUUID(v) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+}
+
+// aceita variações comuns de nomes vindos do frontend
+const rawType = String((payment_data.pix_key_type || "")).trim().toLowerCase();
+let keyTypeNormalized = null;
+if (["cpf"].includes(rawType)) keyTypeNormalized = "CPF";
+else if (["cnpj"].includes(rawType)) keyTypeNormalized = "CNPJ";
+else if (["phone", "telefone", "celular", "mobile"].includes(rawType)) keyTypeNormalized = "PHONE";
+else if (["email", "e-mail", "mail"].includes(rawType)) keyTypeNormalized = "EMAIL";
+else if (["random", "aleatoria", "aleatória", "uuid", "evp"].includes(rawType)) keyTypeNormalized = "RANDOM";
+
+// fallback: se frontend não enviou tipo, tentamos deduzir pela chave
+let pixRaw = String(payment_data.pix_key || "").trim();
+if (!keyTypeNormalized) {
+  const onlyDigits = pixRaw.replace(/\D/g, "");
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixRaw)) keyTypeNormalized = "EMAIL";
+  else if (onlyDigits.length === 11 && /^[0-9]+$/.test(onlyDigits) && validateCPFNumber(onlyDigits)) keyTypeNormalized = "CPF";
+  else if (onlyDigits.length === 14) keyTypeNormalized = "CNPJ";
+  else if (onlyDigits.length === 10 || onlyDigits.length === 11) keyTypeNormalized = "PHONE";
+  else if (isUUID(pixRaw)) keyTypeNormalized = "RANDOM";
+  else keyTypeNormalized = "RANDOM"; // último recurso: trata como chave aleatória
+}
+
+// valida e normaliza a chave conforme tipo
+let pixKey = pixRaw;
+switch (keyTypeNormalized) {
+  case "CPF":
+    pixKey = pixRaw.replace(/\D/g, "");
+    if (!validateCPFNumber(pixKey)) {
+      return res.status(400).json({ error: "CPF inválido." });
     }
+    break;
+  case "CNPJ":
+    pixKey = pixRaw.replace(/\D/g, "");
+    if (!validateCNPJNumber(pixKey)) {
+      return res.status(400).json({ error: "CNPJ inválido." });
+    }
+    break;
+  case "PHONE":
+    pixKey = pixRaw.replace(/\D/g, "");
+    if (!validatePhone(pixKey)) {
+      return res.status(400).json({ error: "Telefone inválido para chave PIX." });
+    }
+    // garante formato com DDI/DDD conforme necessário (você pode normalizar para +55... se quiser)
+    break;
+  case "EMAIL":
+    pixKey = String(pixRaw).trim().toLowerCase();
+    if (!validateEmail(pixKey)) {
+      return res.status(400).json({ error: "E-mail inválido para chave PIX." });
+    }
+    break;
+  case "RANDOM":
+    // aceita UUID ou qualquer string não-vazia
+    if (!pixKey || pixKey.length < 3) {
+      return res.status(400).json({ error: "Chave aleatória inválida." });
+    }
+    break;
+  default:
+    return res.status(400).json({ error: "Tipo de chave PIX não reconhecido." });
+}
+
+// Opcional: mapeamento para os tipos entendidos pelo provedor (se precisar ajustar, troque aqui)
+const providerTypeMap = {
+  "CPF": "CPF",
+  "CNPJ": "CNPJ",
+  "PHONE": "PHONE",
+  "EMAIL": "EMAIL",
+  "RANDOM": "RANDOM"
+};
+const providerKeyType = providerTypeMap[keyTypeNormalized] || keyTypeNormalized;
+
+// grava no usuário (se ainda não existia) — armazena tipo em minúsculas para consistência
+if (!user.pix_key) {
+  user.pix_key = pixKey;
+  user.pix_key_type = keyTypeNormalized.toLowerCase();
+} else if (user.pix_key !== pixKey) {
+  return res.status(400).json({ error: "Chave PIX já cadastrada e não pode ser alterada." });
+}
 
     const externalReference = `saque_${user._id}_${Date.now()}`;
 
@@ -1015,13 +1120,13 @@ if (!user) {
     };
 
     const valueInCents = Math.round(amountNum * 100);
-    const createPayload = {
-      value: valueInCents,
-      destinationAlias: pixKey,
-      destinationAliasType: keyType,
-      correlationID: externalReference,
-      comment: `Saque para ${user._id}`
-    };
+const createPayload = {
+  value: valueInCents,
+  destinationAlias: pixKey,
+  destinationAliasType: providerKeyType,
+  correlationID: externalReference,
+  comment: `Saque para ${user._id}`
+};
 
     console.log("[DEBUG] Enviando createPayment para OpenPix:", createPayload);
 
