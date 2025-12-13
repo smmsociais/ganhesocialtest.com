@@ -44,6 +44,39 @@ let dailyFixedRanking = null;
 
 const baselineValores = [10, 9, 8, 7, 6, 5.9, 5.8, 5.7, 5.6, 5.5];
 
+// garante helper acessível mesmo em hot-reload / diferentes escopos
+if (typeof globalThis.fetchTopFromDailyEarning !== "function") {
+  globalThis.fetchTopFromDailyEarning = async function(limit = 10) {
+    try {
+      const ganhos = await DailyEarning.aggregate([
+        { $group: { _id: "$userId", totalGanhos: { $sum: "$valor" } } },
+        { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "usuario" } },
+        { $unwind: { path: "$usuario", preserveNullAndEmptyArrays: true } },
+        { $project: {
+            userId: "$_id",
+            username: { $ifNull: ["$usuario.nome", "Usuário"] },
+            token: { $ifNull: ["$usuario.token", null] },
+            real_total: "$totalGanhos"
+        }},
+        { $sort: { real_total: -1 } },
+        { $limit: limit }
+      ]);
+
+      return ganhos.map(g => ({
+        username: g.username || "Usuário",
+        token: g.token || null,
+        real_total: Number(g.real_total || 0),
+        userId: g.userId ? String(g.userId) : null,
+        source: "earnings"
+      }));
+    } catch (e) {
+      console.error("Erro fetchTopFromDailyEarning:", e);
+      return [];
+    }
+  };
+}
+const fetchTopFromDailyEarning = globalThis.fetchTopFromDailyEarning;
+
 async function salvarAcaoComLimitePorUsuario(novaAcao) {
     const LIMITE = 10000;
 
