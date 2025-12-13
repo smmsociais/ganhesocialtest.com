@@ -575,6 +575,84 @@
             margin-top: 5px;
             display: block;
         }
+
+        /* === NOVOS ESTILOS PARA CAMPO PIX COM ÍCONE DE EDIÇÃO === */
+        .pix-input-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .pix-input-container .input-box {
+            padding-right: 50px;
+            /* Espaço para o ícone */
+        }
+
+        .pix-edit-icon {
+            position: absolute;
+            right: 15px;
+            top: calc(50% + 4px);
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--gray-dark);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 8px;
+            border-radius: 4px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+        }
+
+        .pix-edit-icon:hover {
+            color: var(--button);
+            background-color: var(--hover);
+        }
+
+        .pix-edit-icon:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        .pix-save-icon {
+            position: absolute;
+            right: 15px;
+            top: calc(50% + 4px);
+            transform: translateY(-50%);
+            background: var(--success);
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 8px;
+            border-radius: 4px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+        }
+
+        .pix-save-icon:hover {
+            background: #218838;
+        }
+
+        .pix-input-container.disabled .input-box {
+            background-color: var(--hover);
+            color: var(--gray-dark);
+            cursor: not-allowed;
+        }
+
+        /* === NOVOS ESTILOS PARA MODO EDIÇÃO === */
+        .edit-mode .input-box {
+            background-color: var(--container) !important;
+            color: var(--text) !important;
+            border-color: var(--button) !important;
+            cursor: text !important;
+        }
     </style>
 </head>
 
@@ -656,8 +734,12 @@
                     <input type="text" id="amount" class="input-box" placeholder="Valor" oninput="formatCurrency(this)">
                 </div>
 
-                <div class="form-group">
+                <!-- Container para o campo PIX com ícone de edição -->
+                <div class="form-group pix-input-container" id="pixContainer">
                     <input type="text" id="pixKey" class="input-box" placeholder="Digite sua chave PIX" maxlength="255">
+                    <button type="button" id="pixEditIcon" class="pix-edit-icon">
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
                     <div id="pixError" class="error-message"></div>
                 </div>
 
@@ -674,6 +756,8 @@
         // Variáveis globais
         let savedPixKey = null;
         let savedPixType = null;
+        let isEditingPix = false;
+        let originalPixKey = '';
 
         /* === ATUALIZAR LOGOS POR TEMA === */
         function atualizarLogosPorTema() {
@@ -795,6 +879,82 @@
             }
 
             alertBox.style.display = "block";
+        }
+
+        /* === FUNÇÕES DE CONTROLE DO CAMPO PIX === */
+        function togglePixEdit() {
+            const pixInput = document.getElementById('pixKey');
+            const pixContainer = document.getElementById('pixContainer');
+            const pixEditIcon = document.getElementById('pixEditIcon');
+            
+            if (!isEditingPix) {
+                // Entrar no modo edição
+                isEditingPix = true;
+                originalPixKey = pixInput.value;
+                
+                // Habilitar o campo
+                pixInput.disabled = false;
+                pixContainer.classList.add('edit-mode');
+                pixContainer.classList.remove('disabled');
+                
+                // Trocar ícone para salvar
+                pixEditIcon.innerHTML = '<i class="fas fa-check"></i>';
+                pixEditIcon.className = 'pix-save-icon';
+                pixEditIcon.title = 'Salvar alterações';
+                
+                // Focar no campo
+                pixInput.focus();
+                pixInput.select();
+            } else {
+                // Tentar salvar as alterações
+                const validationResult = validatePixKey();
+                
+                if (validationResult.isValid) {
+                    // Salvar alterações
+                    const pixInfo = validationResult.pixInfo;
+                    savedPixKey = pixInfo.cleanKey;
+                    savedPixType = pixInfo.type;
+                    
+                    // Sair do modo edição
+                    exitEditMode();
+                    
+                    // Opcional: enviar para API para salvar a chave PIX
+                    // savePixKeyToServer(pixInfo.cleanKey, pixInfo.type);
+                    
+                    showAlert("Chave PIX atualizada com sucesso!", "success");
+                } else {
+                    // Se inválida, manter no modo edição
+                    pixInput.focus();
+                }
+            }
+        }
+
+        function exitEditMode() {
+            const pixInput = document.getElementById('pixKey');
+            const pixContainer = document.getElementById('pixContainer');
+            const pixEditIcon = document.getElementById('pixEditIcon');
+            
+            isEditingPix = false;
+            
+            // Desabilitar o campo
+            pixInput.disabled = true;
+            pixContainer.classList.remove('edit-mode');
+            pixContainer.classList.add('disabled');
+            
+            // Voltar ícone para editar
+            pixEditIcon.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+            pixEditIcon.className = 'pix-edit-icon';
+            pixEditIcon.title = 'Editar chave PIX';
+        }
+
+        function cancelEditMode() {
+            const pixInput = document.getElementById('pixKey');
+            
+            if (isEditingPix) {
+                // Restaurar valor original
+                pixInput.value = originalPixKey;
+                exitEditMode();
+            }
         }
 
         /* === FUNÇÕES DE VALIDAÇÃO DE PIX === */
@@ -985,131 +1145,147 @@
             input.value = 'R$ ' + value.replace('.', ',').replace(/(\d)(?=(\d{3})+\,)/g, "$1.");
         }
 
-// Helper: retorna token limpo (sem "Bearer " e sem espaços)
-function getCleanToken() {
-    let t = localStorage.getItem("token");
-    if (!t) return null;
-    // remove possíveis aspas e prefixo "Bearer "
-    t = String(t).trim().replace(/^"|"$/g, "");
-    t = t.replace(/^Bearer\s+/i, "").trim();
-    return t || null;
-}
-
-/* === FUNÇÕES DE CARREGAMENTO DE DADOS === */
-async function loadWithdrawData() {
-    const token = getCleanToken();
-    if (!token) {
-        // força logout/redireciona se quiser
-        window.location.href = "https://ganhesocialtest.com/login";
-        return;
-    }
-
-    try {
-        // usar header Authorization é mais padrão/seguro do que ?token=...
-        const response = await fetch(`https://ganhesocialtest.com/api/get_saldo`, {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.error || "Erro ao buscar saldo.");
+        // Helper: retorna token limpo (sem "Bearer " e sem espaços)
+        function getCleanToken() {
+            let t = localStorage.getItem("token");
+            if (!t) return null;
+            // remove possíveis aspas e prefixo "Bearer "
+            t = String(t).trim().replace(/^"|"$/g, "");
+            t = t.replace(/^Bearer\s+/i, "").trim();
+            return t || null;
         }
 
-        const saldoDisponivel = parseFloat(data.saldo_disponivel || 0);
-        localStorage.setItem("saldoDisponivel", saldoDisponivel);
-        document.getElementById("availableBalance").textContent = saldoDisponivel.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-        // resto do seu código que preenche pix...
-        if (data.pix_key && data.pix_key_type) {
-            savedPixKey = data.pix_key;
-            savedPixType = data.pix_key_type;
-            const pixKeyInput = document.getElementById('pixKey');
-            // formatação conforme tipo (mantive seu comportamento)
-            if (data.pix_key_type === 'cpf') {
-                pixKeyInput.value = data.pix_key.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
-            } else if (data.pix_key_type === 'cnpj') {
-                pixKeyInput.value = data.pix_key.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-            } else if (data.pix_key_type === 'phone') {
-                const phone = data.pix_key;
-                if (phone.length === 10) pixKeyInput.value = phone.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
-                else pixKeyInput.value = phone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
-            } else {
-                pixKeyInput.value = data.pix_key;
+        /* === FUNÇÕES DE CARREGAMENTO DE DADOS === */
+        async function loadWithdrawData() {
+            const token = getCleanToken();
+            if (!token) {
+                // força logout/redireciona se quiser
+                window.location.href = "https://ganhesocialtest.com/login";
+                return;
             }
-            pixKeyInput.disabled = true;
-        }
 
-    } catch (error) {
-        console.error("Erro ao carregar saldo:", error);
-        showAlert("Erro ao carregar informações da conta. Por favor, tente novamente.");
-    }
-}
+            try {
+                // usar header Authorization é mais padrão/seguro do que ?token=...
+                const response = await fetch(`https://ganhesocialtest.com/api/get_saldo`, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
 
-/* === FUNÇÃO DE SOLICITAÇÃO DE SAQUE === */
-async function requestWithdraw() {
-    const rawAmount = document.getElementById('amount').value.replace(/\D/g, '');
-    const amount = parseFloat(rawAmount) / 100;
-    const pixKey = document.getElementById('pixKey').value.trim();
-    const token = getCleanToken();
-    const saldoDisponivel = parseFloat(localStorage.getItem("saldoDisponivel") || 0);
-
-    document.getElementById("alertBox").style.display = "none";
-
-    if (!amount || amount < 5) {
-        showAlert("O valor mínimo para saque é de R$ 5,00.");
-        return;
-    }
-    if (amount > saldoDisponivel) {
-        showAlert("Saldo insuficiente para realizar o saque.");
-        return;
-    }
-
-    const validationResult = validatePixKey();
-    if (!validationResult.isValid) return;
-    const pixInfo = validationResult.pixInfo;
-
-    if (!token) {
-        showAlert("Sessão expirada. Faça login novamente.");
-        return;
-    }
-
-    try {
-        // DEBUG: log antes de enviar (remova depois)
-        console.log("Enviando withdraw com token:", token);
-
-        const response = await fetch("https://ganhesocialtest.com/api/withdraw", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`   // token limpo aqui
-            },
-            body: JSON.stringify({
-                amount: parseFloat(amount),
-                payment_method: "pix",
-                payment_data: {
-                    pix_key: pixInfo.cleanKey,
-                    pix_key_type: pixInfo.type
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || "Erro ao buscar saldo.");
                 }
-            })
-        });
 
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.error || "Erro ao solicitar saque");
+                const saldoDisponivel = parseFloat(data.saldo_disponivel || 0);
+                localStorage.setItem("saldoDisponivel", saldoDisponivel);
+                document.getElementById("availableBalance").textContent = saldoDisponivel.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+                // Configurar campo PIX se existir dados
+                if (data.pix_key && data.pix_key_type) {
+                    savedPixKey = data.pix_key;
+                    savedPixType = data.pix_key_type;
+                    const pixKeyInput = document.getElementById('pixKey');
+                    const pixContainer = document.getElementById('pixContainer');
+                    
+                    // formatação conforme tipo (mantive seu comportamento)
+                    if (data.pix_key_type === 'cpf') {
+                        pixKeyInput.value = data.pix_key.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+                    } else if (data.pix_key_type === 'cnpj') {
+                        pixKeyInput.value = data.pix_key.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+                    } else if (data.pix_key_type === 'phone') {
+                        const phone = data.pix_key;
+                        if (phone.length === 10) pixKeyInput.value = phone.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+                        else pixKeyInput.value = phone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+                    } else {
+                        pixKeyInput.value = data.pix_key;
+                    }
+                    
+                    // Configurar campo como somente leitura
+                    pixKeyInput.disabled = true;
+                    pixContainer.classList.add('disabled');
+                    
+                    // Configurar ícone de edição
+                    const pixEditIcon = document.getElementById('pixEditIcon');
+                    pixEditIcon.style.display = 'flex';
+                }
+
+            } catch (error) {
+                console.error("Erro ao carregar saldo:", error);
+                showAlert("Erro ao carregar informações da conta. Por favor, tente novamente.");
+            }
         }
 
-        showAlert("Saque solicitado com sucesso! O pagamento está em processamento.", "success");
-        document.getElementById('amount').value = '';
-        await loadWithdrawData();
+        /* === FUNÇÃO DE SOLICITAÇÃO DE SAQUE === */
+        async function requestWithdraw() {
+            // Se estiver editando, cancela o modo edição primeiro
+            if (isEditingPix) {
+                cancelEditMode();
+                return;
+            }
 
-    } catch (error) {
-        console.error("Erro ao solicitar saque:", error);
-        showAlert(error.message || "Erro ao solicitar saque. Tente novamente.");
-    }
-}
+            const rawAmount = document.getElementById('amount').value.replace(/\D/g, '');
+            const amount = parseFloat(rawAmount) / 100;
+            const pixKey = document.getElementById('pixKey').value.trim();
+            const token = getCleanToken();
+            const saldoDisponivel = parseFloat(localStorage.getItem("saldoDisponivel") || 0);
+
+            document.getElementById("alertBox").style.display = "none";
+
+            if (!amount || amount < 5) {
+                showAlert("O valor mínimo para saque é de R$ 5,00.");
+                return;
+            }
+            if (amount > saldoDisponivel) {
+                showAlert("Saldo insuficiente para realizar o saque.");
+                return;
+            }
+
+            const validationResult = validatePixKey();
+            if (!validationResult.isValid) return;
+            const pixInfo = validationResult.pixInfo;
+
+            if (!token) {
+                showAlert("Sessão expirada. Faça login novamente.");
+                return;
+            }
+
+            try {
+                // DEBUG: log antes de enviar (remova depois)
+                console.log("Enviando withdraw com token:", token);
+
+                const response = await fetch("https://ganhesocialtest.com/api/withdraw", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`   // token limpo aqui
+                    },
+                    body: JSON.stringify({
+                        amount: parseFloat(amount),
+                        payment_method: "pix",
+                        payment_data: {
+                            pix_key: pixInfo.cleanKey,
+                            pix_key_type: pixInfo.type
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || "Erro ao solicitar saque");
+                }
+
+                showAlert("Saque solicitado com sucesso! O pagamento está em processamento.", "success");
+                document.getElementById('amount').value = '';
+                await loadWithdrawData();
+
+            } catch (error) {
+                console.error("Erro ao solicitar saque:", error);
+                showAlert(error.message || "Erro ao solicitar saque. Tente novamente.");
+            }
+        }
+
         /* === INICIALIZAÇÃO UNIFICADA === */
         document.addEventListener("DOMContentLoaded", async function () {
             const token = localStorage.getItem("token");
@@ -1127,6 +1303,16 @@ async function requestWithdraw() {
 
             // Configurar botão de tema
             configurarTemaToggle();
+
+            // Configurar evento para o ícone de edição do PIX
+            document.getElementById('pixEditIcon').addEventListener('click', togglePixEdit);
+
+            // Permitir sair do modo edição pressionando ESC
+            document.getElementById('pixKey').addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && isEditingPix) {
+                    cancelEditMode();
+                }
+            });
 
             // Configura máscara automática no campo PIX
             document.getElementById('pixKey').addEventListener('input', function (e) {
