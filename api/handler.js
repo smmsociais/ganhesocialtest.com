@@ -987,16 +987,14 @@ const providerTypeMap = {
   "EMAIL": "EMAIL",
   "RANDOM": "RANDOM"
 };
+
 const providerKeyType = providerTypeMap[keyTypeNormalized] || keyTypeNormalized;
 
-// grava no usuário se ainda não existir (se desejar bloquear alteração, mantenha essa lógica)
-// ATENÇÃO: isso grava a chave do saque como chave principal do usuário apenas quando estiver vazia
 if (!user.pix_key) {
   user.pix_key = pixKey;
   user.pix_key_type = keyTypeNormalized;
 }
 
-// cria referência externa e novo saque (usa keyTypeNormalized)
 const externalReference = `saque_${user._id}_${Date.now()}`;
 
 const novoSaque = {
@@ -1015,6 +1013,28 @@ user.saldo = (user.saldo ?? 0) - amountNum;
 user.saques = user.saques || [];
 user.saques.push(novoSaque);
 await user.save();
+
+    // ===== Comunica com provedor OpenPix =====
+    const OPENPIX_API_KEY = process.env.OPENPIX_API_KEY;
+    const OPENPIX_API_URL = process.env.OPENPIX_API_URL || "https://api.openpix.com.br";
+
+    if (!OPENPIX_API_KEY) {
+      // restaura saldo e marca erro
+      const idxErr0 = user.saques.findIndex(s => s.externalReference === externalReference);
+      if (idxErr0 >= 0) {
+        user.saques[idxErr0].status = "FAILED";
+        user.saques[idxErr0].error = { msg: "OPENPIX_API_KEY não configurada" };
+        user.saldo += amountNum;
+        await user.save();
+      }
+      return res.status(500).json({ error: "Configuração do provedor ausente." });
+    }
+
+    const createHeaders = {
+      "Content-Type": "application/json",
+      "Authorization": OPENPIX_API_KEY,
+      "Idempotency-Key": externalReference
+    };
 
 // preparar payload para o provedor usando providerKeyType
 const valueInCents = Math.round(amountNum * 100);
