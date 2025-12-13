@@ -34,6 +34,14 @@ router.get("/auth/google/callback", googleCallback);
 router.get("/auth/google/signup", googleSignup);
 router.get("/auth/google/signup/callback", googleSignupCallback);
 
+let ultimoRanking = null;
+let ultimaAtualizacao = 0;
+let top3FixosHoje = null;
+let diaTop3 = null;
+let horaInicioRanking = null;
+let zeroedAtMidnight = false;
+let dailyFixedRanking = null;
+
 async function salvarAcaoComLimitePorUsuario(novaAcao) {
     const LIMITE = 10000;
 
