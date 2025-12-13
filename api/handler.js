@@ -957,52 +957,8 @@ if (!user) {
       return res.status(400).json({ error: "Saldo insuficiente." });
     }
 
-// === Validação e normalização de chave PIX (aceita CPF, CNPJ, phone, email, random) ===
-function isAllSameDigits(s) {
-  return /^(\d)\1+$/.test(s);
-}
-
-function validateCPFNumber(cpf) {
-  cpf = String(cpf).replace(/\D/g, "");
-  if (cpf.length !== 11) return false;
-  if (isAllSameDigits(cpf)) return false;
-  let sum = 0, remainder;
-  for (let i = 1; i <= 9; i++) sum += parseInt(cpf.substring(i-1, i)) * (11 - i);
-  remainder = (sum * 10) % 11;
-  if (remainder === 10) remainder = 0;
-  if (remainder !== parseInt(cpf.substring(9, 10))) return false;
-  sum = 0;
-  for (let i = 1; i <= 10; i++) sum += parseInt(cpf.substring(i-1, i)) * (12 - i);
-  remainder = (sum * 10) % 11;
-  if (remainder === 10) remainder = 0;
-  if (remainder !== parseInt(cpf.substring(10, 11))) return false;
-  return true;
-}
-
-function validateCNPJNumber(cnpj) {
-  cnpj = String(cnpj).replace(/\D/g, "");
-  if (cnpj.length !== 14) return false;
-  if (isAllSameDigits(cnpj)) return false;
-  // validação mais completa do CNPJ pode ser adicionada, mas essa já evita entradas óbvias
-  return true;
-}
-
-function validateEmail(email) {
-  if (!email) return false;
-  // regex simples e prática
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
-}
-
-function validatePhone(numeric) {
-  if (!numeric) return false;
-  return /^[0-9]{10,11}$/.test(numeric);
-}
-
-function isUUID(v) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
-}
-
-// aceita variações comuns de nomes vindos do frontend
+// === Aceitar qualquer chave PIX sem validação de quantidade de dígitos ===
+// pega tipo enviado pelo frontend (se houver) e normaliza o nome usado internamente
 const rawType = String((payment_data.pix_key_type || "")).trim().toLowerCase();
 let keyTypeNormalized = null;
 if (["cpf"].includes(rawType)) keyTypeNormalized = "CPF";
@@ -1010,58 +966,20 @@ else if (["cnpj"].includes(rawType)) keyTypeNormalized = "CNPJ";
 else if (["phone", "telefone", "celular", "mobile"].includes(rawType)) keyTypeNormalized = "PHONE";
 else if (["email", "e-mail", "mail"].includes(rawType)) keyTypeNormalized = "EMAIL";
 else if (["random", "aleatoria", "aleatória", "uuid", "evp"].includes(rawType)) keyTypeNormalized = "RANDOM";
+else if (rawType) keyTypeNormalized = rawType.toUpperCase(); // aceita qualquer rótulo enviado
+else keyTypeNormalized = "RANDOM"; // fallback se frontend não enviar tipo
 
-// fallback: se frontend não enviou tipo, tentamos deduzir pela chave
-let pixRaw = String(payment_data.pix_key || "").trim();
-if (!keyTypeNormalized) {
-  const onlyDigits = pixRaw.replace(/\D/g, "");
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixRaw)) keyTypeNormalized = "EMAIL";
-  else if (onlyDigits.length === 11 && /^[0-9]+$/.test(onlyDigits) && validateCPFNumber(onlyDigits)) keyTypeNormalized = "CPF";
-  else if (onlyDigits.length === 14) keyTypeNormalized = "CNPJ";
-  else if (onlyDigits.length === 10 || onlyDigits.length === 11) keyTypeNormalized = "PHONE";
-  else if (isUUID(pixRaw)) keyTypeNormalized = "RANDOM";
-  else keyTypeNormalized = "RANDOM"; // último recurso: trata como chave aleatória
+// pega a chave, limpa espaços nas bordas; se for email, coloca em lowercase
+let pixKey = String(payment_data.pix_key || "").trim();
+if (!pixKey) {
+  return res.status(400).json({ error: "Chave PIX inválida (vazia)." });
 }
+if (keyTypeNormalized === "EMAIL") pixKey = pixKey.toLowerCase();
 
-// valida e normaliza a chave conforme tipo
-let pixKey = pixRaw;
-switch (keyTypeNormalized) {
-  case "CPF":
-    pixKey = pixRaw.replace(/\D/g, "");
-    if (!validateCPFNumber(pixKey)) {
-      return res.status(400).json({ error: "CPF inválido." });
-    }
-    break;
-  case "CNPJ":
-    pixKey = pixRaw.replace(/\D/g, "");
-    if (!validateCNPJNumber(pixKey)) {
-      return res.status(400).json({ error: "CNPJ inválido." });
-    }
-    break;
-  case "PHONE":
-    pixKey = pixRaw.replace(/\D/g, "");
-    if (!validatePhone(pixKey)) {
-      return res.status(400).json({ error: "Telefone inválido para chave PIX." });
-    }
-    // garante formato com DDI/DDD conforme necessário (você pode normalizar para +55... se quiser)
-    break;
-  case "EMAIL":
-    pixKey = String(pixRaw).trim().toLowerCase();
-    if (!validateEmail(pixKey)) {
-      return res.status(400).json({ error: "E-mail inválido para chave PIX." });
-    }
-    break;
-  case "RANDOM":
-    // aceita UUID ou qualquer string não-vazia
-    if (!pixKey || pixKey.length < 3) {
-      return res.status(400).json({ error: "Chave aleatória inválida." });
-    }
-    break;
-  default:
-    return res.status(400).json({ error: "Tipo de chave PIX não reconhecido." });
-}
+// opcional: log útil para debugging
+console.log("[DEBUG] withdraw - pixKey (normalized):", pixKey, "keyTypeNormalized:", keyTypeNormalized);
 
-// Opcional: mapeamento para os tipos entendidos pelo provedor (se precisar ajustar, troque aqui)
+// mapeamento simples para o provedor (ajuste se o provedor esperar nomes diferentes)
 const providerTypeMap = {
   "CPF": "CPF",
   "CNPJ": "CNPJ",
@@ -1071,12 +989,20 @@ const providerTypeMap = {
 };
 const providerKeyType = providerTypeMap[keyTypeNormalized] || keyTypeNormalized;
 
-    const externalReference = `saque_${user._id}_${Date.now()}`;
+// grava no usuário se ainda não existir (se desejar bloquear alteração, mantenha essa lógica)
+// ATENÇÃO: isso grava a chave do saque como chave principal do usuário apenas quando estiver vazia
+if (!user.pix_key) {
+  user.pix_key = pixKey;
+  user.pix_key_type = keyTypeNormalized;
+}
+
+// cria referência externa e novo saque (usa keyTypeNormalized)
+const externalReference = `saque_${user._id}_${Date.now()}`;
 
 const novoSaque = {
   valor: amountNum,
   chave_pix: pixKey,
-  tipo_chave: keyTypeNormalized,  
+  tipo_chave: keyTypeNormalized,
   status: "PENDING",
   data: new Date(),
   providerId: null,
@@ -1084,34 +1010,14 @@ const novoSaque = {
   ownerName: user.name || user.nome || "Usuário",
 };
 
-    user.saldo = (user.saldo ?? 0) - amountNum;
-    user.saques = user.saques || [];
-    user.saques.push(novoSaque);
-    await user.save();
+// atualiza saldo e adiciona saque
+user.saldo = (user.saldo ?? 0) - amountNum;
+user.saques = user.saques || [];
+user.saques.push(novoSaque);
+await user.save();
 
-    // ===== Comunica com provedor OpenPix =====
-    const OPENPIX_API_KEY = process.env.OPENPIX_API_KEY;
-    const OPENPIX_API_URL = process.env.OPENPIX_API_URL || "https://api.openpix.com.br";
-
-    if (!OPENPIX_API_KEY) {
-      // restaura saldo e marca erro
-      const idxErr0 = user.saques.findIndex(s => s.externalReference === externalReference);
-      if (idxErr0 >= 0) {
-        user.saques[idxErr0].status = "FAILED";
-        user.saques[idxErr0].error = { msg: "OPENPIX_API_KEY não configurada" };
-        user.saldo += amountNum;
-        await user.save();
-      }
-      return res.status(500).json({ error: "Configuração do provedor ausente." });
-    }
-
-    const createHeaders = {
-      "Content-Type": "application/json",
-      "Authorization": OPENPIX_API_KEY,
-      "Idempotency-Key": externalReference
-    };
-
-    const valueInCents = Math.round(amountNum * 100);
+// preparar payload para o provedor usando providerKeyType
+const valueInCents = Math.round(amountNum * 100);
 const createPayload = {
   value: valueInCents,
   destinationAlias: pixKey,
