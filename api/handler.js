@@ -1323,13 +1323,15 @@ router.get("/get_saldo", async (req, res) => {
     // 2) tenta interpretar token como JWT (melhor fluxo) — se falhar, fallback para buscar por token no DB
     let usuario = null;
 
-    // tenta JWT (se JWT_SECRET estiver definido)
     if (process.env.JWT_SECRET) {
       try {
         const payload = jwt.verify(token, process.env.JWT_SECRET);
         const userId = payload?.id || payload?.sub;
         if (userId) {
-          usuario = await User.findById(userId).select("saldo pix_key pix_key_type _id ativo_ate indicado_por nome email");
+          // incluir saques para podermos retornar last_saque
+          usuario = await User.findById(userId)
+            .select("saldo pix_key pix_key_type _id ativo_ate indicado_por nome email saques")
+            .lean();
         }
       } catch (errJwt) {
         // não é JWT válido; segue para fallback (não tratar como erro aqui)
@@ -1339,7 +1341,9 @@ router.get("/get_saldo", async (req, res) => {
 
     // fallback: buscar por campo token (compatibilidade com implementação anterior)
     if (!usuario) {
-      usuario = await User.findOne({ token }).select("saldo pix_key pix_key_type _id ativo_ate indicado_por nome email");
+      usuario = await User.findOne({ token })
+        .select("saldo pix_key pix_key_type _id ativo_ate indicado_por nome email saques")
+        .lean();
     }
 
     if (!usuario) {
@@ -1350,37 +1354,94 @@ router.get("/get_saldo", async (req, res) => {
     const pendentes = await ActionHistory.find({
       user: usuario._id,
       acao_validada: "pendente"
-    }).select("valor_confirmacao");
+    }).select("valor_confirmacao").lean();
 
-    const saldo_pendente = pendentes.reduce(
+    const saldo_pendente = (pendentes || []).reduce(
       (soma, acao) => soma + (acao.valor_confirmacao || 0),
       0
     );
 
-    // Normaliza tipo de chave PIX (se existir)
-    let pixKey = usuario.pix_key ?? null;
-    let pixKeyType = usuario.pix_key_type ?? null;
-    if (pixKey && pixKeyType) {
-      pixKeyType = String(pixKeyType).toLowerCase();
-      if (pixKeyType === "cpf" || pixKeyType === "c" || pixKeyType === "cpf_cnpj") {
-        pixKeyType = "cpf";
-        pixKey = String(pixKey).replace(/\D/g, "");
-      } else if (pixKeyType === "cnpj") {
-        pixKeyType = "cnpj";
-        pixKey = String(pixKey).replace(/\D/g, "");
-      } else if (pixKeyType === "phone" || pixKeyType === "celular" || pixKeyType === "telefone") {
-        pixKeyType = "phone";
-        pixKey = String(pixKey).replace(/\D/g, "");
-      } else {
-        pixKeyType = String(pixKeyType);
+    // Helper: normaliza tipo e chave
+    function normalizePixPair(rawKey, rawType) {
+      if (!rawKey && !rawType) return { key: null, type: null };
+
+      let key = rawKey ?? null;
+      let type = rawType ?? null;
+      if (type) type = String(type).toLowerCase();
+
+      // normaliza tipo textual
+      if (type === "c" || type === "cpf_cnpj") type = "cpf"; // casos estranhos
+      if (type === "telefone" || type === "celular") type = "phone";
+
+      if (key && typeof key === "string") key = key.trim();
+
+      // aplica limpeza por tipo
+      try {
+        if (type === "cpf") {
+          key = String(key).replace(/\D/g, "");
+        } else if (type === "cnpj") {
+          key = String(key).replace(/\D/g, "");
+        } else if (type === "phone") {
+          key = String(key).replace(/\D/g, "");
+        } else if (type === "email") {
+          key = String(key).toLowerCase();
+        }
+      } catch (e) {
+        // ignore, retornar raw
+      }
+
+      return { key: key || null, type: type || null };
+    }
+
+    // Normaliza usuário.pix_key
+    const userPix = normalizePixPair(usuario.pix_key ?? null, usuario.pix_key_type ?? null);
+
+    // Determina last_saque (mais recente) a partir do array usuario.saques
+    let lastSaque = null;
+    if (Array.isArray(usuario.saques) && usuario.saques.length > 0) {
+      // safe sort: por data -> new Date(...)
+      const copy = usuario.saques.slice();
+      copy.sort((a, b) => {
+        const da = a?.data ? new Date(a.data) : (a?.createdAt ? new Date(a.createdAt) : new Date(0));
+        const db = b?.data ? new Date(b.data) : (b?.createdAt ? new Date(b.createdAt) : new Date(0));
+        return db - da;
+      });
+      const rawLast = copy[0];
+      if (rawLast) {
+        lastSaque = {
+          chave_pix: rawLast.chave_pix ?? rawLast.pix_key ?? rawLast.destination ?? null,
+          tipo_chave: rawLast.tipo_chave ?? rawLast.pix_key_type ?? rawLast.tipo ?? null,
+          valor: rawLast.valor ?? rawLast.amount ?? null,
+          data: rawLast.data ? new Date(rawLast.data).toISOString() : (rawLast.createdAt ? new Date(rawLast.createdAt).toISOString() : null)
+        };
       }
     }
+
+    // Normaliza last_saque pix info (se existir)
+    let lastSaquePix = { key: null, type: null };
+    if (lastSaque && lastSaque.chave_pix) {
+      lastSaquePix = normalizePixPair(lastSaque.chave_pix, lastSaque.tipo_chave);
+    }
+
+    // Escolhe a chave efetiva que o frontend pode preferir:
+    // prioriza last_saque quando existir; caso contrário usa user.pix_key
+    const pixKeyEffective = lastSaquePix.key ?? userPix.key ?? null;
+    const pixKeyEffectiveType = lastSaquePix.type ?? userPix.type ?? null;
+
+    // DEBUG: log resumido
+    console.log("[DEBUG] get_saldo - userPix:", userPix, "lastSaquePix:", lastSaquePix, "effective:", { pixKeyEffective, pixKeyEffectiveType });
 
     return res.status(200).json({
       saldo_disponivel: typeof usuario.saldo === "number" ? usuario.saldo : 0,
       saldo_pendente,
-      pix_key: pixKey,
-      pix_key_type: pixKeyType
+      // mantém os valores do usuário (não sobrescreve DB)
+      pix_key: userPix.key,
+      pix_key_type: userPix.type,
+      // fornece a última operação para UI preferir quando desejar
+      last_saque: lastSaque,
+      // chave efetiva (conveniência para front) — prefira usar esse campo no frontend
+      pix_key_effective: pixKeyEffective,
+      pix_key_effective_type: pixKeyEffectiveType
     });
   } catch (error) {
     console.error("💥 Erro ao obter saldo:", error);
