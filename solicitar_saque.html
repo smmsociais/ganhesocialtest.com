@@ -1048,24 +1048,44 @@
                 localStorage.setItem("saldoDisponivel", saldoDisponivel);
                 document.getElementById("availableBalance").textContent = saldoDisponivel.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-                // Configurar campo PIX se existir dados
-                if (data.pix_key && data.pix_key_type) {
-                    savedPixKey = data.pix_key;
-                    savedPixType = data.pix_key_type;
-                    const pixKeyInput = document.getElementById('pixKey');
-                    const pixContainer = document.getElementById('pixContainer');
-                    
-                    // Exibe a chave PIX exatamente como está no banco (sem formatação)
-                    pixKeyInput.value = data.pix_key;
-                    
-                    // Configurar campo como somente leitura
-                    pixKeyInput.disabled = true;
-                    pixContainer.classList.add('disabled');
-                    
-                    // Configurar ícone de edição
-                    const pixEditIcon = document.getElementById('pixEditIcon');
-                    pixEditIcon.style.display = 'flex';
-                }
+// trecho dentro de loadWithdrawData() logo após receber 'data'
+const pixKeyInput = document.getElementById('pixKey');
+const pixContainer = document.getElementById('pixContainer');
+const pixEditIcon = document.getElementById('pixEditIcon');
+
+// decide qual chave exibir: prefere last_saque se existir
+let displayKey = null;
+let displayType = null;
+
+if (data.last_saque && data.last_saque.chave_pix) {
+  displayKey = data.last_saque.chave_pix;
+  displayType = (data.last_saque.tipo_chave || data.pix_key_type || '').toLowerCase();
+} else if (data.pix_key) {
+  displayKey = data.pix_key;
+  displayType = (data.pix_key_type || '').toLowerCase();
+}
+
+if (displayKey) {
+  // coloca o valor exatamente como veio (você pode aplicar formatação opcional aqui)
+  pixKeyInput.value = displayKey;
+
+  // atualiza variáveis locais
+  savedPixKey = displayKey;
+  savedPixType = displayType;
+
+  // define o campo como somente leitura (mantendo seu comportamento atual)
+  pixKeyInput.disabled = true;
+  pixContainer.classList.add('disabled');
+
+  // exibe o ícone de edição
+  if (pixEditIcon) pixEditIcon.style.display = 'flex';
+} else {
+  // não há chave conhecida — permite edição
+  pixKeyInput.value = '';
+  pixKeyInput.disabled = false;
+  pixContainer.classList.remove('disabled');
+  if (pixEditIcon) pixEditIcon.style.display = 'none';
+}
 
             } catch (error) {
                 console.error("Erro ao carregar saldo:", error);
