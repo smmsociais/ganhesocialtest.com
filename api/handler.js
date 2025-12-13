@@ -8,6 +8,7 @@ import { sendRecoveryEmail } from "./mailer.js";
 import crypto from "crypto";
 import { User, ActionHistory, DailyEarning, Pedido, DailyRanking } from "./schema.js";
 import express from "express";
+import jwt from "jsonwebtoken";
 
 // IMPORTAÇÃO DAS ROTAS INDEPENDENTES
 import buscarInstagram from "./buscar_acao_smm_instagram.js";
