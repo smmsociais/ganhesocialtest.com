@@ -408,8 +408,7 @@
         .menu-item i {
             width: 24px;
             text-align: center;
-            color: var(--gray-dark);
-            /* Ícones em cinza escuro */
+            color: var(--gray-dark); /* Ícones em cinza escuro */
         }
 
         .menu-item:hover {
@@ -569,40 +568,9 @@
             visibility: visible;
         }
 
-        /* Estilos específicos para os tipos de PIX */
-        .pix-type-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
+        /* Estilos para o seletor de tipo PIX */
+        .pix-type-selector {
             margin-bottom: 20px;
-        }
-
-        .pix-type-option {
-            padding: 12px;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            text-align: center;
-            cursor: pointer;
-            transition: var(--transition);
-            background: var(--container);
-            color: var(--text);
-        }
-
-        .pix-type-option:hover {
-            border-color: var(--button);
-            background: var(--hover);
-        }
-
-        .pix-type-option.selected {
-            border-color: var(--success);
-            background: rgba(40, 167, 69, 0.1);
-        }
-
-        .pix-type-option i {
-            font-size: 24px;
-            margin-bottom: 8px;
-            display: block;
-            color: var(--button);
         }
 
         .field-description {
@@ -610,6 +578,25 @@
             color: var(--gray-dark);
             margin-top: 5px;
             display: block;
+        }
+
+        .pix-type-select {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background-color: var(--container);
+            color: var(--text);
+            font-size: 1rem;
+            transition: var(--transition);
+            box-sizing: border-box;
+            margin-top: 8px;
+        }
+
+        .pix-type-select:focus {
+            outline: none;
+            border-color: var(--button);
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.25);
         }
     </style>
 </head>
@@ -623,8 +610,7 @@
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
                 <!-- A imagem será trocada via CSS baseado no tema -->
-                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;"
-                    id="logoDesktop">
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -659,7 +645,7 @@
                 <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
         </div>
-    </div>
+        </div>
     </div>
 
     <!-- Conteúdo Principal -->
@@ -684,44 +670,22 @@
 
                 <div class="info-box">
                     <div class="info-title"></i> Método de Saque</div>
-                    <div class="info-content">Aceitamos todos os tipos de chaves PIX: CPF, CNPJ, E-mail, Telefone e
-                        Chave Aleatória.</div>
+                    <div class="info-content">Aceitamos todos os tipos de chaves PIX: CPF, CNPJ, E-mail, Telefone e Chave Aleatória.</div>
                 </div>
 
                 <div class="form-group">
                     <input type="text" id="amount" class="input-box" placeholder="Valor" oninput="formatCurrency(this)">
                 </div>
 
-                <div class="form-group">
-                    <label style="color: var(--text); font-weight: 600; display: block; margin-bottom: 10px;">Tipo de
-                        Chave PIX</label>
-                    <div class="pix-type-options" id="pixTypeOptions">
-                        <div class="pix-type-option" data-type="cpf" onclick="selectPixType('cpf')">
-                            <i class="fas fa-id-card"></i>
-                            <div>CPF</div>
-                            <small class="field-description">Apenas números</small>
-                        </div>
-                        <div class="pix-type-option" data-type="cnpj" onclick="selectPixType('cnpj')">
-                            <i class="fas fa-building"></i>
-                            <div>CNPJ</div>
-                            <small class="field-description">Apenas números</small>
-                        </div>
-                        <div class="pix-type-option" data-type="email" onclick="selectPixType('email')">
-                            <i class="fas fa-envelope"></i>
-                            <div>E-mail</div>
-                            <small class="field-description">E-mail válido</small>
-                        </div>
-                        <div class="pix-type-option" data-type="phone" onclick="selectPixType('phone')">
-                            <i class="fas fa-phone"></i>
-                            <div>Telefone</div>
-                            <small class="field-description">Com DDD</small>
-                        </div>
-                        <div class="pix-type-option" data-type="random" onclick="selectPixType('random')">
-                            <i class="fas fa-key"></i>
-                            <div>Chave Aleatória</div>
-                            <small class="field-description">UUID</small>
-                        </div>
-                    </div>
+                <div class="form-group pix-type-selector">
+                    <label style="color: var(--text); font-weight: 600; display: block; margin-bottom: 8px;">Tipo de Chave PIX</label>
+                    <select id="pixTypeSelect" class="pix-type-select" onchange="selectPixType(this.value)">
+                        <option value="cpf">CPF</option>
+                        <option value="cnpj">CNPJ</option>
+                        <option value="email">E-mail</option>
+                        <option value="phone">Telefone</option>
+                        <option value="random">Chave Aleatória</option>
+                    </select>
                 </div>
 
                 <div class="form-group" id="pixFields">
@@ -750,17 +714,17 @@
             const tema = document.documentElement.getAttribute('data-tema');
             const logoDesktop = document.getElementById('logoDesktop');
             const logoMobile = document.getElementById('logoMobile');
-
+            
             // URLs das logos para cada tema
             const logoClaro = 'https://i.imgur.com/dioL5B7.png';
             const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
-
+            
             const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
-
+            
             if (logoDesktop) {
                 logoDesktop.src = logoURL;
             }
-
+            
             if (logoMobile) {
                 logoMobile.src = logoURL;
             }
@@ -774,20 +738,20 @@
             const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
             atualizarTextoBotaoTema(temaAtual);
 
-            themeToggle.addEventListener('click', function () {
+            themeToggle.addEventListener('click', function() {
                 const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
                 const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
-
+                
                 // Atualiza o atributo data-tema
                 document.documentElement.setAttribute('data-tema', novoTema);
-
+                
                 // Salva no localStorage
                 try {
                     localStorage.setItem('tema', novoTema);
                 } catch (e) {
                     console.warn("Erro ao salvar tema no localStorage:", e);
                 }
-
+                
                 // Atualiza o texto do botão
                 atualizarTextoBotaoTema(novoTema);
             });
@@ -799,7 +763,7 @@
 
             const icon = themeToggle.querySelector('i');
             const text = themeToggle.querySelector('span');
-
+            
             if (tema === 'escuro') {
                 icon.className = 'fas fa-sun';
                 text.textContent = 'Claro';
@@ -870,18 +834,13 @@
         /* === FUNÇÕES DE VALIDAÇÃO DE PIX === */
         function selectPixType(type) {
             currentPixType = type;
-
-            // Remove a seleção de todos os botões
-            document.querySelectorAll('.pix-type-option').forEach(option => {
-                option.classList.remove('selected');
-            });
-
-            // Adiciona seleção ao botão clicado
-            document.querySelector(`.pix-type-option[data-type="${type}"]`).classList.add('selected');
-
-            // Atualiza o placeholder e validação
+            
+            // Atualiza o dropdown
+            document.getElementById('pixTypeSelect').value = type;
+            
+            // Atualiza o campo de entrada
             updatePixField(type);
-
+            
             // Se houver chave salva e for do mesmo tipo, preenche
             if (savedPixKey && savedPixType === type) {
                 document.getElementById('pixKey').value = savedPixKey;
@@ -893,44 +852,44 @@
         function updatePixField(type) {
             const pixKeyInput = document.getElementById('pixKey');
             const fieldHint = document.getElementById('fieldHint');
-
+            
             // Limpa erros
             document.getElementById('pixError').style.display = 'none';
-
-            switch (type) {
+            
+            switch(type) {
                 case 'cpf':
                     pixKeyInput.placeholder = "Digite seu CPF (apenas números)";
                     pixKeyInput.maxLength = 14;
                     fieldHint.textContent = "Digite 11 números do CPF (será formatado automaticamente)";
-                    pixKeyInput.oninput = function () { maskCPF(this); };
+                    pixKeyInput.oninput = function() { maskCPF(this); };
                     break;
-
+                    
                 case 'cnpj':
                     pixKeyInput.placeholder = "Digite seu CNPJ (apenas números)";
                     pixKeyInput.maxLength = 18;
                     fieldHint.textContent = "Digite 14 números do CNPJ (será formatado automaticamente)";
-                    pixKeyInput.oninput = function () { maskCNPJ(this); };
+                    pixKeyInput.oninput = function() { maskCNPJ(this); };
                     break;
-
+                    
                 case 'email':
                     pixKeyInput.placeholder = "Digite seu e-mail";
                     pixKeyInput.maxLength = 255;
                     fieldHint.textContent = "Digite um endereço de e-mail válido";
-                    pixKeyInput.oninput = function () { validateEmail(this); };
+                    pixKeyInput.oninput = function() { validateEmail(this); };
                     break;
-
+                    
                 case 'phone':
                     pixKeyInput.placeholder = "Digite seu telefone com DDD (ex: 11999999999)";
                     pixKeyInput.maxLength = 15;
                     fieldHint.textContent = "Digite o número com DDD (11 dígitos para celular, 10 para fixo)";
-                    pixKeyInput.oninput = function () { maskPhone(this); };
+                    pixKeyInput.oninput = function() { maskPhone(this); };
                     break;
-
+                    
                 case 'random':
                     pixKeyInput.placeholder = "Digite sua chave aleatória (UUID)";
                     pixKeyInput.maxLength = 36;
                     fieldHint.textContent = "Digite a chave aleatória no formato UUID";
-                    pixKeyInput.oninput = function () { validateRandomKey(this); };
+                    pixKeyInput.oninput = function() { validateRandomKey(this); };
                     break;
             }
         }
@@ -938,7 +897,7 @@
         function maskCPF(input) {
             let value = input.value.replace(/\D/g, '');
             value = value.slice(0, 11);
-
+            
             if (value.length > 9) {
                 value = value.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
             } else if (value.length > 6) {
@@ -946,7 +905,7 @@
             } else if (value.length > 3) {
                 value = value.replace(/^(\d{3})(\d{1,3})$/, "$1.$2");
             }
-
+            
             input.value = value;
             validateCPF(input);
         }
@@ -954,7 +913,7 @@
         function maskCNPJ(input) {
             let value = input.value.replace(/\D/g, '');
             value = value.slice(0, 14);
-
+            
             if (value.length > 12) {
                 value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
             } else if (value.length > 8) {
@@ -964,20 +923,20 @@
             } else if (value.length > 2) {
                 value = value.replace(/^(\d{2})(\d{1,3})$/, "$1.$2");
             }
-
+            
             input.value = value;
             validateCNPJ(input);
         }
 
         function maskPhone(input) {
             let value = input.value.replace(/\D/g, '');
-
+            
             if (value.length <= 10) {
                 value = value.replace(/^(\d{2})(\d{4})(\d{0,4})$/, "($1) $2-$3");
             } else {
                 value = value.replace(/^(\d{2})(\d{5})(\d{0,4})$/, "($1) $2-$3");
             }
-
+            
             input.value = value;
             validatePhone(input);
         }
@@ -985,19 +944,19 @@
         function validateEmail(input) {
             const value = input.value.trim();
             const errorElement = document.getElementById('pixError');
-
+            
             if (value === '') {
                 errorElement.style.display = 'none';
                 return true;
             }
-
+            
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(value)) {
                 errorElement.textContent = "Por favor, informe um e-mail válido";
                 errorElement.style.display = 'block';
                 return false;
             }
-
+            
             errorElement.style.display = 'none';
             return true;
         }
@@ -1005,12 +964,12 @@
         function validateRandomKey(input) {
             const value = input.value.trim();
             const errorElement = document.getElementById('pixError');
-
+            
             if (value === '') {
                 errorElement.style.display = 'none';
                 return true;
             }
-
+            
             // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
             const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
             if (!uuidRegex.test(value)) {
@@ -1018,7 +977,7 @@
                 errorElement.style.display = 'block';
                 return false;
             }
-
+            
             errorElement.style.display = 'none';
             return true;
         }
@@ -1026,25 +985,25 @@
         function validateCPF(input) {
             const value = input.value.replace(/\D/g, '');
             const errorElement = document.getElementById('pixError');
-
+            
             if (value.length === 0) {
                 errorElement.style.display = 'none';
                 return true;
             }
-
+            
             if (value.length !== 11) {
                 errorElement.textContent = "CPF deve ter 11 dígitos";
                 errorElement.style.display = 'block';
                 return false;
             }
-
+            
             // Validação simples de CPF
             if (/^(\d)\1{10}$/.test(value)) {
                 errorElement.textContent = "CPF inválido";
                 errorElement.style.display = 'block';
                 return false;
             }
-
+            
             errorElement.style.display = 'none';
             return true;
         }
@@ -1052,18 +1011,18 @@
         function validateCNPJ(input) {
             const value = input.value.replace(/\D/g, '');
             const errorElement = document.getElementById('pixError');
-
+            
             if (value.length === 0) {
                 errorElement.style.display = 'none';
                 return true;
             }
-
+            
             if (value.length !== 14) {
                 errorElement.textContent = "CNPJ deve ter 14 dígitos";
                 errorElement.style.display = 'block';
                 return false;
             }
-
+            
             errorElement.style.display = 'none';
             return true;
         }
@@ -1071,18 +1030,18 @@
         function validatePhone(input) {
             const value = input.value.replace(/\D/g, '');
             const errorElement = document.getElementById('pixError');
-
+            
             if (value.length === 0) {
                 errorElement.style.display = 'none';
                 return true;
             }
-
+            
             if (value.length < 10 || value.length > 11) {
                 errorElement.textContent = "Telefone deve ter 10 ou 11 dígitos (com DDD)";
                 errorElement.style.display = 'block';
                 return false;
             }
-
+            
             errorElement.style.display = 'none';
             return true;
         }
@@ -1090,14 +1049,14 @@
         function validatePixKey() {
             const pixKey = document.getElementById('pixKey').value.trim();
             const errorElement = document.getElementById('pixError');
-
+            
             if (!pixKey) {
                 errorElement.textContent = "Por favor, informe sua chave PIX";
                 errorElement.style.display = 'block';
                 return false;
             }
-
-            switch (currentPixType) {
+            
+            switch(currentPixType) {
                 case 'cpf':
                     return validateCPF(document.getElementById('pixKey'));
                 case 'cnpj':
@@ -1138,10 +1097,10 @@
                 if (data.pix_key && data.pix_key_type) {
                     savedPixKey = data.pix_key;
                     savedPixType = data.pix_key_type;
-
+                    
                     // Seleciona o tipo correto
                     selectPixType(data.pix_key_type);
-
+                    
                     // Preenche o campo
                     const pixKeyInput = document.getElementById('pixKey');
                     if (data.pix_key_type === 'cpf') {
@@ -1151,11 +1110,10 @@
                     } else {
                         pixKeyInput.value = data.pix_key;
                     }
-
+                    
                     // Desabilita a edição se já estiver salva
                     pixKeyInput.disabled = true;
-                    document.getElementById('pixTypeOptions').style.pointerEvents = 'none';
-                    document.getElementById('pixTypeOptions').style.opacity = '0.7';
+                    document.getElementById('pixTypeSelect').disabled = true;
                 }
 
             } catch (error) {
@@ -1260,7 +1218,7 @@
             // Configurar botão de tema
             configurarTemaToggle();
 
-            // Seleciona CPF por padrão
+            // Inicializa o tipo PIX como CPF
             selectPixType('cpf');
 
             // Verifica se há uma mensagem de sucesso para exibir
@@ -1274,8 +1232,8 @@
             await loadWithdrawData();
 
             // Observador para mudanças de tema
-            const observer = new MutationObserver(function (mutations) {
-                mutations.forEach(function (mutation) {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
                     if (mutation.attributeName === 'data-tema') {
                         atualizarLogosPorTema();
                     }
@@ -1288,5 +1246,4 @@
         });
     </script>
 </body>
-
 </html>
