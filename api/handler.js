@@ -849,7 +849,7 @@ router.get("/validate-reset-token", async (req, res) => {
   }
 });
 
-// api/routes/withdraw.js
+// api/withdraw.js
 router.all("/withdraw", async (req, res) => {
   // certifique-se de declarar method
   const method = req.method;
@@ -865,36 +865,56 @@ router.all("/withdraw", async (req, res) => {
 
     // ===== Autenticação =====
     // preferível: validar JWT e carregar usuário pelo id do token
-    const authHeader = req.headers.authorization || "";
-    if (!authHeader.startsWith("Bearer ")) {
-      console.log("[DEBUG] Token ausente ou formato inválido:", authHeader);
-      return res.status(401).json({ error: "Token ausente ou inválido." });
-    }
-    const token = authHeader.split(" ")[1].trim();
+// ===== Autenticação (substitua a sua seção atual por isto) =====
+const authHeader = (req.headers.authorization || "").toString();
+let token = null;
 
-    // opção A: verificar JWT e buscar user pelo id do payload
-    let payload;
-    try {
-      payload = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (errJwt) {
-      console.log("[DEBUG] JWT inválido:", errJwt.message);
-      return res.status(401).json({ error: "Token inválido." });
-    }
+// aceita "Bearer <token>" ou token cru no header
+if (authHeader.startsWith("Bearer ")) {
+  token = authHeader.split(" ")[1].trim();
+} else if (authHeader.length > 0) {
+  token = authHeader.trim();
+}
+
+if (!token) {
+  console.log("[DEBUG] Token ausente no header Authorization:", authHeader);
+  return res.status(401).json({ error: "Token ausente ou inválido." });
+}
+
+console.log("[DEBUG] withdraw - token recebido (primeiros 12 chars):", token.slice(0,12));
+
+// tenta interpretar como JWT (se JWT_SECRET existir) — se falhar, faz fallback para buscar por token no DB
+let user = null;
+
+if (process.env.JWT_SECRET) {
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
     const userId = payload?.id || payload?.sub;
-    const user = userId ? await User.findById(userId) : null;
-
-    // opção B (se você usa token simples salvo em user.token): fallback
-    if (!user) {
-      // tenta localizar por campo token (compatibilidade com sua implementação atual)
-      const userByToken = await User.findOne({ token });
-      if (!userByToken) {
-        console.log("[DEBUG] Usuário não encontrado por token/jwt:", userId || token);
-        return res.status(401).json({ error: "Usuário não autenticado." });
-      }
-      // use userByToken como usuário autenticado
-      // (ou substitua acima diretamente)
-      user = userByToken;
+    if (userId) {
+      user = await User.findById(userId);
+      console.log("[DEBUG] withdraw - token JWT válido, userId:", userId, "user found:", !!user);
     }
+  } catch (errJwt) {
+    // não tratar como falha fatal aqui — pode ser token antigo/aleatório, então vamos tentar fallback
+    console.log("[DEBUG] withdraw - jwt.verify falhou (provavelmente não é JWT):", errJwt.message);
+  }
+}
+
+// fallback: se não encontrou via JWT, tenta buscar usuário pelo token cru no banco
+if (!user) {
+  try {
+    user = await User.findOne({ token }).select("+token +saldo +pix_key +pix_key_type +saques"); // ajuste select conforme seu schema
+    console.log("[DEBUG] withdraw - busca por token cru no DB result:", !!user);
+  } catch (errFind) {
+    console.error("[ERROR] withdraw - erro ao buscar user por token no DB:", errFind);
+    return res.status(500).json({ error: "Erro interno na autenticação." });
+  }
+}
+
+if (!user) {
+  console.log("[DEBUG] Usuário não encontrado por token/jwt:", token.slice(0,12));
+  return res.status(401).json({ error: "Usuário não autenticado." });
+}
 
     // ===== GET: retornar histórico de saques =====
     if (method === "GET") {
