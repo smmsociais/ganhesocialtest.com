@@ -42,6 +42,8 @@ let horaInicioRanking = null;
 let zeroedAtMidnight = false;
 let dailyFixedRanking = null;
 
+const baselineValores = [10, 9, 8, 7, 6, 5.9, 5.8, 5.7, 5.6, 5.5];
+
 async function salvarAcaoComLimitePorUsuario(novaAcao) {
     const LIMITE = 10000;
 
