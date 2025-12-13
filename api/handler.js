@@ -848,33 +848,54 @@ router.get("/validate-reset-token", async (req, res) => {
   }
 });
 
-// 🔹 Rota: /api/withdraw
-router.post("/withdraw", async (req, res) => {
+// api/routes/withdraw.js
+router.all("/withdraw", async (req, res) => {
+  // certifique-se de declarar method
+  const method = req.method;
+
+  // se preferir bloquear métodos diferentes:
   if (method !== "GET" && method !== "POST") {
     console.log("[DEBUG] Método não permitido:", method);
     return res.status(405).json({ error: "Método não permitido." });
   }
 
-  const OPENPIX_API_KEY = process.env.OPENPIX_API_KEY;
-  const OPENPIX_API_URL = process.env.OPENPIX_API_URL || "https://api.openpix.com.br";
-
-  // conecta DB (assume função global connectDB e modelo User)
-  await connectDB();
-
-  // 🔹 Autenticação
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
-    console.log("[DEBUG] Token ausente ou inválido:", authHeader);
-    return res.status(401).json({ error: "Token ausente ou inválido." });
-  }
-  const token = authHeader.split(" ")[1];
-  const user = await User.findOne({ token });
-  if (!user) {
-    console.log("[DEBUG] Usuário não encontrado para token:", token);
-    return res.status(401).json({ error: "Usuário não autenticado." });
-  }
-
   try {
+    await connectDB();
+
+    // ===== Autenticação =====
+    // preferível: validar JWT e carregar usuário pelo id do token
+    const authHeader = req.headers.authorization || "";
+    if (!authHeader.startsWith("Bearer ")) {
+      console.log("[DEBUG] Token ausente ou formato inválido:", authHeader);
+      return res.status(401).json({ error: "Token ausente ou inválido." });
+    }
+    const token = authHeader.split(" ")[1].trim();
+
+    // opção A: verificar JWT e buscar user pelo id do payload
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (errJwt) {
+      console.log("[DEBUG] JWT inválido:", errJwt.message);
+      return res.status(401).json({ error: "Token inválido." });
+    }
+    const userId = payload?.id || payload?.sub;
+    const user = userId ? await User.findById(userId) : null;
+
+    // opção B (se você usa token simples salvo em user.token): fallback
+    if (!user) {
+      // tenta localizar por campo token (compatibilidade com sua implementação atual)
+      const userByToken = await User.findOne({ token });
+      if (!userByToken) {
+        console.log("[DEBUG] Usuário não encontrado por token/jwt:", userId || token);
+        return res.status(401).json({ error: "Usuário não autenticado." });
+      }
+      // use userByToken como usuário autenticado
+      // (ou substitua acima diretamente)
+      user = userByToken;
+    }
+
+    // ===== GET: retornar histórico de saques =====
     if (method === "GET") {
       const saquesFormatados = (user.saques || []).map(s => ({
         amount: s.valor ?? s.amount ?? null,
@@ -885,70 +906,55 @@ router.post("/withdraw", async (req, res) => {
         externalReference: s.externalReference || null,
         providerId: s.providerId || s.wooviId || s.openpixId || null,
       }));
-      console.log("[DEBUG] Histórico de saques retornado:", saquesFormatados);
+      console.log("[DEBUG] Histórico de saques retornado:", saquesFormatados.length, "itens");
       return res.status(200).json(saquesFormatados);
     }
 
-    // ===== POST =====
-    // Normaliza body (compatível com body já parseado ou string)
+    // ===== POST: criar saque =====
+    // normaliza body
     let body = req.body;
     if (typeof body === "string") {
       try { body = JSON.parse(body); } catch (e) { /* keep as-is */ }
     }
 
     const { amount, payment_method, payment_data } = body || {};
-    console.log("[DEBUG] Dados recebidos para saque:", { amount, payment_method, payment_data });
+    console.log("[DEBUG] Dados recebidos para saque:", { amount, payment_method });
 
-    // Validações básicas
-    if (!amount || (typeof amount !== "number" && typeof amount !== "string")) {
-      console.log("[DEBUG] Valor de saque inválido:", amount);
+    if (amount == null || (typeof amount !== "number" && typeof amount !== "string")) {
       return res.status(400).json({ error: "Valor de saque inválido (mínimo R$0,01)." });
     }
     const amountNum = Number(amount);
     if (isNaN(amountNum) || amountNum <= 0) {
-      console.log("[DEBUG] Valor de saque inválido após parse:", amountNum);
       return res.status(400).json({ error: "Valor de saque inválido." });
     }
 
     if (!payment_method || !payment_data?.pix_key || !payment_data?.pix_key_type) {
-      console.log("[DEBUG] Dados de pagamento incompletos:", payment_data);
       return res.status(400).json({ error: "Dados de pagamento incompletos." });
     }
 
-    // Verifica saldo (assumindo user.saldo em reais)
     if ((user.saldo ?? 0) < amountNum) {
-      console.log("[DEBUG] Saldo insuficiente:", { saldo: user.saldo, amount: amountNum });
       return res.status(400).json({ error: "Saldo insuficiente." });
     }
 
-    // Permitir apenas CPF por enquanto (ajuste se quiser permitir outros)
-    const allowedTypes = ["CPF"];
-    const keyType = (payment_data.pix_key_type || "").toUpperCase();
+    const allowedTypes = ["CPF"]; // ajustar se quiser permitir CNPJ, EMAIL, CELLPHONE etc.
+    const keyType = String((payment_data.pix_key_type || "")).toUpperCase();
     if (!allowedTypes.includes(keyType)) {
-      console.log("[DEBUG] Tipo de chave PIX inválido:", keyType);
       return res.status(400).json({ error: "Tipo de chave PIX inválido." });
     }
 
-    // Formata chave
     let pixKey = String(payment_data.pix_key || "");
     if (keyType === "CPF" || keyType === "CNPJ") pixKey = pixKey.replace(/\D/g, "");
-    console.log("[DEBUG] Chave PIX formatada:", pixKey);
 
-    // Salva PIX do usuário se ainda não existir; se existir e diferente, bloqueia
+    // salva PIX se não existir — bloqueia alteração caso exista diferente
     if (!user.pix_key) {
       user.pix_key = pixKey;
       user.pix_key_type = keyType;
-      console.log("[DEBUG] Chave PIX salva no usuário:", { pixKey, keyType });
     } else if (user.pix_key !== pixKey) {
-      console.log("[DEBUG] Chave PIX diferente da cadastrada:", { userPix: user.pix_key, novaPix: pixKey });
       return res.status(400).json({ error: "Chave PIX já cadastrada e não pode ser alterada." });
     }
 
-    // Cria externalReference único
     const externalReference = `saque_${user._id}_${Date.now()}`;
-    console.log("[DEBUG] externalReference gerada:", externalReference);
 
-    // Monta objeto de saque e atualiza saldo & array (marca PENDING inicialmente)
     const novoSaque = {
       valor: amountNum,
       chave_pix: pixKey,
@@ -960,18 +966,16 @@ router.post("/withdraw", async (req, res) => {
       ownerName: user.name || user.nome || "Usuário",
     };
 
-    // Deduz saldo e armazena saque
     user.saldo = (user.saldo ?? 0) - amountNum;
     user.saques = user.saques || [];
     user.saques.push(novoSaque);
     await user.save();
-    console.log("[DEBUG] Usuário atualizado com novo saque. Saldo agora:", user.saldo);
 
-    // ===== Comunica com o provedor OpenPix (create -> approve) =====
-    const valueInCents = Math.round(amountNum * 100);
+    // ===== Comunica com provedor OpenPix =====
+    const OPENPIX_API_KEY = process.env.OPENPIX_API_KEY;
+    const OPENPIX_API_URL = process.env.OPENPIX_API_URL || "https://api.openpix.com.br";
 
     if (!OPENPIX_API_KEY) {
-      console.error("[ERROR] OPENPIX_API_KEY não configurada");
       // restaura saldo e marca erro
       const idxErr0 = user.saques.findIndex(s => s.externalReference === externalReference);
       if (idxErr0 >= 0) {
@@ -989,6 +993,7 @@ router.post("/withdraw", async (req, res) => {
       "Idempotency-Key": externalReference
     };
 
+    const valueInCents = Math.round(amountNum * 100);
     const createPayload = {
       value: valueInCents,
       destinationAlias: pixKey,
@@ -997,9 +1002,8 @@ router.post("/withdraw", async (req, res) => {
       comment: `Saque para ${user._id}`
     };
 
-    console.log("[DEBUG] Payload createPayment enviado ao OpenPix:", createPayload);
+    console.log("[DEBUG] Enviando createPayment para OpenPix:", createPayload);
 
-    // Faz create payment
     let createRes;
     try {
       createRes = await fetch(`${OPENPIX_API_URL}/api/v1/payment`, {
@@ -1008,13 +1012,12 @@ router.post("/withdraw", async (req, res) => {
         body: JSON.stringify(createPayload)
       });
     } catch (err) {
-      console.error("[ERROR] Falha na requisição createPayment:", err);
-      // marca erro no saque e restaura saldo
+      console.error("[ERROR] Falha createPayment:", err);
       const idxErr = user.saques.findIndex(s => s.externalReference === externalReference);
       if (idxErr >= 0) {
         user.saques[idxErr].status = "FAILED";
         user.saques[idxErr].error = { msg: "Falha na requisição createPayment", detail: err.message };
-        user.saldo += amountNum; // restaura saldo
+        user.saldo += amountNum;
         await user.save();
       }
       return res.status(500).json({ error: "Erro ao comunicar com o provedor de pagamentos." });
@@ -1024,7 +1027,6 @@ router.post("/withdraw", async (req, res) => {
     let createData;
     try { createData = JSON.parse(createText); } catch (err) {
       console.error("[ERROR] Resposta createPayment não-JSON:", createText);
-      // restaura saldo e marca erro
       const idx = user.saques.findIndex(s => s.externalReference === externalReference);
       if (idx >= 0) {
         user.saques[idx].status = "FAILED";
@@ -1035,11 +1037,8 @@ router.post("/withdraw", async (req, res) => {
       return res.status(createRes.status || 500).json({ error: createText });
     }
 
-    console.log("[DEBUG] Resposta createPayment:", createData, "Status HTTP:", createRes.status);
-
     if (!createRes.ok) {
       console.error("[DEBUG] Erro createPayment:", createData);
-      // marca erro no saque e restaura saldo
       const idxErr = user.saques.findIndex(s => s.externalReference === externalReference);
       if (idxErr >= 0) {
         user.saques[idxErr].status = "FAILED";
@@ -1047,49 +1046,35 @@ router.post("/withdraw", async (req, res) => {
         user.saldo += amountNum;
         await user.save();
       }
-
-      if (createRes.status === 403) {
-        return res.status(403).json({ error: createData.error || createData.message || "Recurso não habilitado." });
-      }
-
-      return res.status(400).json({ error: createData.message || createData.error || "Erro ao criar pagamento no provedor." });
+      return res.status(createRes.status === 403 ? 403 : 400).json({ error: createData.message || createData.error || "Erro ao criar pagamento no provedor." });
     }
 
-    // Extrai possíveis identificadores úteis
     const paymentId = createData.id || createData.paymentId || createData.payment_id || createData.transaction?.id || null;
     const returnedCorrelation = createData.correlationID || createData.correlationId || createData.correlation || null;
 
-    console.log("[DEBUG] paymentId extraído:", paymentId, "correlation retornada:", returnedCorrelation);
-
-    // Atualiza o saque com providerId/correlation, mantendo status PENDING
+    // atualiza registro com providerId (mantém PENDING)
     const createdIndex = user.saques.findIndex(s => s.externalReference === externalReference);
     if (createdIndex >= 0) {
       if (paymentId) user.saques[createdIndex].providerId = paymentId;
-      if (!user.saques[createdIndex].externalReference) user.saques[createdIndex].externalReference = externalReference;
       user.saques[createdIndex].status = "PENDING";
       await user.save();
     }
 
-    // Decide identificador para aprovação
+    // approve
     const toApproveIdentifier = paymentId || returnedCorrelation || externalReference;
-
     if (!toApproveIdentifier) {
-      console.warn("[WARN] createPayment não retornou identificador usável — saque permanece PENDING.");
       return res.status(200).json({
         message: "Saque criado, aguardando aprovação manual (identificador não retornado).",
         create: createData
       });
     }
 
-    // ===== Approve =====
     const approveHeaders = {
       "Content-Type": "application/json",
       "Authorization": OPENPIX_API_KEY,
       "Idempotency-Key": `approve_${toApproveIdentifier}`
     };
-
     const approvePayload = paymentId ? { paymentId } : { correlationID: toApproveIdentifier };
-    console.log("[DEBUG] Enviando approvePayment:", approvePayload);
 
     let approveRes;
     try {
@@ -1099,7 +1084,7 @@ router.post("/withdraw", async (req, res) => {
         body: JSON.stringify(approvePayload)
       });
     } catch (err) {
-      console.error("[ERROR] Falha na requisição approvePayment:", err);
+      console.error("[ERROR] Falha approvePayment:", err);
       if (createdIndex >= 0) {
         user.saques[createdIndex].status = "PENDING_APPROVAL";
         user.saques[createdIndex].error = { msg: "Falha na requisição de aprovação", detail: err.message };
@@ -1120,28 +1105,16 @@ router.post("/withdraw", async (req, res) => {
       return res.status(approveRes.status || 500).json({ error: approveText });
     }
 
-    console.log("[DEBUG] Resposta approvePayment:", approveData, "Status HTTP:", approveRes.status);
-
     if (!approveRes.ok) {
       console.error("[DEBUG] Erro approvePayment:", approveData);
-      if (approveRes.status === 403) {
-        if (createdIndex >= 0) {
-          user.saques[createdIndex].status = "PENDING_APPROVAL";
-          user.saques[createdIndex].error = approveData;
-          await user.save();
-        }
-        return res.status(403).json({ error: approveData.error || approveData.message || "Aprovação negada." });
-      }
-
       if (createdIndex >= 0) {
         user.saques[createdIndex].status = "PENDING_APPROVAL";
         user.saques[createdIndex].error = approveData;
         await user.save();
       }
-      return res.status(400).json({ error: approveData.message || approveData.error || "Erro ao aprovar pagamento." });
+      return res.status(approveRes.status === 403 ? 403 : 400).json({ error: approveData.message || approveData.error || "Erro ao aprovar pagamento." });
     }
 
-    // Se approve ok -> atualiza status conforme retorno
     const approveStatus = approveData.status || approveData.transaction?.status || "COMPLETED";
     if (createdIndex >= 0) {
       user.saques[createdIndex].status = (approveStatus === "COMPLETED" || approveStatus === "EXECUTED") ? "COMPLETED" : approveStatus;
@@ -1149,79 +1122,53 @@ router.post("/withdraw", async (req, res) => {
       await user.save();
     }
 
-    // ===== Processar comissão de afiliado (5%) se saque COMPLETED =====
+    // processa comissão (mesma lógica sua)
     try {
       const COMMISSION_RATE = 0.05;
       const isCompleted = approveStatus === "COMPLETED" || approveStatus === "EXECUTED";
       if (isCompleted) {
-        // Recarrega user para garantir dados atualizados (opcional)
         const saqueRecord = (user.saques || []).find(s => s.externalReference === externalReference || s.providerId === (paymentId || null));
         const saqueValor = saqueRecord ? (saqueRecord.valor ?? amountNum) : amountNum;
 
-        console.log("[DEBUG] Saque finalizado para comissão. Valor:", saqueValor, "externalReference:", externalReference);
-
-        // Verifica se usuário foi indicado
         if (user.indicado_por) {
-          // Evita pagar duas vezes: verificar se já existe ActionHistory para esse externalReference + tipo comissao
           const existente = await ActionHistory.findOne({ id_action: externalReference, tipo: "comissao" });
-          if (existente) {
-            console.log("[DEBUG] Comissão já registrada para esse saque (ignorar).", externalReference);
-          } else {
-            // verifica se o usuário que sacou está ativo (dentro do período ativo_ate)
+          if (!existente) {
             const agora = new Date();
             if (user.ativo_ate && new Date(user.ativo_ate) > agora) {
-              // encontra afiliado (quem indicou)
               const afiliado = await User.findOne({ codigo_afiliado: user.indicado_por });
               if (afiliado) {
-                const comissaoValor = Number((saqueValor * COMMISSION_RATE).toFixed(2)); // em reais, 2 decimais
-                console.log("[DEBUG] Criando comissão para afiliado:", afiliado._id.toString(), "valor:", comissaoValor);
-
-// cria registro de comissão no ActionHistory (com url_dir preenchido)
-const acaoComissao = new ActionHistory({
-  user: afiliado._id,
-  token: afiliado.token || null,
-  nome_usuario: afiliado.nome || afiliado.email || null,
-  id_action: externalReference,                     // usado para evitar duplicidade
-  id_pedido: `comissao_${externalReference}`,        // identificador próprio
-  id_conta: user._id.toString(),                    // conta/usuário que gerou o saque
-  unique_id: null,
-  // Preenchendo url_dir com referência ao saque - evita erro de validação
-  url_dir: `/saques/${externalReference}`,          
-  acao_validada: "valida",
-  valor_confirmacao: comissaoValor,
-  quantidade_pontos: 0,
-  tipo_acao: "comissao",
-  rede_social: "Sistema",
-  tipo: "comissao",
-  afiliado: afiliado.codigo_afiliado,
-  valor: comissaoValor,
-  data: new Date(),
-});
-await acaoComissao.save();
-
-                // Atualiza saldo do afiliado e histórico
+                const comissaoValor = Number((saqueValor * COMMISSION_RATE).toFixed(2));
+                const acaoComissao = new ActionHistory({
+                  user: afiliado._id,
+                  token: afiliado.token || null,
+                  nome_usuario: afiliado.nome || afiliado.email || null,
+                  id_action: externalReference,
+                  id_pedido: `comissao_${externalReference}`,
+                  id_conta: user._id.toString(),
+                  unique_id: null,
+                  url_dir: `/saques/${externalReference}`,
+                  acao_validada: "valida",
+                  valor_confirmacao: comissaoValor,
+                  quantidade_pontos: 0,
+                  tipo_acao: "comissao",
+                  rede_social: "Sistema",
+                  tipo: "comissao",
+                  afiliado: afiliado.codigo_afiliado,
+                  valor: comissaoValor,
+                  data: new Date(),
+                });
+                await acaoComissao.save();
                 afiliado.saldo = (afiliado.saldo ?? 0) + comissaoValor;
                 afiliado.historico_acoes = afiliado.historico_acoes || [];
                 afiliado.historico_acoes.push(acaoComissao._id);
                 await afiliado.save();
-
-                console.log("[DEBUG] Comissão registrada e saldo do afiliado atualizado:", { afiliadoId: afiliado._id, novoSaldo: afiliado.saldo });
-              } else {
-                console.log("[DEBUG] Afiliado não encontrado para codigo:", user.indicado_por);
               }
-            } else {
-              console.log("[DEBUG] Usuário que sacou não está ativo ou ativo_ate expirou, sem comissão.", { indicado_por: user.indicado_por, ativo_ate: user.ativo_ate });
             }
           }
-        } else {
-          console.log("[DEBUG] Usuário não foi indicado (sem comissão).");
         }
-      } else {
-        console.log("[DEBUG] Saque não finalizado (status:", approveStatus, ") — sem comissão.");
       }
     } catch (errCom) {
       console.error("[ERROR] Falha ao processar comissão de afiliado:", errCom);
-      // Não reverte o saque — apenas loga o erro
     }
 
     return res.status(200).json({
