@@ -1050,8 +1050,6 @@ switch (keyTypeNormalized) {
       return res.status(400).json({ error: "Chave aleatória inválida." });
     }
     break;
-  default:
-    return res.status(400).json({ error: "Tipo de chave PIX não reconhecido." });
 }
 
 // Opcional: mapeamento para os tipos entendidos pelo provedor (se precisar ajustar, troque aqui)
