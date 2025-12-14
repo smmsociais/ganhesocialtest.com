@@ -421,7 +421,7 @@
             <!-- Botão de Cadastro com Google -->
             <div class="form-group">
                 <div class="d-flex justify-content-center">
-                    <a href="https://ganhesocial.com/api/auth/google/signup" class="google-signup-btn"
+                    <a href="https://ganhesocialtest.com/api/auth/google/signup" class="google-signup-btn"
                         id="googleSignupBtn">
                         <img src="https://www.google.com/favicon.ico" alt="Google">
                         <span class="btn-text">Inscrever-se com o Google</span>
@@ -433,7 +433,7 @@
             <div id="notification-area"></div>
         </form>
 
-        <a href="https://ganhesocial.com/login" class="login-link">
+        <a href="https://ganhesocialtest.com/login" class="login-link">
             Já tem uma conta? <strong>Faça login</strong>
         </a>
 
@@ -473,7 +473,7 @@
 
             // Função de cadastro com Google
             window.signupWithGoogle = function () {
-                window.location.href = 'https://ganhesocial.com/api/auth/google/signup';
+                window.location.href = 'https://ganhesocialtest.com/api/auth/google/signup';
             };
 
             // Adicionar evento de clique no botão do Google
@@ -487,7 +487,7 @@
 
             // Função para resposta de credenciais do Google (se usar One Tap)
             function handleCredentialResponse(response) {
-                fetch('https://ganhesocial.com/api/auth/google/signup/callback', {
+                fetch('https://ganhesocialtest.com/api/auth/google/signup/callback', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -553,7 +553,7 @@
 
                     const indicado_por = localStorage.getItem("codigo_afiliado_ref") || null;
 
-                    const response = await fetch("https://ganhesocial.com/api/signup", {
+                    const response = await fetch("https://ganhesocialtest.com/api/signup", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -592,3 +592,4 @@
 </body>
 
 </html>
+
