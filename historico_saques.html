@@ -424,7 +424,8 @@
         .menu-item i {
             width: 24px;
             text-align: center;
-            color: var(--gray-dark); /* Ícones em cinza escuro */
+            color: var(--gray-dark);
+            /* Ícones em cinza escuro */
         }
 
         .menu-item:hover {
@@ -542,9 +543,12 @@
         }
 
         @keyframes pulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 opacity: 1;
             }
+
             50% {
                 opacity: 0.5;
             }
@@ -666,7 +670,8 @@
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
                 <!-- A imagem será trocada via CSS baseado no tema -->
-                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;"
+                    id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -701,7 +706,7 @@
                 <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
         </div>
-        </div>
+    </div>
     </div>
 
     <!-- Conteúdo Principal -->
@@ -717,8 +722,8 @@
                         <table class="withdrawal-table">
                             <thead>
                                 <tr>
-                                    <th>Chave PIX</th>
                                     <th>Data</th>
+                                    <th>Chave PIX</th>
                                     <th>Valor</th>
                                     <th>Status</th>
                                 </tr>
@@ -750,359 +755,360 @@
         </div>
     </div>
 
- <script>
-    /* === ATUALIZAR LOGOS POR TEMA === */
-    function atualizarLogosPorTema() {
-        const tema = document.documentElement.getAttribute('data-tema');
-        const logoDesktop = document.getElementById('logoDesktop');
-        const logoMobile = document.getElementById('logoMobile');
-        
-        // URLs das logos para cada tema
-        const logoClaro = 'https://i.imgur.com/dioL5B7.png';
-        const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
-        
-        const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
-        
-        if (logoDesktop) {
-            logoDesktop.src = logoURL;
-        }
-        
-        if (logoMobile) {
-            logoMobile.src = logoURL;
-        }
-    }
+    <script>
+        /* === ATUALIZAR LOGOS POR TEMA === */
+        function atualizarLogosPorTema() {
+            const tema = document.documentElement.getAttribute('data-tema');
+            const logoDesktop = document.getElementById('logoDesktop');
+            const logoMobile = document.getElementById('logoMobile');
 
-    /* === CONFIGURAR TOGGLE DE TEMA === */
-    function configurarTemaToggle() {
-        const themeToggle = document.getElementById('themeToggle');
-        if (!themeToggle) return;
+            // URLs das logos para cada tema
+            const logoClaro = 'https://i.imgur.com/dioL5B7.png';
+            const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
 
-        const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
-        atualizarTextoBotaoTema(temaAtual);
+            const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
 
-        themeToggle.addEventListener('click', function() {
-            const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
-            const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
-            
-            // Atualiza o atributo data-tema
-            document.documentElement.setAttribute('data-tema', novoTema);
-            
-            // Salva no localStorage
-            try {
-                localStorage.setItem('tema', novoTema);
-            } catch (e) {
-                console.warn("Erro ao salvar tema no localStorage:", e);
+            if (logoDesktop) {
+                logoDesktop.src = logoURL;
             }
-            
-            // Atualiza o texto do botão
-            atualizarTextoBotaoTema(novoTema);
-        });
-    }
 
-    function atualizarTextoBotaoTema(tema) {
-        const themeToggle = document.getElementById('themeToggle');
-        if (!themeToggle) return;
-
-        const icon = themeToggle.querySelector('i');
-        const text = themeToggle.querySelector('span');
-        
-        if (tema === 'escuro') {
-            icon.className = 'fas fa-sun';
-            text.textContent = 'Claro';
-        } else {
-            icon.className = 'fas fa-moon';
-            text.textContent = 'Escuro';
+            if (logoMobile) {
+                logoMobile.src = logoURL;
+            }
         }
-    }
 
-    /* === CONTROLE DO MENU HAMBURGUER === */
-    function configurarMenu() {
-        const menuToggle = document.getElementById('menuToggle');
-        const menuOverlay = document.getElementById('menuOverlay');
-        const menuContent = document.getElementById('menuContent');
-        const menuCloseBtn = document.getElementById('menuCloseBtn');
+        /* === CONFIGURAR TOGGLE DE TEMA === */
+        function configurarTemaToggle() {
+            const themeToggle = document.getElementById('themeToggle');
+            if (!themeToggle) return;
 
-        if (!menuToggle || !menuOverlay || !menuContent) return;
+            const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
+            atualizarTextoBotaoTema(temaAtual);
 
-        function toggleMenu() {
-            menuContent.classList.toggle('active');
-            menuOverlay.classList.toggle('active');
-            const spans = menuToggle.querySelectorAll('span');
-            if (menuContent.classList.contains('active')) {
-                spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
-                spans[1].style.opacity = '0';
-                spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+            themeToggle.addEventListener('click', function () {
+                const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
+                const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
+
+                // Atualiza o atributo data-tema
+                document.documentElement.setAttribute('data-tema', novoTema);
+
+                // Salva no localStorage
+                try {
+                    localStorage.setItem('tema', novoTema);
+                } catch (e) {
+                    console.warn("Erro ao salvar tema no localStorage:", e);
+                }
+
+                // Atualiza o texto do botão
+                atualizarTextoBotaoTema(novoTema);
+            });
+        }
+
+        function atualizarTextoBotaoTema(tema) {
+            const themeToggle = document.getElementById('themeToggle');
+            if (!themeToggle) return;
+
+            const icon = themeToggle.querySelector('i');
+            const text = themeToggle.querySelector('span');
+
+            if (tema === 'escuro') {
+                icon.className = 'fas fa-sun';
+                text.textContent = 'Claro';
             } else {
+                icon.className = 'fas fa-moon';
+                text.textContent = 'Escuro';
+            }
+        }
+
+        /* === CONTROLE DO MENU HAMBURGUER === */
+        function configurarMenu() {
+            const menuToggle = document.getElementById('menuToggle');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuContent = document.getElementById('menuContent');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+            if (!menuToggle || !menuOverlay || !menuContent) return;
+
+            function toggleMenu() {
+                menuContent.classList.toggle('active');
+                menuOverlay.classList.toggle('active');
+                const spans = menuToggle.querySelectorAll('span');
+                if (menuContent.classList.contains('active')) {
+                    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                    spans[1].style.opacity = '0';
+                    spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+                } else {
+                    spans[0].style.transform = 'none';
+                    spans[1].style.opacity = '1';
+                    spans[2].style.transform = 'none';
+                }
+            }
+
+            function closeMenu() {
+                menuContent.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                const spans = menuToggle.querySelectorAll('span');
                 spans[0].style.transform = 'none';
                 spans[1].style.opacity = '1';
                 spans[2].style.transform = 'none';
             }
+
+            menuToggle.addEventListener('click', toggleMenu);
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
         }
 
-        function closeMenu() {
-            menuContent.classList.remove('active');
-            menuOverlay.classList.remove('active');
-            const spans = menuToggle.querySelectorAll('span');
-            spans[0].style.transform = 'none';
-            spans[1].style.opacity = '1';
-            spans[2].style.transform = 'none';
+        /* === FUNÇÕES DE UTILIDADE === */
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocialtest.com";
         }
 
-        menuToggle.addEventListener('click', toggleMenu);
-        menuCloseBtn.addEventListener('click', closeMenu);
-        menuOverlay.addEventListener('click', closeMenu);
-    }
-
-    /* === FUNÇÕES DE UTILIDADE === */
-    function logout() {
-        localStorage.removeItem("token");
-        window.location.href = "https://ganhesocialtest.com";
-    }
-
-    function showAlert(message) {
-        alert(message);
-    }
-
-    // Variáveis globais para controle da paginação
-    let currentPage = 1;
-    const itemsPerPage = 100; // Máximo de 100 saques por página
-    let allWithdrawals = [];
-
-    /* === INICIALIZAÇÃO UNIFICADA === */
-    document.addEventListener("DOMContentLoaded", async function () {
-        const token = localStorage.getItem("token");
-
-        if (!token) {
-            setTimeout(() => {
-                window.location.href = "https://ganhesocialtest.com/login";
-            }, 100);
-            return;
+        function showAlert(message) {
+            alert(message);
         }
 
-        // Configura o menu
-        configurarMenu();
+        // Variáveis globais para controle da paginação
+        let currentPage = 1;
+        const itemsPerPage = 100; // Máximo de 100 saques por página
+        let allWithdrawals = [];
 
-        // Atualiza as logos baseado no tema atual
-        atualizarLogosPorTema();
+        /* === INICIALIZAÇÃO UNIFICADA === */
+        document.addEventListener("DOMContentLoaded", async function () {
+            const token = localStorage.getItem("token");
 
-        // Configurar botão de tema
-        configurarTemaToggle();
-
-        // Configura eventos da paginação
-        document.getElementById('prev-page').addEventListener('click', () => changePage(currentPage - 1));
-        document.getElementById('next-page').addEventListener('click', () => changePage(currentPage + 1));
-
-        // Carrega histórico de saques
-        await loadWithdrawals();
-
-        // Observador para mudanças de tema
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.attributeName === 'data-tema') {
-                    atualizarLogosPorTema();
-                }
-            });
-        });
-        observer.observe(document.documentElement, { attributes: true });
-
-        document.body.classList.add('loaded');
-    });
-
-    /* === FUNÇÕES DE CARREGAMENTO DE DADOS === */
-    async function loadWithdrawals() {
-        const token = localStorage.getItem("token");
-
-        if (!token) {
-            return;
-        }
-
-        try {
-            // Mostra estado de carregamento
-            showLoadingState();
-
-            const response = await fetch("https://ganhesocialtest.com/api/withdraw", {
-                method: "GET",
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || "Erro ao carregar histórico de saques");
+            if (!token) {
+                setTimeout(() => {
+                    window.location.href = "https://ganhesocialtest.com/login";
+                }, 100);
+                return;
             }
 
-            allWithdrawals = data;
-            displayWithdrawalsPage(1);
-        } catch (error) {
-            showAlert(error.message);
-            showEmptyState();
-        }
-    }
+            // Configura o menu
+            configurarMenu();
 
-    function showLoadingState() {
-        const loadingRow = document.getElementById('loading-row');
-        const noWithdrawalsMsg = document.getElementById('no-withdrawals');
-        const pagination = document.getElementById('pagination');
+            // Atualiza as logos baseado no tema atual
+            atualizarLogosPorTema();
 
-        if (loadingRow) loadingRow.style.display = '';
-        if (noWithdrawalsMsg) noWithdrawalsMsg.style.display = 'none';
-        if (pagination) pagination.style.display = 'none';
-    }
+            // Configurar botão de tema
+            configurarTemaToggle();
 
-    function showEmptyState() {
-        const loadingRow = document.getElementById('loading-row');
-        const noWithdrawalsMsg = document.getElementById('no-withdrawals');
-        const pagination = document.getElementById('pagination');
+            // Configura eventos da paginação
+            document.getElementById('prev-page').addEventListener('click', () => changePage(currentPage - 1));
+            document.getElementById('next-page').addEventListener('click', () => changePage(currentPage + 1));
 
-        if (loadingRow) loadingRow.style.display = 'none';
-        if (noWithdrawalsMsg) noWithdrawalsMsg.style.display = 'flex';
-        if (pagination) pagination.style.display = 'none';
-    }
+            // Carrega histórico de saques
+            await loadWithdrawals();
 
-    function formatCurrency(value) {
-        // Converte para número e formata com separadores de milhar
-        const numberValue = Number(value);
+            // Observador para mudanças de tema
+            const observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
+                    if (mutation.attributeName === 'data-tema') {
+                        atualizarLogosPorTema();
+                    }
+                });
+            });
+            observer.observe(document.documentElement, { attributes: true });
 
-        // Formata a parte inteira com separadores de milhar
-        const parts = numberValue.toFixed(2).split('.');
-        const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        const decimalPart = parts[1];
-
-        return `R$ ${integerPart},${decimalPart}`;
-    }
-
-    function displayWithdrawalsPage(page) {
-        currentPage = page;
-
-        // Ordena por data (mais recente primeiro)
-        allWithdrawals.sort((a, b) => {
-            const aTime = typeof a.date === 'object' && a.date.$date
-                ? Number(a.date.$date.$numberLong || a.date.$date)
-                : Date.parse(a.date);
-
-            const bTime = typeof b.date === 'object' && b.date.$date
-                ? Number(b.date.$date.$numberLong || b.date.$date)
-                : Date.parse(b.date);
-
-            return bTime - aTime;
+            document.body.classList.add('loaded');
         });
 
-        // Calcula índices para a página atual
-        const startIndex = (page - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        const pageWithdrawals = allWithdrawals.slice(startIndex, endIndex);
+        /* === FUNÇÕES DE CARREGAMENTO DE DADOS === */
+        async function loadWithdrawals() {
+            const token = localStorage.getItem("token");
 
-        const withdrawalsList = document.getElementById("withdrawals-list");
-        const loadingRow = document.getElementById("loading-row");
-
-        // Limpa a tabela e esconde o loading
-        if (withdrawalsList) {
-            withdrawalsList.innerHTML = "";
-        }
-
-        if (loadingRow) {
-            loadingRow.style.display = 'none';
-        }
-
-        if (allWithdrawals.length === 0) {
-            showEmptyState();
-            return;
-        }
-
-        // Exibe os saques da página atual
-        pageWithdrawals.forEach(withdrawal => {
-            const row = document.createElement("tr");
-            row.className = 'fade-in';
-
-            const date = new Date(withdrawal.date);
-            const formattedDate = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-
-            // Usa a nova função de formatação
-            const formattedValue = formatCurrency(withdrawal.amount);
-
-            let statusClass = '';
-            let statusText = '';
-
-            if (withdrawal.status === 'completed') {
-                statusClass = 'status-completed';
-                statusText = 'Efetuado';
-            } else if (withdrawal.status === 'pending') {
-                statusClass = 'status-pending';
-                statusText = 'Pendente';
-            } else if (withdrawal.status === 'failed') {
-                statusClass = 'status-failed';
-                statusText = 'Falhou';
-            } else {
-                statusClass = 'status-completed';
-                statusText = 'Efetuado';
+            if (!token) {
+                return;
             }
 
-            // Exibe a chave PIX/CPF sem formatação
-            let formattedKey = withdrawal.pixKey || withdrawal.method || '-';
+            try {
+                // Mostra estado de carregamento
+                showLoadingState();
 
-            row.innerHTML = `
-                <td>${formattedKey}</td>
-                <td>
-                    <div class="tooltip">
-                        ${formattedDate}
-                        <span class="tooltip-text">${date.toLocaleString('pt-BR')}</span>
-                    </div>
-                </td>
-                <td><strong>${formattedValue}</strong></td>
-                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-            `;
+                const response = await fetch("https://ganhesocialtest.com/api/withdraw", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
 
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Erro ao carregar histórico de saques");
+                }
+
+                allWithdrawals = data;
+                displayWithdrawalsPage(1);
+            } catch (error) {
+                showAlert(error.message);
+                showEmptyState();
+            }
+        }
+
+        function showLoadingState() {
+            const loadingRow = document.getElementById('loading-row');
+            const noWithdrawalsMsg = document.getElementById('no-withdrawals');
+            const pagination = document.getElementById('pagination');
+
+            if (loadingRow) loadingRow.style.display = '';
+            if (noWithdrawalsMsg) noWithdrawalsMsg.style.display = 'none';
+            if (pagination) pagination.style.display = 'none';
+        }
+
+        function showEmptyState() {
+            const loadingRow = document.getElementById('loading-row');
+            const noWithdrawalsMsg = document.getElementById('no-withdrawals');
+            const pagination = document.getElementById('pagination');
+
+            if (loadingRow) loadingRow.style.display = 'none';
+            if (noWithdrawalsMsg) noWithdrawalsMsg.style.display = 'flex';
+            if (pagination) pagination.style.display = 'none';
+        }
+
+        function formatCurrency(value) {
+            // Converte para número e formata com separadores de milhar
+            const numberValue = Number(value);
+
+            // Formata a parte inteira com separadores de milhar
+            const parts = numberValue.toFixed(2).split('.');
+            const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            const decimalPart = parts[1];
+
+            return `R$ ${integerPart},${decimalPart}`;
+        }
+
+        function displayWithdrawalsPage(page) {
+            currentPage = page;
+
+            // Ordena por data (mais recente primeiro)
+            allWithdrawals.sort((a, b) => {
+                const aTime = typeof a.date === 'object' && a.date.$date
+                    ? Number(a.date.$date.$numberLong || a.date.$date)
+                    : Date.parse(a.date);
+
+                const bTime = typeof b.date === 'object' && b.date.$date
+                    ? Number(b.date.$date.$numberLong || b.date.$date)
+                    : Date.parse(b.date);
+
+                return bTime - aTime;
+            });
+
+            // Calcula índices para a página atual
+            const startIndex = (page - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageWithdrawals = allWithdrawals.slice(startIndex, endIndex);
+
+            const withdrawalsList = document.getElementById("withdrawals-list");
+            const loadingRow = document.getElementById("loading-row");
+
+            // Limpa a tabela e esconde o loading
             if (withdrawalsList) {
-                withdrawalsList.appendChild(row);
+                withdrawalsList.innerHTML = "";
             }
-        });
 
-        // Atualiza a paginação
-        updatePagination();
-    }
+            if (loadingRow) {
+                loadingRow.style.display = 'none';
+            }
 
-    function changePage(page) {
-        const totalPages = Math.ceil(allWithdrawals.length / itemsPerPage);
+            if (allWithdrawals.length === 0) {
+                showEmptyState();
+                return;
+            }
 
-        if (page < 1 || page > totalPages) return;
+            // Exibe os saques da página atual
+            pageWithdrawals.forEach(withdrawal => {
+                const row = document.createElement("tr");
+                row.className = 'fade-in';
 
-        displayWithdrawalsPage(page);
-    }
+                const date = new Date(withdrawal.date);
+                const formattedDate = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
 
-    function updatePagination() {
-        const totalPages = Math.ceil(allWithdrawals.length / itemsPerPage);
-        const prevButton = document.getElementById('prev-page');
-        const nextButton = document.getElementById('next-page');
-        const pageInfo = document.getElementById('page-info');
-        const pagination = document.getElementById('pagination');
-        const noWithdrawalsMsg = document.getElementById('no-withdrawals');
+                // Usa a nova função de formatação
+                const formattedValue = formatCurrency(withdrawal.amount);
 
-        // Esconde mensagem de vazio se houver dados
-        if (noWithdrawalsMsg && allWithdrawals.length > 0) {
-            noWithdrawalsMsg.style.display = 'none';
+                let statusClass = '';
+                let statusText = '';
+
+                if (withdrawal.status === 'completed') {
+                    statusClass = 'status-completed';
+                    statusText = 'Efetuado';
+                } else if (withdrawal.status === 'pending') {
+                    statusClass = 'status-pending';
+                    statusText = 'Pendente';
+                } else if (withdrawal.status === 'failed') {
+                    statusClass = 'status-failed';
+                    statusText = 'Falhou';
+                } else {
+                    statusClass = 'status-completed';
+                    statusText = 'Efetuado';
+                }
+
+                // Exibe a chave PIX/CPF sem formatação
+                let formattedKey = withdrawal.pixKey || withdrawal.method || '-';
+
+row.innerHTML = `
+    <td>
+        <div class="tooltip">
+            ${formattedDate}
+            <span class="tooltip-text">${date.toLocaleString('pt-BR')}</span>
+        </div>
+    </td>
+    <td>${formattedKey}</td>
+    <td><strong>${formattedValue}</strong></td>
+    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+`;
+
+                if (withdrawalsList) {
+                    withdrawalsList.appendChild(row);
+                }
+            });
+
+            // Atualiza a paginação
+            updatePagination();
         }
 
-        // Mostra/oculta paginação baseado no número de páginas
-        if (pagination) {
-            if (totalPages > 1) {
-                pagination.style.display = 'flex';
-            } else {
-                pagination.style.display = 'none';
-            }
+        function changePage(page) {
+            const totalPages = Math.ceil(allWithdrawals.length / itemsPerPage);
+
+            if (page < 1 || page > totalPages) return;
+
+            displayWithdrawalsPage(page);
         }
 
-        // Atualiza estado dos botões
-        if (prevButton) prevButton.disabled = currentPage === 1;
-        if (nextButton) nextButton.disabled = currentPage === totalPages;
+        function updatePagination() {
+            const totalPages = Math.ceil(allWithdrawals.length / itemsPerPage);
+            const prevButton = document.getElementById('prev-page');
+            const nextButton = document.getElementById('next-page');
+            const pageInfo = document.getElementById('page-info');
+            const pagination = document.getElementById('pagination');
+            const noWithdrawalsMsg = document.getElementById('no-withdrawals');
 
-        // Atualiza informação da página
-        if (pageInfo) pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
-    }
-</script>
+            // Esconde mensagem de vazio se houver dados
+            if (noWithdrawalsMsg && allWithdrawals.length > 0) {
+                noWithdrawalsMsg.style.display = 'none';
+            }
+
+            // Mostra/oculta paginação baseado no número de páginas
+            if (pagination) {
+                if (totalPages > 1) {
+                    pagination.style.display = 'flex';
+                } else {
+                    pagination.style.display = 'none';
+                }
+            }
+
+            // Atualiza estado dos botões
+            if (prevButton) prevButton.disabled = currentPage === 1;
+            if (nextButton) nextButton.disabled = currentPage === totalPages;
+
+            // Atualiza informação da página
+            if (pageInfo) pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+        }
+    </script>
 </body>
+
 </html>
