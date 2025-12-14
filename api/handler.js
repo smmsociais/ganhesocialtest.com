@@ -1062,50 +1062,108 @@ console.log("[DEBUG] withdraw - pixKey final:", pixKey, "tipo:", keyTypeNormaliz
 
     console.log("[DEBUG] Enviando createPayment para OpenPix:", createPayload);
 
-    let createRes;
-    try {
-      createRes = await fetch(`${OPENPIX_API_URL}/api/v1/payment`, {
-        method: "POST",
-        headers: createHeaders,
-        body: JSON.stringify(createPayload)
-      });
-    } catch (err) {
-      console.error("[ERROR] Falha createPayment:", err);
-      const idxErr = user.saques.findIndex(s => s.externalReference === externalReference);
-      if (idxErr >= 0) {
-        user.saques[idxErr].status = "FAILED";
-        user.saques[idxErr].error = { msg: "Falha na requisição createPayment", detail: err.message };
-        user.saldo += amountNum;
-        await user.save();
-      }
-      return res.status(500).json({ error: "Erro ao comunicar com o provedor de pagamentos." });
-    }
+// ======== createPayment com retries automáticos em caso de "Chave Pix inválida para tipo X" ========
+async function createPaymentAttempt(key, aliasType, idempSuffix) {
+  const hdrs = {
+    "Content-Type": "application/json",
+    "Authorization": OPENPIX_API_KEY,
+    "Idempotency-Key": `${externalReference}_${String(idempSuffix || aliasType)}`
+  };
+  const payload = {
+    value: valueInCents,
+    destinationAlias: key,
+    destinationAliasType: aliasType,
+    correlationID: externalReference,
+    comment: `Saque para ${user._id}`
+  };
+  console.log("[DEBUG] createPaymentAttempt payload:", payload, "Idempotency-Key:", hdrs["Idempotency-Key"]);
+  let res;
+  try {
+    res = await fetch(`${OPENPIX_API_URL}/api/v1/payment`, {
+      method: "POST",
+      headers: hdrs,
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    // falha de rede — retorna objeto com erro
+    return { ok: false, error: err, http: null, text: null, data: null };
+  }
 
-    const createText = await createRes.text();
-    let createData;
-    try { createData = JSON.parse(createText); } catch (err) {
-      console.error("[ERROR] Resposta createPayment não-JSON:", createText);
-      const idx = user.saques.findIndex(s => s.externalReference === externalReference);
-      if (idx >= 0) {
-        user.saques[idx].status = "FAILED";
-        user.saques[idx].error = { msg: "Resposta createPayment inválida", raw: createText };
-        user.saldo += amountNum;
-        await user.save();
-      }
-      return res.status(createRes.status || 500).json({ error: createText });
-    }
+  const text = await res.text();
+  let data = null;
+  try { data = JSON.parse(text); } catch (e) { data = null; }
+  return { ok: res.ok, http: res, text, data };
+}
 
-    if (!createRes.ok) {
-      console.error("[DEBUG] Erro createPayment:", createData);
-      const idxErr = user.saques.findIndex(s => s.externalReference === externalReference);
-      if (idxErr >= 0) {
-        user.saques[idxErr].status = "FAILED";
-        user.saques[idxErr].error = createData;
-        user.saldo += amountNum;
-        await user.save();
-      }
-      return res.status(createRes.status === 403 ? 403 : 400).json({ error: createData.message || createData.error || "Erro ao criar pagamento no provedor." });
+// define ordem de tentativas: começa pelo providerKeyType atual, depois tenta alternativas inteligentes
+const prioritizedTypes = (() => {
+  const initial = providerKeyType || keyTypeNormalized || "RANDOM";
+  // se chave contém '@' priorizamos EMAIL; se contém '-' e parece uuid priorizamos RANDOM
+  const tries = [initial];
+  // se o initial for CPF e a chave parece numérica sem pontuação, tentar PHONE primeiro
+  if (initial === "CPF") {
+    // tenta PHONE antes de CPF (caso o frontend tenha marcado errado)
+    tries.unshift("PHONE");
+  }
+  // garantir unicidade e ordem prática
+  const possible = ["PHONE", "CPF", "CNPJ", "EMAIL", "RANDOM"];
+  possible.forEach(t => { if (!tries.includes(t)) tries.push(t); });
+  return tries;
+})();
+
+let createResult = null;
+let lastCreateData = null;
+for (let i = 0; i < prioritizedTypes.length; i++) {
+  const tryType = prioritizedTypes[i];
+  const attempt = await createPaymentAttempt(pixKey, tryType, tryType);
+  lastCreateData = attempt.data ?? { raw: attempt.text ?? null, error: attempt.error?.message ?? null };
+  if (attempt.ok) {
+    createResult = { success: true, data: attempt.data, http: attempt.http, usedType: tryType };
+    break;
+  } else {
+    // se a resposta do provedor indicar explicitamente "Chave Pix inválida para tipo" — tentar próximo tipo
+    const msg = JSON.stringify(attempt.data || attempt.text || "");
+    const indicatesInvalidType = /chave\s*pix.*inv[aá]lida.*tipo/i.test(msg) || /invalid.*for.*type/i.test(msg);
+    console.log("[DEBUG] createPayment attempt failed:", { tryType, indicatesInvalidType, data: attempt.data, text: attempt.text });
+    if (!indicatesInvalidType) {
+      // se o erro não parece ser "tipo inválido", abortamos e retornamos este erro ao cliente (após marcação/rollback)
+      createResult = { success: false, data: attempt.data, http: attempt.http, error: attempt.error || attempt.text || "Erro ao criar pagamento" };
+      break;
     }
+    // caso contrário, continua o loop tentando o próximo tipo
+  }
+}
+
+if (!createResult) {
+  // nenhuma tentativa obteve resposta ok; marcar failed e restaurar saldo
+  console.error("[DEBUG] createPayment todas as tentativas falharam. último retorno:", lastCreateData);
+  const idxErr = user.saques.findIndex(s => s.externalReference === externalReference);
+  if (idxErr >= 0) {
+    user.saques[idxErr].status = "FAILED";
+    user.saques[idxErr].error = { msg: "Todas as tentativas de createPayment falharam", last: lastCreateData };
+    user.saldo += amountNum;
+    await user.save();
+  }
+  return res.status(400).json({ error: lastCreateData?.error || lastCreateData?.message || "Erro ao criar pagamento no provedor." });
+}
+
+if (!createResult.success) {
+  // createResult foi definido com um erro não relacionado a tipo — já tratado acima mas por segurança:
+  const idxErr = user.saques.findIndex(s => s.externalReference === externalReference);
+  if (idxErr >= 0) {
+    user.saques[idxErr].status = "FAILED";
+    user.saques[idxErr].error = createResult.data || createResult.error || lastCreateData;
+    user.saldo += amountNum;
+    await user.save();
+  }
+  return res.status(400).json({ error: (createResult.data && (createResult.data.message || createResult.data.error)) || createResult.error || "Erro ao criar pagamento no provedor." });
+}
+
+// Se chegou aqui, createResult tem sucesso
+const createData = createResult.data;
+const createHttp = createResult.http;
+console.log("[DEBUG] createPayment succeed with type:", createResult.usedType, "response:", createData);
+// continua fluxo normal (approve) com createData
 
     const paymentId = createData.id || createData.paymentId || createData.payment_id || createData.transaction?.id || null;
     const returnedCorrelation = createData.correlationID || createData.correlationId || createData.correlation || null;
