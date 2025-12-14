@@ -733,7 +733,7 @@
 
                     <div class="referral-link-box">
                         <input type="text" class="referral-link" id="referralLink"
-                            value="https://ganhesocialtest.com/cadastro?ref=123456" readonly>
+                            value="https://ganhesocial.com/cadastro?ref=123456" readonly>
                         <button class="copy-btn" id="copyBtn">
                             <i class="fas fa-copy"></i> Copiar
                         </button>
@@ -884,7 +884,7 @@
         /* === FUNÇÕES DE UTILIDADE === */
         function logout() {
             localStorage.removeItem("token");
-            window.location.href = "https://ganhesocialtest.com";
+            window.location.href = "https://ganhesocial.com";
         }
 
         async function carregarDadosAfiliados() {
@@ -895,7 +895,7 @@
             }
 
             try {
-                const response = await fetch("https://ganhesocialtest.com/api/afiliados", {
+                const response = await fetch("https://ganhesocial.com/api/afiliados", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -915,7 +915,7 @@
 
                 // Atualiza o link de indicação com o código do usuário
                 if (data.codigo_afiliado) {
-                    document.getElementById("referralLink").value = `https://ganhesocialtest.com/?ref=${data.codigo_afiliado}`;
+                    document.getElementById("referralLink").value = `https://ganhesocial.com/?ref=${data.codigo_afiliado}`;
                 }
 
             } catch (error) {
@@ -952,7 +952,7 @@
 
             if (!token) {
                 setTimeout(() => {
-                    window.location.href = "https://ganhesocialtest.com/login";
+                    window.location.href = "https://ganhesocial.com/login";
                 }, 100);
                 return;
             }
