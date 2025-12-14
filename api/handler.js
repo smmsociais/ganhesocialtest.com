@@ -1192,7 +1192,17 @@ const createHttp = createResult.http;
 console.log("[DEBUG] createPayment succeed with type:", createResult.usedType, "response:", createData);
 // continua fluxo normal (approve) com createData
 
-    const paymentId = createData.id || createData.paymentId || createData.payment_id || createData.transaction?.id || null;
+   // ======= EXTRAÇÃO ROBUSTA DO IDENTIFICADOR (paymentId) =======
+    const paymentId =
+      createData.id ||
+      createData.paymentId ||
+      createData.payment_id ||
+      createData.transaction?.id ||
+      createData.payment?.id ||
+      createData.payment?.paymentId ||
+      createData.transactionId ||
+      null;
+
     const returnedCorrelation = createData.correlationID || createData.correlationId || createData.correlation || null;
 
     const createdIndex = user.saques.findIndex(s => s.externalReference === externalReference);
@@ -1202,22 +1212,26 @@ console.log("[DEBUG] createPayment succeed with type:", createResult.usedType, "
       await user.save();
     }
 
-    // approve
+    // Decide identificador para aprovação: prefira paymentId (mais confiável)
     const toApproveIdentifier = paymentId || returnedCorrelation || externalReference;
     if (!toApproveIdentifier) {
+      console.warn("[WARN] createPayment não retornou identificador usável — saque permanece PENDING.");
       return res.status(200).json({
         message: "Saque criado, aguardando aprovação manual (identificador não retornado).",
         create: createData
       });
     }
 
+    // monta payload de approve (prefira paymentId quando disponível)
     const approveHeaders = {
       "Content-Type": "application/json",
       "Authorization": OPENPIX_API_KEY,
       "Idempotency-Key": `approve_${toApproveIdentifier}`
     };
+
     const approvePayload = paymentId ? { paymentId } : { correlationID: toApproveIdentifier };
 
+    // chama endpoint de approve
     let approveRes;
     try {
       approveRes = await fetch(`${OPENPIX_API_URL}/api/v1/payment/approve`, {
@@ -1226,10 +1240,10 @@ console.log("[DEBUG] createPayment succeed with type:", createResult.usedType, "
         body: JSON.stringify(approvePayload)
       });
     } catch (err) {
-      console.error("[ERROR] Falha approvePayment:", err);
+      console.error("[ERROR] Falha approvePayment (network):", err);
       if (createdIndex >= 0) {
         user.saques[createdIndex].status = "PENDING_APPROVAL";
-        user.saques[createdIndex].error = { msg: "Falha na requisição de aprovação", detail: err.message };
+        user.saques[createdIndex].error = { msg: "Falha na requisição de aprovação (network)", detail: err.message };
         await user.save();
       }
       return res.status(500).json({ error: "Erro ao aprovar pagamento (comunicação com provedor)." });
@@ -1237,30 +1251,47 @@ console.log("[DEBUG] createPayment succeed with type:", createResult.usedType, "
 
     const approveText = await approveRes.text();
     let approveData;
-    try { approveData = JSON.parse(approveText); } catch (err) {
-      console.error("[ERROR] Resposta approvePayment não-JSON:", approveText);
-      if (createdIndex >= 0) {
-        user.saques[createdIndex].status = "PENDING_APPROVAL";
-        user.saques[createdIndex].error = { msg: "Resposta de aprovação inválida", raw: approveText };
-        await user.save();
-      }
-      return res.status(approveRes.status || 500).json({ error: approveText });
-    }
+    try { approveData = JSON.parse(approveText); } catch (err) { approveData = null; }
 
     if (!approveRes.ok) {
-      console.error("[DEBUG] Erro approvePayment:", approveData);
+      // log completo para debugging
+      console.error("[DEBUG] Erro approvePayment:", { status: approveRes.status, body: approveData ?? approveText });
+
+      // Mensagens do provedor que indicam "chave não encontrada" ou similar
+      const bodyMsg = JSON.stringify(approveData || approveText || "");
+      const notFoundKey = /chave\s*pix.*n[aã]o encontrada/i.test(bodyMsg) || /not.*found.*pix/i.test(bodyMsg) || /chave.*nao.*encontrada/i.test(bodyMsg);
+
       if (createdIndex >= 0) {
-        user.saques[createdIndex].status = "PENDING_APPROVAL";
-        user.saques[createdIndex].error = approveData;
-        await user.save();
+        // marcar como FAILED ou PENDING_APPROVAL dependendo do erro
+        if (notFoundKey) {
+          user.saques[createdIndex].status = "FAILED";
+          user.saques[createdIndex].error = approveData || { raw: approveText };
+          // restaura saldo
+          user.saldo = (user.saldo ?? 0) + amountNum;
+          await user.save();
+          return res.status(400).json({ error: approveData?.error || approveData?.message || "Chave Pix não encontrada (proveedor)." });
+        } else {
+          // erro genérico de aprovação -> marcar PENDING_APPROVAL para investigação manual
+          user.saques[createdIndex].status = "PENDING_APPROVAL";
+          user.saques[createdIndex].error = approveData || { raw: approveText };
+          await user.save();
+          return res.status(400).json({ error: approveData?.error || approveData?.message || "Erro ao aprovar pagamento (pendente)." });
+        }
+      } else {
+        return res.status(400).json({ error: approveData?.error || approveData?.message || "Erro ao aprovar pagamento." });
       }
-      return res.status(approveRes.status === 403 ? 403 : 400).json({ error: approveData.message || approveData.error || "Erro ao aprovar pagamento." });
     }
 
-    const approveStatus = approveData.status || approveData.transaction?.status || "COMPLETED";
+    // approve ok -> parse e atualiza status do saque
+    let realApproveData = approveData;
+    if (!realApproveData) {
+      try { realApproveData = JSON.parse(approveText); } catch (e) { realApproveData = { raw: approveText }; }
+    }
+
+    const approveStatus = realApproveData.status || realApproveData.transaction?.status || "COMPLETED";
     if (createdIndex >= 0) {
       user.saques[createdIndex].status = (approveStatus === "COMPLETED" || approveStatus === "EXECUTED") ? "COMPLETED" : approveStatus;
-      user.saques[createdIndex].providerId = user.saques[createdIndex].providerId || paymentId || approveData.id || null;
+      user.saques[createdIndex].providerId = user.saques[createdIndex].providerId || paymentId || realApproveData.id || null;
       await user.save();
     }
 
