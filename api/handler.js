@@ -1016,7 +1016,6 @@ let pixRaw = String(payment_data.pix_key || "").trim();
 if (!keyTypeNormalized) {
   const onlyDigits = pixRaw.replace(/\D/g, "");
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixRaw)) keyTypeNormalized = "EMAIL";
-  else if (onlyDigits.length === 11 && /^[0-9]+$/.test(onlyDigits) && validateCPFNumber(onlyDigits)) keyTypeNormalized = "CPF";
   else if (onlyDigits.length === 14) keyTypeNormalized = "CNPJ";
   else if (onlyDigits.length === 10 || onlyDigits.length === 11 || onlyDigits.length === 12) keyTypeNormalized = "PHONE";
   else if (isUUID(pixRaw)) keyTypeNormalized = "RANDOM";
