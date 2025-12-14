@@ -1062,29 +1062,33 @@ console.log("[DEBUG] withdraw - pixKey final:", pixKey, "tipo:", keyTypeNormaliz
 
     console.log("[DEBUG] Enviando createPayment para OpenPix:", createPayload);
 
-// --- Normalizações por tipo (usar no createPaymentAttempt) ---
-// pixKey é a string original (pixRaw.trim())
-const onlyDigits = pixKey.replace(/\D/g, "");
+// --- Antes do aliasForType: detecta se o frontend forneceu explicitamente o tipo ---
+const explicitTypeProvided = Boolean(payment_data.pix_key_type && String(payment_data.pix_key_type).trim());
+
+// normaliza só-dígitos para CPF/CNPJ (útil para enviar ao provedor)
+const onlyDigits = (pixKey || "").replace(/\D/g, "");
+const cpfDigits = onlyDigits.length >= 11 ? onlyDigits.slice(-11) : onlyDigits; // garante pelo menos os 11 finais se houver lixo
+const cnpjDigits = onlyDigits.length >= 14 ? onlyDigits.slice(-14) : onlyDigits;
 
 // aliasForType contém a chave que será enviada para cada destinationAliasType
 const aliasForType = {
-  "CPF": pixKey,    // CPF como veio (ou remova pontuação se preferir)
-  "CNPJ": pixKey,
+  "CPF": cpfDigits || pixKey,    // preferir dígitos puros
+  "CNPJ": cnpjDigits || pixKey,
   "EMAIL": (pixKey || "").toLowerCase(),
   "RANDOM": pixKey,
   // PHONE: normaliza para formato internacional sem '+' — ex: 55 + DDD + número
   "PHONE": (() => {
-    let phone = onlyDigits;
-    // se já começar com 55 (DDI) mantemos; se começar com '0' removemos zeros à esquerda
-    if (/^0+/.test(phone)) phone = phone.replace(/^0+/, "");
-    // se não tem DDI, prefixa 55
+    let phone = (pixKey || "").replace(/\D/g, "");
+    if (!phone) return phone;
+    // remove zeros à esquerda se houver
+    phone = phone.replace(/^0+/, "");
+    // se já tem DDI 55, mantém; senão prefixa 55
     if (!/^55/.test(phone)) phone = `55${phone}`;
     return phone;
   })()
 };
 
-// Exemplo de log para debugging
-console.log("[DEBUG] aliasForType:", aliasForType);
+console.log("[DEBUG] aliasForType:", aliasForType, "explicitTypeProvided:", explicitTypeProvided);
 
 // ======== createPayment com retries automáticos em caso de "Chave Pix inválida para tipo X" ========
 async function createPaymentAttempt(key, aliasType, idempSuffix) {
@@ -1120,18 +1124,17 @@ async function createPaymentAttempt(key, aliasType, idempSuffix) {
   return { ok: res.ok, http: res, text, data };
 }
 
-
-
-// define ordem de tentativas: começa pelo providerKeyType atual, depois tenta alternativas inteligentes
+// ===== define ordem de tentativas =====
+// se o frontend passou explicitTypeProvided, respeitamos a ordem (não forçamos PHONE antes de CPF)
 const prioritizedTypes = (() => {
   const initial = providerKeyType || keyTypeNormalized || "RANDOM";
-  // se chave contém '@' priorizamos EMAIL; se contém '-' e parece uuid priorizamos RANDOM
   const tries = [initial];
-  // se o initial for CPF e a chave parece numérica sem pontuação, tentar PHONE primeiro
-  if (initial === "CPF") {
-    // tenta PHONE antes de CPF (caso o frontend tenha marcado errado)
+
+  if (!explicitTypeProvided && initial === "CPF") {
+    // somente se o tipo veio de inferência do backend, tentar PHONE primeiro
     tries.unshift("PHONE");
   }
+
   // garantir unicidade e ordem prática
   const possible = ["PHONE", "CPF", "CNPJ", "EMAIL", "RANDOM"];
   possible.forEach(t => { if (!tries.includes(t)) tries.push(t); });
