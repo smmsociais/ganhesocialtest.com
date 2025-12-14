@@ -1062,8 +1062,33 @@ console.log("[DEBUG] withdraw - pixKey final:", pixKey, "tipo:", keyTypeNormaliz
 
     console.log("[DEBUG] Enviando createPayment para OpenPix:", createPayload);
 
+// --- Normalizações por tipo (usar no createPaymentAttempt) ---
+// pixKey é a string original (pixRaw.trim())
+const onlyDigits = pixKey.replace(/\D/g, "");
+
+// aliasForType contém a chave que será enviada para cada destinationAliasType
+const aliasForType = {
+  "CPF": pixKey,    // CPF como veio (ou remova pontuação se preferir)
+  "CNPJ": pixKey,
+  "EMAIL": (pixKey || "").toLowerCase(),
+  "RANDOM": pixKey,
+  // PHONE: normaliza para formato internacional sem '+' — ex: 55 + DDD + número
+  "PHONE": (() => {
+    let phone = onlyDigits;
+    // se já começar com 55 (DDI) mantemos; se começar com '0' removemos zeros à esquerda
+    if (/^0+/.test(phone)) phone = phone.replace(/^0+/, "");
+    // se não tem DDI, prefixa 55
+    if (!/^55/.test(phone)) phone = `55${phone}`;
+    return phone;
+  })()
+};
+
+// Exemplo de log para debugging
+console.log("[DEBUG] aliasForType:", aliasForType);
+
 // ======== createPayment com retries automáticos em caso de "Chave Pix inválida para tipo X" ========
 async function createPaymentAttempt(key, aliasType, idempSuffix) {
+  // key aqui já será aliasForType[aliasType] passado na chamada
   const hdrs = {
     "Content-Type": "application/json",
     "Authorization": OPENPIX_API_KEY,
@@ -1095,6 +1120,8 @@ async function createPaymentAttempt(key, aliasType, idempSuffix) {
   return { ok: res.ok, http: res, text, data };
 }
 
+
+
 // define ordem de tentativas: começa pelo providerKeyType atual, depois tenta alternativas inteligentes
 const prioritizedTypes = (() => {
   const initial = providerKeyType || keyTypeNormalized || "RANDOM";
@@ -1115,7 +1142,7 @@ let createResult = null;
 let lastCreateData = null;
 for (let i = 0; i < prioritizedTypes.length; i++) {
   const tryType = prioritizedTypes[i];
-  const attempt = await createPaymentAttempt(pixKey, tryType, tryType);
+const attempt = await createPaymentAttempt(aliasForType[tryType] || pixKey, tryType, tryType);
   lastCreateData = attempt.data ?? { raw: attempt.text ?? null, error: attempt.error?.message ?? null };
   if (attempt.ok) {
     createResult = { success: true, data: attempt.data, http: attempt.http, usedType: tryType };
