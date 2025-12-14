@@ -1301,6 +1301,155 @@ const createPayload = {
   }
 });
 
+
+// ROTA: /api/get_saldo (GET)
+router.get("/get_saldo", async (req, res) => {
+  try {
+    await connectDB();
+
+    // DEBUG: mostra o que chega (remova/ajuste em produção)
+    console.log("[DEBUG] get_saldo headers.authorization:", req.headers.authorization, "query.token:", req.query.token);
+
+    // 1) pegar token: primeiro query, depois Authorization: Bearer <token>
+    let token = req.query?.token || null;
+    const authHeader = (req.headers.authorization || "").toString();
+    if (!token && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1].trim();
+    }
+
+    if (!token) {
+      return res.status(400).json({ error: "Token obrigatório." });
+    }
+
+    // 2) tenta interpretar token como JWT (melhor fluxo) — se falhar, fallback para buscar por token no DB
+    let usuario = null;
+
+    if (process.env.JWT_SECRET) {
+      try {
+        const payload = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = payload?.id || payload?.sub;
+        if (userId) {
+          // incluir saques para podermos retornar last_saque
+          usuario = await User.findById(userId)
+            .select("saldo pix_key pix_key_type _id ativo_ate indicado_por nome email saques")
+            .lean();
+        }
+      } catch (errJwt) {
+        // não é JWT válido; segue para fallback (não tratar como erro aqui)
+        console.log("[DEBUG] token não é JWT válido / jwt.verify falhou:", errJwt.message);
+      }
+    }
+
+    // fallback: buscar por campo token (compatibilidade com implementação anterior)
+    if (!usuario) {
+      usuario = await User.findOne({ token })
+        .select("saldo pix_key pix_key_type _id ativo_ate indicado_por nome email saques")
+        .lean();
+    }
+
+    if (!usuario) {
+      return res.status(403).json({ error: "Acesso negado." });
+    }
+
+    // Busca ações pendentes (não validadas)
+    const pendentes = await ActionHistory.find({
+      user: usuario._id,
+      acao_validada: "pendente"
+    }).select("valor_confirmacao").lean();
+
+    const saldo_pendente = (pendentes || []).reduce(
+      (soma, acao) => soma + (acao.valor_confirmacao || 0),
+      0
+    );
+
+    // Helper: normaliza tipo e chave
+    function normalizePixPair(rawKey, rawType) {
+      if (!rawKey && !rawType) return { key: null, type: null };
+
+      let key = rawKey ?? null;
+      let type = rawType ?? null;
+      if (type) type = String(type).toLowerCase();
+
+      // normaliza tipo textual
+      if (type === "c" || type === "cpf_cnpj") type = "cpf"; // casos estranhos
+      if (type === "telefone" || type === "celular") type = "phone";
+
+      if (key && typeof key === "string") key = key.trim();
+
+      // aplica limpeza por tipo
+      try {
+        if (type === "cpf") {
+          key = String(key).replace(/\D/g, "");
+        } else if (type === "cnpj") {
+          key = String(key).replace(/\D/g, "");
+        } else if (type === "phone") {
+          key = String(key).replace(/\D/g, "");
+        } else if (type === "email") {
+          key = String(key).toLowerCase();
+        }
+      } catch (e) {
+        // ignore, retornar raw
+      }
+
+      return { key: key || null, type: type || null };
+    }
+
+    // Normaliza usuário.pix_key
+    const userPix = normalizePixPair(usuario.pix_key ?? null, usuario.pix_key_type ?? null);
+
+    // Determina last_saque (mais recente) a partir do array usuario.saques
+    let lastSaque = null;
+    if (Array.isArray(usuario.saques) && usuario.saques.length > 0) {
+      // safe sort: por data -> new Date(...)
+      const copy = usuario.saques.slice();
+      copy.sort((a, b) => {
+        const da = a?.data ? new Date(a.data) : (a?.createdAt ? new Date(a.createdAt) : new Date(0));
+        const db = b?.data ? new Date(b.data) : (b?.createdAt ? new Date(b.createdAt) : new Date(0));
+        return db - da;
+      });
+      const rawLast = copy[0];
+      if (rawLast) {
+        lastSaque = {
+          chave_pix: rawLast.chave_pix ?? rawLast.pix_key ?? rawLast.destination ?? null,
+          tipo_chave: rawLast.tipo_chave ?? rawLast.pix_key_type ?? rawLast.tipo ?? null,
+          valor: rawLast.valor ?? rawLast.amount ?? null,
+          data: rawLast.data ? new Date(rawLast.data).toISOString() : (rawLast.createdAt ? new Date(rawLast.createdAt).toISOString() : null)
+        };
+      }
+    }
+
+    // Normaliza last_saque pix info (se existir)
+    let lastSaquePix = { key: null, type: null };
+    if (lastSaque && lastSaque.chave_pix) {
+      lastSaquePix = normalizePixPair(lastSaque.chave_pix, lastSaque.tipo_chave);
+    }
+
+    // Escolhe a chave efetiva que o frontend pode preferir:
+    // prioriza last_saque quando existir; caso contrário usa user.pix_key
+    const pixKeyEffective = lastSaquePix.key ?? userPix.key ?? null;
+    const pixKeyEffectiveType = lastSaquePix.type ?? userPix.type ?? null;
+
+    // DEBUG: log resumido
+    console.log("[DEBUG] get_saldo - userPix:", userPix, "lastSaquePix:", lastSaquePix, "effective:", { pixKeyEffective, pixKeyEffectiveType });
+
+    return res.status(200).json({
+      saldo_disponivel: typeof usuario.saldo === "number" ? usuario.saldo : 0,
+      saldo_pendente,
+      // mantém os valores do usuário (não sobrescreve DB)
+      pix_key: userPix.key,
+      pix_key_type: userPix.type,
+      // fornece a última operação para UI preferir quando desejar
+      last_saque: lastSaque,
+      // chave efetiva (conveniência para front) — prefira usar esse campo no frontend
+      pix_key_effective: pixKeyEffective,
+      pix_key_effective_type: pixKeyEffectiveType
+    });
+  } catch (error) {
+    console.error("💥 Erro ao obter saldo:", error);
+    return res.status(500).json({ error: "Erro ao buscar saldo." });
+  }
+});
+
 // Rota: /api/historico_acoes (GET)
 router.get("/historico_acoes", async (req, res) => {
 if (req.method !== "GET") {
