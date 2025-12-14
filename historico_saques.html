@@ -978,98 +978,98 @@
             return `R$ ${integerPart},${decimalPart}`;
         }
 
-        function displayWithdrawalsPage(page) {
-            currentPage = page;
+function displayWithdrawalsPage(page) {
+    currentPage = page;
 
-            // Ordena por data (mais recente primeiro)
-            allWithdrawals.sort((a, b) => {
-                const aTime = typeof a.date === 'object' && a.date.$date
-                    ? Number(a.date.$date.$numberLong || a.date.$date)
-                    : Date.parse(a.date);
+    // Ordena por data (mais recente primeiro)
+    allWithdrawals.sort((a, b) => {
+        const aTime = typeof a.date === 'object' && a.date.$date
+            ? Number(a.date.$date.$numberLong || a.date.$date)
+            : Date.parse(a.date);
 
-                const bTime = typeof b.date === 'object' && b.date.$date
-                    ? Number(b.date.$date.$numberLong || b.date.$date)
-                    : Date.parse(b.date);
+        const bTime = typeof b.date === 'object' && b.date.$date
+            ? Number(b.date.$date.$numberLong || b.date.$date)
+            : Date.parse(b.date);
 
-                return bTime - aTime;
-            });
+        return bTime - aTime;
+    });
 
-            // Calcula índices para a página atual
-            const startIndex = (page - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const pageWithdrawals = allWithdrawals.slice(startIndex, endIndex);
+    // Calcula índices para a página atual
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageWithdrawals = allWithdrawals.slice(startIndex, endIndex);
 
-            const withdrawalsList = document.getElementById("withdrawals-list");
-            const loadingRow = document.getElementById("loading-row");
+    const withdrawalsList = document.getElementById("withdrawals-list");
+    const loadingRow = document.getElementById("loading-row");
 
-            // Limpa a tabela e esconde o loading
-            if (withdrawalsList) {
-                withdrawalsList.innerHTML = "";
-            }
+    // Limpa a tabela e esconde o loading
+    if (withdrawalsList) {
+        withdrawalsList.innerHTML = "";
+    }
 
-            if (loadingRow) {
-                loadingRow.style.display = 'none';
-            }
+    if (loadingRow) {
+        loadingRow.style.display = 'none';
+    }
 
-            if (allWithdrawals.length === 0) {
-                showEmptyState();
-                return;
-            }
+    if (allWithdrawals.length === 0) {
+        showEmptyState();
+        return;
+    }
 
-            // Exibe os saques da página atual
-            pageWithdrawals.forEach(withdrawal => {
-                const row = document.createElement("tr");
-                row.className = 'fade-in';
+    // Exibe os saques da página atual
+    pageWithdrawals.forEach(withdrawal => {
+        const row = document.createElement("tr");
+        row.className = 'fade-in';
 
-                const date = new Date(withdrawal.date);
-                const formattedDate = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+        const date = new Date(withdrawal.date);
+        const formattedDate = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
 
-                // Usa a nova função de formatação
-                const formattedValue = formatCurrency(withdrawal.amount);
+        // Usa a nova função de formatação
+        const formattedValue = formatCurrency(withdrawal.amount);
 
-                let statusClass = '';
-                let statusText = '';
+        let statusClass = '';
+        let statusText = '';
 
-                if (withdrawal.status === 'completed') {
-                    statusClass = 'status-completed';
-                    statusText = 'Efetuado';
-                } else if (withdrawal.status === 'pending') {
-                    statusClass = 'status-pending';
-                    statusText = 'Pendente';
-                } else if (withdrawal.status === 'failed') {
-                    statusClass = 'status-failed';
-                    statusText = 'Falhou';
-                } else {
-                    statusClass = 'status-completed';
-                    statusText = 'Efetuado';
-                }
-
-                // Exibe a chave PIX/CPF sem formatação
-                let formattedKey = withdrawal.pixKey || withdrawal.method || '-';
-
-row.innerHTML = `
-    <td>
-        <div class="tooltip">
-            ${formattedDate}
-            <span class="tooltip-text">${date.toLocaleString('pt-BR')}</span>
-        </div>
-    </td>
-    <td>${formattedKey}</td>
-    <td><strong>${formattedValue}</strong></td>
-    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-`;
-
-                if (withdrawalsList) {
-                    withdrawalsList.appendChild(row);
-                }
-            });
-
-            // Atualiza a paginação
-            updatePagination();
+        if (withdrawal.status === 'completed') {
+            statusClass = 'status-completed';
+            statusText = 'Efetuado';
+        } else if (withdrawal.status === 'pending') {
+            statusClass = 'status-pending';
+            statusText = 'Pendente';
+        } else if (withdrawal.status === 'failed') {
+            statusClass = 'status-failed';
+            statusText = 'Falhou';
+        } else {
+            statusClass = 'status-completed';
+            statusText = 'Efetuado';
         }
+
+        // Exibe a chave PIX/CPF sem formatação
+        let formattedKey = withdrawal.pixKey || withdrawal.method || '-';
+
+        row.innerHTML = `
+            <td>
+                <div class="tooltip">
+                    ${formattedDate}
+                    <span class="tooltip-text">${date.toLocaleString('pt-BR')}</span>
+                </div>
+            </td>
+            <td>${formattedKey}</td>
+            <td><strong>${formattedValue}</strong></td>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+        `;
+
+        if (withdrawalsList) {
+            withdrawalsList.appendChild(row);
+        }
+    });
+
+    // Atualiza a paginação
+    updatePagination();
+}
 
         function changePage(page) {
             const totalPages = Math.ceil(allWithdrawals.length / itemsPerPage);
