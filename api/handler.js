@@ -1025,12 +1025,6 @@ if (!keyTypeNormalized) {
 // valida e normaliza a chave conforme tipo
 let pixKey = pixRaw;
 switch (keyTypeNormalized) {
-  case "CPF":
-    pixKey = pixRaw.replace(/\D/g, "");
-    if (!validateCPFNumber(pixKey)) {
-      return res.status(400).json({ error: "CPF inválido." });
-    }
-    break;
   case "CNPJ":
     pixKey = pixRaw.replace(/\D/g, "");
     if (!validateCNPJNumber(pixKey)) {
