@@ -833,7 +833,7 @@
             const token = localStorage.getItem("token");
 
             if (!token) {
-                window.location.href = "https://ganhesocialtest.com/login";
+                window.location.href = "https://ganhesocial.com/login";
                 return;
             }
 
@@ -1232,7 +1232,7 @@
             if (data.url && data.url.includes('tiktok.com')) {
                 // Se já é uma URL do TikTok, usa como está
                 url = data.url;
-            } else if (data.url && data.url.includes('ganhesocialtest.com')) {
+            } else if (data.url && data.url.includes('ganhesocial.com')) {
                 // Se é uma URL do GanheSocial, extrai o username e constrói a URL correta
                 const usernameFromUrl = data.url.split('/').pop();
                 url = `https://www.tiktok.com/@${usernameFromUrl}`;
@@ -1463,7 +1463,7 @@
                     throw new Error("Token não encontrado. Faça login novamente.");
                 }
 
-                const response = await fetch("https://ganhesocialtest.com/api/contas_tiktok", {
+                const response = await fetch("https://ganhesocial.com/api/contas_tiktok", {
                     method: "GET",
                     headers: {
                         "Authorization": `Bearer ${token}`
@@ -1563,7 +1563,7 @@
         /* === LOGOUT === */
         function logout() {
             localStorage.removeItem("token");
-            window.location.href = "https://ganhesocialtest.com";
+            window.location.href = "https://ganhesocial.com";
         }   
     </script>
 </body>
