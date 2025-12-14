@@ -948,113 +948,69 @@ router.all("/withdraw", async (req, res) => {
       return res.status(400).json({ error: "Saldo insuficiente." });
     }
 
-    // === Validação simplificada de chave PIX ===
-    const rawType = String((payment_data.pix_key_type || "")).trim().toLowerCase();
-    let keyTypeNormalized = null;
+// === VALIDAÇÃO: remover checagens por quantidade de dígitos ===
+const rawType = String((payment_data.pix_key_type || "")).trim().toLowerCase();
     
-    // Mapeia tipos suportados
-    const typeMap = {
-      "cpf": "CPF",
-      "cnpj": "CNPJ", 
-      "phone": "PHONE",
-      "telefone": "PHONE",
-      "celular": "PHONE",
-      "mobile": "PHONE",
-      "email": "EMAIL",
-      "e-mail": "EMAIL",
-      "mail": "EMAIL",
-      "random": "RANDOM",
-      "aleatoria": "RANDOM",
-      "aleatória": "RANDOM",
-      "uuid": "RANDOM",
-      "evp": "RANDOM"
-    };
+// normaliza tipos conhecidos do frontend
+const typeMap = {
+  "cpf": "CPF",
+  "cnpj": "CNPJ",
+  "phone": "PHONE",
+  "telefone": "PHONE",
+  "celular": "PHONE",
+  "mobile": "PHONE",
+  "email": "EMAIL",
+  "e-mail": "EMAIL",
+  "mail": "EMAIL",
+  "random": "RANDOM",
+  "aleatoria": "RANDOM",
+  "aleatória": "RANDOM",
+  "uuid": "RANDOM",
+  "evp": "RANDOM"
+};
+let keyTypeNormalized = typeMap[rawType] || null;
+let pixRaw = String(payment_data.pix_key || "").trim();
 
-    keyTypeNormalized = typeMap[rawType] || null;
+// Se frontend não enviou tipo, detecta apenas email ou uuid; caso contrário usa PHONE como fallback
+if (!keyTypeNormalized) {
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixRaw)) {
+    keyTypeNormalized = "EMAIL";
+  } else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pixRaw)) {
+    keyTypeNormalized = "RANDOM";
+  } else {
+    // NÃO deduzir CPF/CNPJ por quantidade de dígitos — evita erro do provedor.
+    // Usamos PHONE como fallback (mais comum para chaves que são números).
+    keyTypeNormalized = "PHONE";
+  }
+}
 
-    // Se não reconheceu pelo tipo fornecido, tenta deduzir pelo formato da chave
-    let pixRaw = String(payment_data.pix_key || "").trim();
-    if (!keyTypeNormalized) {
-      const onlyDigits = pixRaw.replace(/\D/g, "");
-      
-      // Verifica por email primeiro
-      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixRaw)) {
-        keyTypeNormalized = "EMAIL";
-      }
-      // Verifica por UUID
-      else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pixRaw)) {
-        keyTypeNormalized = "RANDOM";
-      }
-      // Verifica por apenas dígitos (CPF, CNPJ ou telefone)
-      else if (/^\d+$/.test(pixRaw)) {
-        if (pixRaw.length === 11) {
-          keyTypeNormalized = "CPF";
-        } else if (pixRaw.length === 14) {
-          keyTypeNormalized = "CNPJ";
-        } else if (pixRaw.length >= 10 && pixRaw.length <= 11) {
-          keyTypeNormalized = "PHONE";
-        } else {
-          keyTypeNormalized = "RANDOM";
-        }
-      } else {
-        // Qualquer outra coisa é considerada chave aleatória
-        keyTypeNormalized = "RANDOM";
-      }
-    }
+// validação mínima: apenas garante chave não vazia; e valida email caso type seja EMAIL
+if (!pixRaw) {
+  return res.status(400).json({ error: "Chave PIX inválida (vazia)." });
+}
 
-    // Validações mínimas por tipo
-    let pixKey = pixRaw;
-    switch (keyTypeNormalized) {
-      case "CPF":
-        pixKey = pixRaw.replace(/\D/g, "");
-        if (pixKey.length !== 11 || !/^\d{11}$/.test(pixKey)) {
-          return res.status(400).json({ error: "CPF deve ter 11 dígitos numéricos." });
-        }
-        break;
-        
-      case "CNPJ":
-        pixKey = pixRaw.replace(/\D/g, "");
-        if (pixKey.length !== 14 || !/^\d{14}$/.test(pixKey)) {
-          return res.status(400).json({ error: "CNPJ deve ter 14 dígitos numéricos." });
-        }
-        break;
-        
-      case "PHONE":
-        pixKey = pixRaw.replace(/\D/g, "");
-        // Aceita telefones com 10 ou 11 dígitos (com DDD)
-        if (!/^\d{10,11}$/.test(pixKey)) {
-          return res.status(400).json({ error: "Telefone inválido. Use DDD + número (10 ou 11 dígitos)." });
-        }
-        break;
-        
-      case "EMAIL":
-        pixKey = pixRaw.trim().toLowerCase();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixKey)) {
-          return res.status(400).json({ error: "E-mail inválido para chave PIX." });
-        }
-        break;
-        
-      case "RANDOM":
-        // Remove espaços e valida que não está vazia
-        pixKey = pixRaw.trim();
-        if (!pixKey || pixKey.length < 5) {
-          return res.status(400).json({ error: "Chave aleatória muito curta (mínimo 5 caracteres)." });
-        }
-        break;
-        
-      default:
-        return res.status(400).json({ error: "Tipo de chave PIX não suportado." });
-    }
+let pixKey = pixRaw;
+if (keyTypeNormalized === "EMAIL") {
+  pixKey = pixRaw.toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixKey)) {
+    return res.status(400).json({ error: "E-mail inválido para chave PIX." });
+  }
+} else {
+  // para PHONE / RANDOM / CPF / CNPJ etc. NÃO aplicar checagens por quantidade
+  pixKey = pixRaw;
+}
 
-    // Mapeamento para o provedor
-    const providerTypeMap = {
-      "CPF": "CPF",
-      "CNPJ": "CNPJ", 
-      "PHONE": "PHONE",
-      "EMAIL": "EMAIL",
-      "RANDOM": "RANDOM"
-    };
-    const providerKeyType = providerTypeMap[keyTypeNormalized] || keyTypeNormalized;
+// mapear para o provedor (ajuste se o provedor exigir rótulos específicos)
+const providerTypeMap = {
+  "CPF": "CPF",
+  "CNPJ": "CNPJ",
+  "PHONE": "PHONE",
+  "EMAIL": "EMAIL",
+  "RANDOM": "RANDOM"
+};
+const providerKeyType = providerTypeMap[keyTypeNormalized] || keyTypeNormalized;
+
+console.log("[DEBUG] withdraw - pixKey final:", pixKey, "tipo:", keyTypeNormalized, "providerType:", providerKeyType);
 
     const externalReference = `saque_${user._id}_${Date.now()}`;
 
