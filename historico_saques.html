@@ -1042,21 +1042,7 @@
                     statusText = 'Efetuado';
                 }
 
-                // Formata a chave PIX/CPF
-                let formattedKey = withdrawal.pixKey || withdrawal.method || '-';
-
-                // Formatação específica para CPF
-                if (withdrawal.keyType === 'cpf' && /^\d{11}$/.test(withdrawal.pixKey)) {
-                    formattedKey = withdrawal.pixKey.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                }
-
-                // Formatação genérica para CPF (caso não tenha keyType mas seja um CPF)
-                else if (/^\d{11}$/.test(withdrawal.pixKey)) {
-                    formattedKey = withdrawal.pixKey.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                }
-
                 row.innerHTML = `
-                    <td>${formattedKey}</td>
                     <td>
                         <div class="tooltip">
                             ${formattedDate}
