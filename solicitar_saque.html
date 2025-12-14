@@ -861,17 +861,17 @@
         function togglePixEdit() {
             const pixInput = document.getElementById('pixKey');
             const pixContainer = document.getElementById('pixContainer');
-            
+
             if (!isEditingPix) {
                 // Entrar no modo edição
                 isEditingPix = true;
                 originalPixKey = pixInput.value;
-                
+
                 // Habilitar o campo
                 pixInput.disabled = false;
                 pixContainer.classList.add('edit-mode');
                 pixContainer.classList.remove('disabled');
-                
+
                 // Focar no campo
                 pixInput.focus();
                 pixInput.select();
@@ -882,9 +882,9 @@
         function exitEditMode() {
             const pixInput = document.getElementById('pixKey');
             const pixContainer = document.getElementById('pixContainer');
-            
+
             isEditingPix = false;
-            
+
             // Desabilitar o campo
             pixInput.disabled = true;
             pixContainer.classList.remove('edit-mode');
@@ -925,8 +925,8 @@
                     cleanKey: cleanValue,
                     isValid: true
                 };
-            } else if (/^\d{10,11}$/.test(cleanValue)) {
-                // Telefone - 10 ou 11 dígitos
+            } else if (/^\d{10,11,12}$/.test(cleanValue)) {
+                // Telefone - 10, 11 ou 12 dígitos
                 return {
                     type: 'phone',
                     formattedKey: cleanValue,
@@ -990,8 +990,8 @@
             }
 
             errorElement.style.display = 'none';
-            return { 
-                isValid: true, 
+            return {
+                isValid: true,
                 pixInfo: {
                     ...pixInfo,
                     cleanKey: cleanPixKey // Envia sem pontuação
@@ -1048,44 +1048,44 @@
                 localStorage.setItem("saldoDisponivel", saldoDisponivel);
                 document.getElementById("availableBalance").textContent = saldoDisponivel.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-// trecho dentro de loadWithdrawData() logo após receber 'data'
-const pixKeyInput = document.getElementById('pixKey');
-const pixContainer = document.getElementById('pixContainer');
-const pixEditIcon = document.getElementById('pixEditIcon');
+                // trecho dentro de loadWithdrawData() logo após receber 'data'
+                const pixKeyInput = document.getElementById('pixKey');
+                const pixContainer = document.getElementById('pixContainer');
+                const pixEditIcon = document.getElementById('pixEditIcon');
 
-// decide qual chave exibir: prefere last_saque se existir
-let displayKey = null;
-let displayType = null;
+                // decide qual chave exibir: prefere last_saque se existir
+                let displayKey = null;
+                let displayType = null;
 
-if (data.last_saque && data.last_saque.chave_pix) {
-  displayKey = data.last_saque.chave_pix;
-  displayType = (data.last_saque.tipo_chave || data.pix_key_type || '').toLowerCase();
-} else if (data.pix_key) {
-  displayKey = data.pix_key;
-  displayType = (data.pix_key_type || '').toLowerCase();
-}
+                if (data.last_saque && data.last_saque.chave_pix) {
+                    displayKey = data.last_saque.chave_pix;
+                    displayType = (data.last_saque.tipo_chave || data.pix_key_type || '').toLowerCase();
+                } else if (data.pix_key) {
+                    displayKey = data.pix_key;
+                    displayType = (data.pix_key_type || '').toLowerCase();
+                }
 
-if (displayKey) {
-  // coloca o valor exatamente como veio (você pode aplicar formatação opcional aqui)
-  pixKeyInput.value = displayKey;
+                if (displayKey) {
+                    // coloca o valor exatamente como veio (você pode aplicar formatação opcional aqui)
+                    pixKeyInput.value = displayKey;
 
-  // atualiza variáveis locais
-  savedPixKey = displayKey;
-  savedPixType = displayType;
+                    // atualiza variáveis locais
+                    savedPixKey = displayKey;
+                    savedPixType = displayType;
 
-  // define o campo como somente leitura (mantendo seu comportamento atual)
-  pixKeyInput.disabled = true;
-  pixContainer.classList.add('disabled');
+                    // define o campo como somente leitura (mantendo seu comportamento atual)
+                    pixKeyInput.disabled = true;
+                    pixContainer.classList.add('disabled');
 
-  // exibe o ícone de edição
-  if (pixEditIcon) pixEditIcon.style.display = 'flex';
-} else {
-  // não há chave conhecida — permite edição
-  pixKeyInput.value = '';
-  pixKeyInput.disabled = false;
-  pixContainer.classList.remove('disabled');
-  if (pixEditIcon) pixEditIcon.style.display = 'none';
-}
+                    // exibe o ícone de edição
+                    if (pixEditIcon) pixEditIcon.style.display = 'flex';
+                } else {
+                    // não há chave conhecida — permite edição
+                    pixKeyInput.value = '';
+                    pixKeyInput.disabled = false;
+                    pixContainer.classList.remove('disabled');
+                    if (pixEditIcon) pixEditIcon.style.display = 'none';
+                }
 
             } catch (error) {
                 console.error("Erro ao carregar saldo:", error);
@@ -1114,7 +1114,7 @@ if (displayKey) {
 
             const validationResult = validatePixKey();
             if (!validationResult.isValid) return;
-            
+
             // Se estiver em modo edição, salva a chave PIX
             if (isEditingPix) {
                 savedPixKey = validationResult.pixInfo.cleanKey;
@@ -1153,13 +1153,13 @@ if (displayKey) {
 
                 showAlert("Saque solicitado com sucesso! O pagamento está em processamento.", "success");
                 document.getElementById('amount').value = '';
-                
+
                 // Atualiza a chave PIX localmente após o sucesso
                 if (isEditingPix) {
                     savedPixKey = pixInfo.cleanKey;
                     savedPixType = pixInfo.type;
                 }
-                
+
                 // Recarrega os dados
                 await loadWithdrawData();
 
