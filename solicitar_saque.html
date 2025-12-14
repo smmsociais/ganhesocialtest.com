@@ -840,7 +840,7 @@
         /* === FUNÇÕES DE UTILIDADE === */
         function logout() {
             localStorage.removeItem("token");
-            window.location.href = "https://ganhesocialtest.com";
+            window.location.href = "https://ganhesocial.com";
         }
 
         function showAlert(message, type = "error") {
@@ -1026,13 +1026,13 @@
             const token = getCleanToken();
             if (!token) {
                 // força logout/redireciona se quiser
-                window.location.href = "https://ganhesocialtest.com/login";
+                window.location.href = "https://ganhesocial.com/login";
                 return;
             }
 
             try {
                 // usar header Authorization é mais padrão/seguro do que ?token=...
-                const response = await fetch(`https://ganhesocialtest.com/api/get_saldo`, {
+                const response = await fetch(`https://ganhesocial.com/api/get_saldo`, {
                     method: "GET",
                     headers: {
                         "Authorization": `Bearer ${token}`
@@ -1130,7 +1130,7 @@
             }
 
             try {
-                const response = await fetch("https://ganhesocialtest.com/api/withdraw", {
+                const response = await fetch("https://ganhesocial.com/api/withdraw", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -1174,7 +1174,7 @@
             const token = localStorage.getItem("token");
 
             if (!token) {
-                window.location.href = "https://ganhesocialtest.com/login";
+                window.location.href = "https://ganhesocial.com/login";
                 return;
             }
 
