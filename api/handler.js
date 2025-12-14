@@ -535,17 +535,21 @@ router.put("/profile", async (req, res) => {
       return res.status(404).json({ error: "Usuário não encontrado." });
     }
 
-    // Campos enviados
-    const { nome_usuario, email, senha } = req.body;
+const { nome_usuario, email, senha } = req.body;
 
-    const updateFields = {};
-    if (nome_usuario) updateFields.nome = nome_usuario;
-    if (email) updateFields.email = email;
-    if (senha) {
-      // ⚠️ Aqui você deveria criptografar a senha antes de salvar
-      // ex: updateFields.senha = await bcrypt.hash(senha, 10);
-      updateFields.senha = senha;
-    }
+const updateFields = {};
+
+if (nome_usuario !== undefined) {
+  updateFields.nome = nome_usuario;
+}
+
+if (email !== undefined) {
+  updateFields.email = email;
+}
+
+if (senha !== undefined) {
+  updateFields.senha = senha; 
+}
 
     const usuarioAtualizado = await User.findOneAndUpdate(
       { token },
