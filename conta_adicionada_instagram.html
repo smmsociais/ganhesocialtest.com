@@ -657,11 +657,6 @@
             </a>
         </div>
         <div class="right-header">
-            <!-- Botão de alternar tema -->
-            <button class="theme-toggle" id="themeToggle">
-                <i class="fas fa-moon"></i>
-                <span>Escuro</span>
-            </button>
         </div>
     </div>
 
@@ -716,52 +711,6 @@
             
             if (logoMobile) {
                 logoMobile.src = logoURL;
-            }
-        }
-
-        /* === CONFIGURAR TOGGLE DE TEMA === */
-        function configurarTemaToggle() {
-            const themeToggle = document.getElementById('themeToggle');
-            if (!themeToggle) return;
-
-            const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
-            atualizarTextoBotaoTema(temaAtual);
-
-            themeToggle.addEventListener('click', function() {
-                const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
-                const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
-                
-                // Atualiza o atributo data-tema
-                document.documentElement.setAttribute('data-tema', novoTema);
-                
-                // Salva no localStorage
-                try {
-                    localStorage.setItem('tema', novoTema);
-                } catch (e) {
-                    console.warn("Erro ao salvar tema no localStorage:", e);
-                }
-                
-                // Atualiza as logos
-                atualizarLogosPorTema();
-                
-                // Atualiza o texto do botão
-                atualizarTextoBotaoTema(novoTema);
-            });
-        }
-
-        function atualizarTextoBotaoTema(tema) {
-            const themeToggle = document.getElementById('themeToggle');
-            if (!themeToggle) return;
-
-            const icon = themeToggle.querySelector('i');
-            const text = themeToggle.querySelector('span');
-            
-            if (tema === 'escuro') {
-                icon.className = 'fas fa-sun';
-                text.textContent = 'Claro';
-            } else {
-                icon.className = 'fas fa-moon';
-                text.textContent = 'Escuro';
             }
         }
 
@@ -823,9 +772,6 @@
 
             // Atualiza as logos baseado no tema atual
             atualizarLogosPorTema();
-
-            // Configurar botão de tema
-            configurarTemaToggle();
 
             // Marca página como carregada
             document.body.classList.add('loaded');
