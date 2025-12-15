@@ -35,7 +35,7 @@
             --shadow-light: rgba(0, 0, 0, 0.08);
             --logo-light: url('https://i.imgur.com/dioL5B7.png');
             --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
-
+            
             /* Logos das redes sociais - tema claro */
             --instagram-logo-light: url('https://i.imgur.com/iJLCWuJ.png');
             --tiktok-logo-light: url('https://i.imgur.com/eOQsV5U.png');
@@ -53,7 +53,7 @@
             --shadow-dark: rgba(0, 0, 0, 0.3);
             --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
             --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
-
+            
             /* Logos das redes sociais - tema escuro */
             --instagram-logo-dark: url('https://i.imgur.com/7CoB7je.png');
             --tiktok-logo-dark: url('https://i.imgur.com/6RxMIU9.png');
@@ -141,6 +141,7 @@
             position: relative;
             z-index: 10;
         }
+
         .left-header {
             display: flex;
             align-items: center;
@@ -231,7 +232,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: calc(100vh - 70px);
+            min-height: 100vh;
             padding: 20px;
         }
 
@@ -241,11 +242,11 @@
             box-shadow: 0 4px 20px var(--shadow);
             overflow: hidden;
             transition: var(--transition);
+            margin-bottom: 30px;
             border: 1px solid var(--border);
             text-align: center;
-            padding: 40px 30px;
             width: 100%;
-            max-width: 600px;
+            max-width: 500px;
         }
 
         .container-header {
@@ -257,13 +258,17 @@
 
         .container-header h2 {
             margin: 0;
-            font-size: 1.5rem;
+            font-size: 1.0rem;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
             color: white !important;
         }
 
         .container-body {
-            padding: 30px 20px;
+            padding: 30px;
             text-align: center;
         }
 
@@ -271,51 +276,40 @@
         .success-box {
             background-color: rgba(40, 167, 69, 0.1);
             border-left: 4px solid var(--success);
-            padding: 30px;
-            margin-bottom: 30px;
-            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 4px;
             text-align: center;
         }
 
         .success-box h3 {
             margin-top: 0;
             color: var(--success);
-            font-size: 1.3rem;
+            font-size: 18px;
             margin-bottom: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .success-icon {
-            font-size: 64px;
+            font-size: 48px;
             color: var(--success);
             margin-bottom: 20px;
         }
 
-        .instagram-account-info {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            margin: 20px 0;
+        .account-details {
+            background: rgba(0, 0, 0, 0.05);
             padding: 15px;
-            background: var(--hover);
             border-radius: 8px;
-            border: 1px solid var(--border);
+            margin: 20px 0;
+            text-align: left;
         }
 
-        .instagram-logo {
-            width: 40px;
-            height: 40px;
-            object-fit: contain;
-        }
-
-        .account-username {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: var(--text);
+        .account-details strong {
+            display: inline-block;
+            width: 120px;
         }
 
         /* Button Styles */
@@ -323,52 +317,52 @@
             background: var(--success);
             color: white;
             border: none;
-            padding: 14px 24px;
-            border-radius: 8px;
+            padding: 12px 20px;
+            border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
             width: 100%;
-            font-size: 1rem;
+            margin-top: 10px;
         }
 
         .btn-secondary {
             background: var(--gray-dark);
             color: white;
             border: none;
-            padding: 14px 24px;
-            border-radius: 8px;
+            padding: 12px 20px;
+            border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
             width: 100%;
-            font-size: 1rem;
+            margin-top: 10px;
         }
 
         .btn-primary:hover {
             background: #218838;
             transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(40, 167, 69, 0.3);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
         }
 
         .btn-secondary:hover {
             background: #5a6268;
             transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(108, 117, 125, 0.3);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
         }
 
         .button-group {
             display: flex;
             gap: 15px;
-            margin-top: 30px;
+            margin-top: 25px;
         }
 
         /* Menu Styles */
@@ -538,25 +532,20 @@
         @media (max-width: 768px) {
             .main-container {
                 padding: 20px;
-                min-height: calc(100vh - 60px);
+                margin-top: 0;
             }
 
             .container {
-                padding: 30px 20px;
                 width: calc(100% - 40px);
+            }
+
+            .container-body {
+                padding: 20px;
             }
 
             .button-group {
                 flex-direction: column;
-                gap: 12px;
-            }
-
-            .success-box {
-                padding: 20px;
-            }
-
-            .success-icon {
-                font-size: 48px;
+                gap: 10px;
             }
         }
 
@@ -567,30 +556,19 @@
 
             .main-container {
                 padding: 15px;
-                min-height: calc(100vh - 54px);
             }
 
             .container {
-                padding: 25px 15px;
                 width: calc(100% - 30px);
+            }
+
+            .container-body {
+                padding: 15px;
             }
 
             .theme-toggle {
                 padding: 6px 12px;
                 font-size: 0.9rem;
-            }
-
-            .container-header h2 {
-                font-size: 1.3rem;
-            }
-
-            .success-box h3 {
-                font-size: 1.1rem;
-            }
-
-            .instagram-account-info {
-                flex-direction: column;
-                gap: 10px;
             }
         }
 
@@ -623,30 +601,12 @@
             }
         }
 
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.05);
-            }
-
-            100% {
-                transform: scale(1);
-            }
-        }
-
         .fade-in {
             animation: fadeIn 0.5s ease forwards;
         }
 
         .bounce-in {
             animation: bounceIn 0.6s ease forwards;
-        }
-
-        .pulse {
-            animation: pulse 2s infinite;
         }
 
         /* Initial Load */
@@ -661,20 +621,6 @@
 </head>
 
 <body>
-    <!-- Aplica tema imediatamente antes do paint para evitar flash -->
-    <script>
-        (function () {
-            try {
-                var temaLocal = localStorage.getItem('tema');
-                if (temaLocal) {
-                    document.documentElement.setAttribute('data-tema', temaLocal);
-                }
-            } catch (e) {
-                console.warn("Erro ao aplicar tema do localStorage:", e);
-            }
-        })();
-    </script>
-
     <!-- Menu Lateral para Desktop -->
     <div class="menu-content" id="menuContent">
         <!-- Botão de fechar (visível apenas no mobile) -->
@@ -682,7 +628,8 @@
 
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
-                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+                <!-- A imagem será trocada via CSS baseado no tema -->
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -713,8 +660,16 @@
             </div>
             <!-- Logo para mobile (no header) -->
             <a href="dashboard" class="logo-mobile">
-                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+                <!-- A imagem será trocada via CSS baseado no tema -->
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
+        </div>
+        <div class="right-header">
+            <!-- Botão de alternar tema -->
+            <button class="theme-toggle" id="themeToggle">
+                <i class="fas fa-moon"></i>
+                <span>Escuro</span>
+            </button>
         </div>
     </div>
 
@@ -752,32 +707,85 @@
             return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
         }
 
-        // Preencher dados da conta quando a página carregar
-        document.addEventListener('DOMContentLoaded', function () {
-            const token = localStorage.getItem("token");
-
-            if (!token) {
-                window.location.href = "https://ganhesocialtest.com/login";
-                return;
+        /* === ATUALIZAR LOGOS POR TEMA === */
+        function atualizarLogosPorTema() {
+            const tema = document.documentElement.getAttribute('data-tema');
+            const logoDesktop = document.getElementById('logoDesktop');
+            const logoMobile = document.getElementById('logoMobile');
+            
+            // URLs das logos para cada tema
+            const logoClaro = 'https://i.imgur.com/dioL5B7.png';
+            const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
+            
+            const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
+            
+            if (logoDesktop) {
+                logoDesktop.src = logoURL;
             }
-
-            const username = getUrlParameter('username');
-            if (username) {
-                // Atualiza a mensagem de sucesso com o nome de usuário
-                const successMessage = document.getElementById('successMessage');
-                successMessage.textContent = `Sua conta do Instagram (@${username}) foi adicionada com sucesso!`;
+            
+            if (logoMobile) {
+                logoMobile.src = logoURL;
             }
+        }
 
-            // Configura o menu
+        /* === CONFIGURAR TOGGLE DE TEMA === */
+        function configurarTemaToggle() {
+            const themeToggle = document.getElementById('themeToggle');
+            if (!themeToggle) return;
+
+            const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
+            atualizarTextoBotaoTema(temaAtual);
+
+            themeToggle.addEventListener('click', function() {
+                const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
+                const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
+                
+                // Atualiza o atributo data-tema
+                document.documentElement.setAttribute('data-tema', novoTema);
+                
+                // Salva no localStorage
+                try {
+                    localStorage.setItem('tema', novoTema);
+                } catch (e) {
+                    console.warn("Erro ao salvar tema no localStorage:", e);
+                }
+                
+                // Atualiza as logos
+                atualizarLogosPorTema();
+                
+                // Atualiza o texto do botão
+                atualizarTextoBotaoTema(novoTema);
+            });
+        }
+
+        function atualizarTextoBotaoTema(tema) {
+            const themeToggle = document.getElementById('themeToggle');
+            if (!themeToggle) return;
+
+            const icon = themeToggle.querySelector('i');
+            const text = themeToggle.querySelector('span');
+            
+            if (tema === 'escuro') {
+                icon.className = 'fas fa-sun';
+                text.textContent = 'Claro';
+            } else {
+                icon.className = 'fas fa-moon';
+                text.textContent = 'Escuro';
+            }
+        }
+
+        /* === CONTROLE DO MENU HAMBURGUER === */
+        function configurarMenu() {
             const menuToggle = document.getElementById('menuToggle');
             const menuOverlay = document.getElementById('menuOverlay');
             const menuContent = document.getElementById('menuContent');
             const menuCloseBtn = document.getElementById('menuCloseBtn');
 
+            if (!menuToggle || !menuOverlay || !menuContent) return;
+
             function toggleMenu() {
                 menuContent.classList.toggle('active');
                 menuOverlay.classList.toggle('active');
-
                 const spans = menuToggle.querySelectorAll('span');
                 if (menuContent.classList.contains('active')) {
                     spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
@@ -802,9 +810,44 @@
             menuToggle.addEventListener('click', toggleMenu);
             menuCloseBtn.addEventListener('click', closeMenu);
             menuOverlay.addEventListener('click', closeMenu);
+        }
+
+        /* === INICIALIZAÇÃO UNIFICADA === */
+        document.addEventListener("DOMContentLoaded", async function () {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                window.location.href = "https://ganhesocialtest.com/login";
+                return;
+            }
+
+            const username = getUrlParameter('username');
+            if (username) {
+                const successMessage = document.getElementById('successMessage');
+                successMessage.textContent = `Sua conta do Instagram (@${username}) foi adicionada com sucesso!`;
+            }
+
+            // Configura o menu
+            configurarMenu();
+
+            // Atualiza as logos baseado no tema atual
+            atualizarLogosPorTema();
+
+            // Configurar botão de tema
+            configurarTemaToggle();
 
             // Marca página como carregada
             document.body.classList.add('loaded');
+
+            // Observador para mudanças de tema
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.attributeName === 'data-tema') {
+                        atualizarLogosPorTema();
+                    }
+                });
+            });
+            observer.observe(document.documentElement, { attributes: true });
         });
 
         function logout() {
