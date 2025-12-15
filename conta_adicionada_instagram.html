@@ -122,13 +122,6 @@
             line-height: 1.6;
         }
 
-        /* Menu item ativo */
-        .menu-item[href="adicionar_conta"] {
-            color: var(--text) !important;
-            font-weight: bold;
-            background-color: rgba(146, 146, 146, 0.1);
-        }
-
         /* Header Styles */
         .header {
             display: flex;
@@ -162,11 +155,22 @@
 
         /* Logo com imagem baseada em variável CSS */
         .logo-desktop img {
+            content: var(--logo);
             transition: var(--transition);
         }
 
         .logo-mobile img {
+            content: var(--logo-mobile);
             transition: var(--transition);
+        }
+
+        /* Logos das redes sociais com base no tema */
+        .instagram-logo {
+            content: var(--instagram-logo);
+        }
+
+        .tiktok-logo {
+            content: var(--tiktok-logo);
         }
 
         /* Botão de alternar tema */
@@ -227,7 +231,6 @@
             font-weight: 700;
         }
 
-        /* Main Container */
         .main-container {
             display: flex;
             justify-content: center;
@@ -245,8 +248,9 @@
             margin-bottom: 30px;
             border: 1px solid var(--border);
             text-align: center;
+            padding: 30px;
             width: 100%;
-            max-width: 500px;
+            max-width: 900px;
         }
 
         .container-header {
@@ -258,111 +262,71 @@
 
         .container-header h2 {
             margin: 0;
-            font-size: 1.0rem;
+            font-size: 1.5rem;
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
             color: white !important;
         }
 
-        .container-body {
-            padding: 30px;
-            text-align: center;
+        .container-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: var(--text);
+            font-weight: 600;
         }
 
-        /* Success Box */
-        .success-box {
-            background-color: rgba(40, 167, 69, 0.1);
-            border-left: 4px solid var(--success);
-            padding: 20px;
-            margin-bottom: 25px;
-            border-radius: 4px;
-            text-align: center;
+        .container-subtitle {
+            font-size: 0.9rem;
+            color: var(--gray-dark);
+            margin-bottom: 30px;
         }
 
-        .success-box h3 {
-            margin-top: 0;
-            color: var(--success);
-            font-size: 18px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
+        .social-networks {
+            display: grid;
+            grid-template-columns: repeat(2, 120px);
+            gap: 25px;
+            margin-top: 30px;
             justify-content: center;
-            gap: 8px;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
-        .success-icon {
-            font-size: 48px;
-            color: var(--success);
-            margin-bottom: 20px;
-        }
-
-        .account-details {
-            background: rgba(0, 0, 0, 0.05);
+        .network-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: var(--transition);
+            cursor: pointer;
             padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            text-align: left;
+            border-radius: var(--card-radius);
+            background: var(--container);
+            border: 1px solid var(--border);
         }
 
-        .account-details strong {
-            display: inline-block;
-            width: 120px;
+        .network-item:hover {
+            background-color: var(--hover);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px var(--shadow);
         }
 
-        /* Button Styles */
-        .btn-primary {
-            background: var(--success);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
+        .network-logo {
+            width: 100px;
+            height: 60px;
+            object-fit: contain;
+            margin-bottom: 10px;
             transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-            margin-top: 10px;
         }
 
-        .btn-secondary {
-            background: var(--gray-dark);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 6px;
+        .network-name {
             font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-            margin-top: 10px;
+            margin-bottom: 5px;
+            color: var(--text);
         }
 
-        .btn-primary:hover {
-            background: #218838;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
-        }
-
-        .button-group {
-            display: flex;
-            gap: 15px;
-            margin-top: 25px;
+        .coming-soon {
+            font-size: 0.75rem;
+            color: var(--gray-dark);
+            font-style: italic;
         }
 
         /* Menu Styles */
@@ -437,6 +401,7 @@
             width: 24px;
             text-align: center;
             color: var(--gray-dark);
+            /* Ícones em cinza escuro */
         }
 
         .menu-item:hover {
@@ -536,16 +501,19 @@
             }
 
             .container {
+                padding: 20px;
                 width: calc(100% - 40px);
             }
 
-            .container-body {
-                padding: 20px;
+            .social-networks {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+                max-width: 100%;
             }
 
-            .button-group {
-                flex-direction: column;
-                gap: 10px;
+            .network-logo {
+                width: 80px;
+                height: 50px;
             }
         }
 
@@ -559,16 +527,23 @@
             }
 
             .container {
-                width: calc(100% - 30px);
-            }
-
-            .container-body {
                 padding: 15px;
+                width: calc(100% - 30px);
             }
 
             .theme-toggle {
                 padding: 6px 12px;
                 font-size: 0.9rem;
+            }
+
+            .network-logo {
+                width: 60px;
+                height: 40px;
+            }
+
+            .social-networks {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
             }
         }
 
@@ -585,28 +560,8 @@
             }
         }
 
-        @keyframes bounceIn {
-            0% {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-
-            50% {
-                transform: scale(1.05);
-                opacity: 1;
-            }
-
-            100% {
-                transform: scale(1);
-            }
-        }
-
         .fade-in {
             animation: fadeIn 0.5s ease forwards;
-        }
-
-        .bounce-in {
-            animation: bounceIn 0.6s ease forwards;
         }
 
         /* Initial Load */
