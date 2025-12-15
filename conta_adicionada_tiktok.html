@@ -7,33 +7,59 @@
     <title>Conta Adicionada TikTok - GanheSocial</title>
     <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- HEAD: aplica tema do localStorage imediatamente (evita flash e melhora sensação de velocidade) -->
+    <script>
+        (function () {
+            try {
+                var temaLocal = localStorage.getItem('tema');
+                if (temaLocal) {
+                    document.documentElement.setAttribute('data-tema', temaLocal);
+                }
+            } catch (e) {
+                console.warn("Erro ao aplicar tema do localStorage:", e);
+            }
+        })();
+    </script>
     <style>
         :root {
             /* Tema claro - padrão */
             --bg-light: #f8f9fa;
-            --text-light: #212529;
+            --text-light: #000000;
             --container-light: #ffffff;
             --button-light: #1a73e8;
             --success-color: #28a745;
             --pending-color: #ffc107;
             --failed-color: #dc3545;
-            --border-light: #dee2e6;
+            --border-light: #e0e0e0;
             --hover-light: #f1f1f1;
-            --shadow-light: rgba(0, 0, 0, 0.1);
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --shadow-light: rgba(0, 0, 0, 0.08);
+            --logo-light: url('https://i.imgur.com/dioL5B7.png');
+            --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
+
+            /* Logos das redes sociais - tema claro */
+            --instagram-logo-light: url('https://i.imgur.com/iJLCWuJ.png');
+            --tiktok-logo-light: url('https://i.imgur.com/eOQsV5U.png');
 
             /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #4285f4;
+            --button-dark: #ebebeb;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
             --border-dark: #333333;
             --hover-dark: #2d2d2d;
             --shadow-dark: rgba(0, 0, 0, 0.3);
-            --primary-gradient-dark: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
+            --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
+
+            /* Logos das redes sociais - tema escuro */
+            --instagram-logo-dark: url('https://i.imgur.com/7CoB7je.png');
+            --tiktok-logo-dark: url('https://i.imgur.com/6RxMIU9.png');
+
+            --ranking-color-light: #28a745;
+            --ranking-color-dark: #34a853;
 
             /* Variáveis comuns */
             --card-radius: 12px;
@@ -56,6 +82,11 @@
             --hover: var(--hover-light);
             --shadow: var(--shadow-light);
             --primary-gradient: var(--primary-gradient);
+            --ranking-color: var(--ranking-color-light);
+            --logo: var(--logo-light);
+            --logo-mobile: var(--logo-mobile-light);
+            --instagram-logo: var(--instagram-logo-light);
+            --tiktok-logo: var(--tiktok-logo-light);
         }
 
         html[data-tema="escuro"] {
@@ -72,8 +103,14 @@
             --primary-gradient: var(--primary-gradient-dark);
             --gray-dark: #8b949e;
             --label-color: #8b949e;
+            --ranking-color: var(--ranking-color-dark);
+            --logo: var(--logo-dark);
+            --logo-mobile: var(--logo-mobile-dark);
+            --instagram-logo: var(--instagram-logo-dark);
+            --tiktok-logo: var(--tiktok-logo-dark);
         }
 
+        /* Estilos base usando variáveis dinâmicas */
         body {
             background-color: var(--bg);
             color: var(--text);
@@ -85,11 +122,11 @@
             line-height: 1.6;
         }
 
+        /* Menu item ativo */
         .menu-item[href="adicionar_conta"] {
-            color: white !important;
+            color: var(--text) !important;
             font-weight: bold;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-left: 3px solid white;
+            background-color: rgba(146, 146, 146, 0.1);
         }
 
         /* Header Styles */
@@ -120,13 +157,83 @@
         .logo {
             height: 32px;
             margin-right: 10px;
+            transition: var(--transition);
+        }
+
+        /* Logo com imagem baseada em variável CSS */
+        .logo-desktop img {
+            transition: var(--transition);
+        }
+
+        .logo-mobile img {
+            transition: var(--transition);
+        }
+
+        /* Botão de alternar tema */
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            color: white !important;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: var(--transition);
+            backdrop-filter: blur(5px);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .theme-icon-sun {
+            display: none;
+        }
+
+        .theme-icon-moon {
+            display: inline-block;
+        }
+
+        html[data-tema="escuro"] .theme-icon-sun {
+            display: inline-block;
+        }
+
+        html[data-tema="escuro"] .theme-icon-moon {
+            display: none;
+        }
+
+        /* Balance Chip */
+        .balance-chip {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+            transition: var(--transition);
+            color: white !important;
+        }
+
+        .balance-chip:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .balance-amount {
+            font-weight: 700;
         }
 
         /* Main Container */
         .main-container {
-            padding: 30px;
-            max-width: 1200px;
-            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
         }
 
         .container {
@@ -135,8 +242,12 @@
             box-shadow: 0 4px 20px var(--shadow);
             overflow: hidden;
             transition: var(--transition);
-            margin-bottom: 300px;
+            margin-bottom: 30px;
             border: 1px solid var(--border);
+            text-align: center;
+            padding: 30px;
+            width: 100%;
+            max-width: 900px;
         }
 
         .container-header {
@@ -148,17 +259,9 @@
 
         .container-header h2 {
             margin: 0;
-            font-size: 1.0rem;
+            font-size: 1.5rem;
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
             color: white !important;
-        }
-
-        .container-body {
-            padding: 20px;
-            text-align: center;
         }
 
         /* Success Box */
@@ -268,7 +371,7 @@
             display: block;
             height: 3px;
             width: 100%;
-            background-color: white;
+            background-color: var(--text);
             border-radius: 3px;
             transition: var(--transition);
         }
@@ -325,7 +428,7 @@
         .menu-item i {
             width: 24px;
             text-align: center;
-            color: var(--button);
+            color: var(--gray-dark);
         }
 
         .menu-item:hover {
@@ -358,14 +461,78 @@
             background-color: rgba(220, 53, 69, 0.1);
         }
 
+        /* Desktop Menu */
+        @media (min-width: 992px) {
+            body {
+                padding-left: 280px;
+            }
+
+            .desktop-header {
+                display: none;
+            }
+
+            .menu-toggle {
+                display: none;
+            }
+
+            .menu-content {
+                left: 0;
+                box-shadow: none;
+            }
+
+            .menu-overlay {
+                display: none !important;
+            }
+
+            .logo-mobile {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .logo-mobile {
+                display: block;
+            }
+
+            body.menu-open .header {
+                display: none;
+            }
+
+            .menu-close-btn {
+                display: block;
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: none;
+                border: none;
+                color: var(--gray-dark) !important;
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 1002;
+            }
+
+            .menu-close-btn:hover {
+                color: var(--failed);
+            }
+        }
+
         /* Responsive Styles */
         @media (max-width: 768px) {
             .main-container {
                 padding: 20px;
+                margin-top: 0;
             }
 
-            .container-header h2 {
-                font-size: 1.0rem;
+            .container {
+                width: calc(100% - 40px);
+            }
+
+            .container-body {
+                padding: 20px;
             }
 
             .button-group {
@@ -375,16 +542,25 @@
         }
 
         @media (max-width: 576px) {
+            .header {
+                padding: 12px 15px;
+            }
+
             .main-container {
                 padding: 15px;
             }
 
-            .container-header {
-                padding: 15px;
+            .container {
+                width: calc(100% - 30px);
             }
 
             .container-body {
                 padding: 15px;
+            }
+
+            .theme-toggle {
+                padding: 6px 12px;
+                font-size: 0.9rem;
             }
         }
 
@@ -425,67 +601,6 @@
             animation: bounceIn 0.6s ease forwards;
         }
 
-        /* Desktop Menu */
-        @media (min-width: 992px) {
-            body {
-                padding-left: 280px;
-            }
-
-            .desktop-header {
-                display: none;
-            }
-
-            .menu-toggle {
-                display: none;
-            }
-
-            .menu-content {
-                left: 0;
-                box-shadow: none;
-            }
-
-            .menu-overlay {
-                display: none !important;
-            }
-
-            .logo-mobile {
-                display: none;
-            }
-
-            .menu-close-btn {
-                display: none !important;
-            }
-        }
-
-        @media (max-width: 991px) {
-            .logo-mobile {
-                display: block;
-            }
-
-            /* Esconde o header quando o menu está aberto */
-            body.menu-open .header {
-                display: none;
-            }
-
-            /* Estilos para o botão de fechar no mobile */
-            .menu-close-btn {
-                display: block;
-                position: absolute;
-                top: 15px;
-                right: 15px;
-                background: none;
-                border: none;
-                color: var(--gray-dark) !important;
-                font-size: 1.5rem;
-                cursor: pointer;
-                z-index: 1002;
-            }
-
-            .menu-close-btn:hover {
-                color: var(--failed);
-            }
-        }
-
         /* Initial Load */
         body {
             visibility: hidden;
@@ -498,20 +613,6 @@
 </head>
 
 <body>
-    <!-- Aplica tema imediatamente antes do paint para evitar flash -->
-    <script>
-        (function () {
-            try {
-                var temaLocal = localStorage.getItem('tema');
-                if (temaLocal) {
-                    document.documentElement.setAttribute('data-tema', temaLocal);
-                }
-            } catch (e) {
-                console.warn("Erro ao aplicar tema do localStorage:", e);
-            }
-        })();
-    </script>
-
     <!-- Menu Lateral para Desktop -->
     <div class="menu-content" id="menuContent">
         <!-- Botão de fechar (visível apenas no mobile) -->
@@ -519,7 +620,8 @@
 
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
-                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+                <!-- A imagem será trocada via CSS baseado no tema -->
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -550,8 +652,11 @@
             </div>
             <!-- Logo para mobile (no header) -->
             <a href="dashboard" class="logo-mobile">
-                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+                <!-- A imagem será trocada via CSS baseado no tema -->
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
+        </div>
+        <div class="right-header">
         </div>
     </div>
 
@@ -559,7 +664,6 @@
     <div class="main-container">
         <div class="container fade-in">
             <div class="container-header">
-                <h2><i class="fas fa-check-circle"></i> Conta Adicionada com Sucesso</h2>
             </div>
             <div class="container-body">
                 <div class="success-box bounce-in">
@@ -589,32 +693,39 @@
             return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
         }
 
-        // Preencher dados da conta quando a página carregar
-        document.addEventListener('DOMContentLoaded', function () {
-            const token = localStorage.getItem("token");
-
-            if (!token) {
-                window.location.href = "https://ganhesocialtest.com/login";
-                return;
+        /* === ATUALIZAR LOGOS POR TEMA === */
+        function atualizarLogosPorTema() {
+            const tema = document.documentElement.getAttribute('data-tema');
+            const logoDesktop = document.getElementById('logoDesktop');
+            const logoMobile = document.getElementById('logoMobile');
+            
+            // URLs das logos para cada tema
+            const logoClaro = 'https://i.imgur.com/dioL5B7.png';
+            const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
+            
+            const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
+            
+            if (logoDesktop) {
+                logoDesktop.src = logoURL;
             }
-
-            const username = getUrlParameter('username');
-            if (username) {
-                // Atualiza a mensagem de sucesso com o nome de usuário
-                const successMessage = document.getElementById('successMessage');
-                successMessage.textContent = `Sua conta do TikTok (@${username}) foi adicionada com sucesso!`;
+            
+            if (logoMobile) {
+                logoMobile.src = logoURL;
             }
+        }
 
-            // Configura o menu
+        /* === CONTROLE DO MENU HAMBURGUER === */
+        function configurarMenu() {
             const menuToggle = document.getElementById('menuToggle');
             const menuOverlay = document.getElementById('menuOverlay');
             const menuContent = document.getElementById('menuContent');
             const menuCloseBtn = document.getElementById('menuCloseBtn');
 
+            if (!menuToggle || !menuOverlay || !menuContent) return;
+
             function toggleMenu() {
                 menuContent.classList.toggle('active');
                 menuOverlay.classList.toggle('active');
-
                 const spans = menuToggle.querySelectorAll('span');
                 if (menuContent.classList.contains('active')) {
                     spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
@@ -639,9 +750,41 @@
             menuToggle.addEventListener('click', toggleMenu);
             menuCloseBtn.addEventListener('click', closeMenu);
             menuOverlay.addEventListener('click', closeMenu);
+        }
+
+        /* === INICIALIZAÇÃO UNIFICADA === */
+        document.addEventListener("DOMContentLoaded", async function () {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                window.location.href = "https://ganhesocialtest.com/login";
+                return;
+            }
+
+            const username = getUrlParameter('username');
+            if (username) {
+                const successMessage = document.getElementById('successMessage');
+                successMessage.textContent = `Sua conta do TikTok (@${username}) foi adicionada com sucesso!`;
+            }
+
+            // Configura o menu
+            configurarMenu();
+
+            // Atualiza as logos baseado no tema atual
+            atualizarLogosPorTema();
 
             // Marca página como carregada
             document.body.classList.add('loaded');
+
+            // Observador para mudanças de tema
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.attributeName === 'data-tema') {
+                        atualizarLogosPorTema();
+                    }
+                });
+            });
+            observer.observe(document.documentElement, { attributes: true });
         });
 
         function logout() {
