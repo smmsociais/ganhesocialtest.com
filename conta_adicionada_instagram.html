@@ -35,7 +35,7 @@
             --shadow-light: rgba(0, 0, 0, 0.08);
             --logo-light: url('https://i.imgur.com/dioL5B7.png');
             --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
-            
+
             /* Logos das redes sociais - tema claro */
             --instagram-logo-light: url('https://i.imgur.com/iJLCWuJ.png');
             --tiktok-logo-light: url('https://i.imgur.com/eOQsV5U.png');
@@ -53,7 +53,7 @@
             --shadow-dark: rgba(0, 0, 0, 0.3);
             --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
             --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
-            
+
             /* Logos das redes sociais - tema escuro */
             --instagram-logo-dark: url('https://i.imgur.com/7CoB7je.png');
             --tiktok-logo-dark: url('https://i.imgur.com/6RxMIU9.png');
@@ -135,13 +135,12 @@
             justify-content: space-between;
             align-items: center;
             padding: 15px 25px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             color: white !important;
             box-shadow: 0 2px 10px var(--shadow);
             position: relative;
             z-index: 10;
         }
-
         .left-header {
             display: flex;
             align-items: center;
@@ -666,6 +665,20 @@
 </head>
 
 <body>
+    <!-- Aplica tema imediatamente antes do paint para evitar flash -->
+    <script>
+        (function () {
+            try {
+                var temaLocal = localStorage.getItem('tema');
+                if (temaLocal) {
+                    document.documentElement.setAttribute('data-tema', temaLocal);
+                }
+            } catch (e) {
+                console.warn("Erro ao aplicar tema do localStorage:", e);
+            }
+        })();
+    </script>
+
     <!-- Menu Lateral para Desktop -->
     <div class="menu-content" id="menuContent">
         <!-- Botão de fechar (visível apenas no mobile) -->
@@ -673,8 +686,7 @@
 
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
-                <!-- A imagem será trocada via CSS baseado no tema -->
-                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -705,17 +717,8 @@
             </div>
             <!-- Logo para mobile (no header) -->
             <a href="dashboard" class="logo-mobile">
-                <!-- A imagem será trocada via CSS baseado no tema -->
-                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
+                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
             </a>
-        </div>
-        <div class="right-header">
-            <!-- Botão de alternar tema -->
-            <button class="theme-toggle" id="themeToggle">
-                <i class="fas fa-moon theme-icon-moon"></i>
-                <i class="fas fa-sun theme-icon-sun"></i>
-                <span>Escuro</span>
-            </button>
         </div>
     </div>
 
@@ -727,21 +730,11 @@
             </div>
             <div class="container-body">
                 <div class="success-box bounce-in">
-                    <div class="success-icon pulse">
+                    <div class="success-icon">
                         <i class="fas fa-check-circle"></i>
                     </div>
                     <h3 id="successMessage">Sua conta do Instagram foi adicionada com sucesso!</h3>
-                    
-                    <div class="instagram-account-info" id="accountInfo">
-                        <img src="https://i.imgur.com/iJLCWuJ.png" alt="Instagram" class="instagram-logo" id="instagramLogo">
-                        <div class="account-username" id="accountUsername">@usuario_instagram</div>
-                    </div>
-                    
-                    <p style="color: var(--gray-dark); margin-top: 15px; font-size: 0.95rem;">
-                        Agora você pode começar a realizar ações e ganhar dinheiro com esta conta!
-                    </p>
                 </div>
-                
                 <div class="button-group">
                     <button class="btn-primary" onclick="window.location.href='realizar_acoes'">
                         <i class="fas fa-tasks"></i> Realizar Ações
@@ -750,17 +743,11 @@
                         <i class="fas fa-cog"></i> Gerenciar Contas
                     </button>
                 </div>
-                
-                <p style="margin-top: 20px; color: var(--gray-dark); font-size: 0.9rem;">
-                    <i class="fas fa-info-circle"></i> Você pode gerenciar esta conta na seção "Gerenciar Contas"
-                </p>
             </div>
         </div>
     </div>
 
     <script>
-        /* === FUNÇÕES GERAIS === */
-        
         // Função para obter parâmetros da URL
         function getUrlParameter(name) {
             name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
@@ -769,88 +756,32 @@
             return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
         }
 
-        /* === LOGOUT === */
-        function logout() {
-            localStorage.removeItem("token");
-            localStorage.removeItem('tema'); // Opcional: limpar também a preferência de tema
-            window.location.href = "https://ganhesocialtest.com";
-        }
+        // Preencher dados da conta quando a página carregar
+        document.addEventListener('DOMContentLoaded', function () {
+            const token = localStorage.getItem("token");
 
-        /* === ATUALIZAR LOGOS POR TEMA === */
-        function atualizarLogosPorTema() {
-            const tema = document.documentElement.getAttribute('data-tema');
-            const logoDesktop = document.getElementById('logoDesktop');
-            const logoMobile = document.getElementById('logoMobile');
-            const instagramLogo = document.getElementById('instagramLogo');
-            
-            // URLs das logos para cada tema
-            const logoClaro = 'https://i.imgur.com/dioL5B7.png';
-            const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
-            const instagramClaro = 'https://i.imgur.com/iJLCWuJ.png';
-            const instagramEscuro = 'https://i.imgur.com/7CoB7je.png';
-            
-            const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
-            const instagramURL = tema === 'escuro' ? instagramEscuro : instagramClaro;
-            
-            if (logoDesktop) logoDesktop.src = logoURL;
-            if (logoMobile) logoMobile.src = logoURL;
-            if (instagramLogo) instagramLogo.src = instagramURL;
-        }
-
-        /* === CONFIGURAR TOGGLE DE TEMA === */
-        function configurarTemaToggle() {
-            const themeToggle = document.getElementById('themeToggle');
-            if (!themeToggle) return;
-
-            const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
-            atualizarTextoBotaoTema(temaAtual);
-
-            themeToggle.addEventListener('click', function() {
-                const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
-                const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
-                
-                // Atualiza o atributo data-tema
-                document.documentElement.setAttribute('data-tema', novoTema);
-                
-                // Salva no localStorage
-                try {
-                    localStorage.setItem('tema', novoTema);
-                } catch (e) {
-                    console.warn("Erro ao salvar tema no localStorage:", e);
-                }
-                
-                // Atualiza o texto do botão
-                atualizarTextoBotaoTema(novoTema);
-                // Atualiza as logos
-                atualizarLogosPorTema();
-            });
-        }
-
-        function atualizarTextoBotaoTema(tema) {
-            const themeToggle = document.getElementById('themeToggle');
-            if (!themeToggle) return;
-
-            const text = themeToggle.querySelector('span');
-            
-            if (tema === 'escuro') {
-                text.textContent = 'Claro';
-            } else {
-                text.textContent = 'Escuro';
+            if (!token) {
+                window.location.href = "https://ganhesocialtest.com/login";
+                return;
             }
-        }
 
-        /* === CONTROLE DO MENU HAMBURGUER === */
-        function configurarMenu() {
+            const username = getUrlParameter('username');
+            if (username) {
+                // Atualiza a mensagem de sucesso com o nome de usuário
+                const successMessage = document.getElementById('successMessage');
+                successMessage.textContent = `Sua conta do Instagram (@${username}) foi adicionada com sucesso!`;
+            }
+
+            // Configura o menu
             const menuToggle = document.getElementById('menuToggle');
             const menuOverlay = document.getElementById('menuOverlay');
             const menuContent = document.getElementById('menuContent');
             const menuCloseBtn = document.getElementById('menuCloseBtn');
 
-            if (!menuToggle || !menuOverlay || !menuContent) return;
-
             function toggleMenu() {
                 menuContent.classList.toggle('active');
                 menuOverlay.classList.toggle('active');
+
                 const spans = menuToggle.querySelectorAll('span');
                 if (menuContent.classList.contains('active')) {
                     spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
@@ -875,55 +806,15 @@
             menuToggle.addEventListener('click', toggleMenu);
             menuCloseBtn.addEventListener('click', closeMenu);
             menuOverlay.addEventListener('click', closeMenu);
-        }
-
-        /* === INICIALIZAÇÃO UNIFICADA === */
-        document.addEventListener("DOMContentLoaded", async function () {
-            const token = localStorage.getItem("token");
-
-            if (!token) {
-                window.location.href = "https://ganhesocialtest.com/login";
-                return;
-            }
-
-            // Preencher dados da conta a partir dos parâmetros da URL
-            const username = getUrlParameter('username');
-            if (username) {
-                // Atualiza a mensagem de sucesso com o nome de usuário
-                const successMessage = document.getElementById('successMessage');
-                const accountUsername = document.getElementById('accountUsername');
-                
-                if (successMessage) {
-                    successMessage.textContent = `Sua conta do Instagram (@${username}) foi adicionada com sucesso!`;
-                }
-                
-                if (accountUsername) {
-                    accountUsername.textContent = `@${username}`;
-                }
-            }
-
-            // Configura o menu
-            configurarMenu();
-
-            // Atualiza as logos baseado no tema atual
-            atualizarLogosPorTema();
-
-            // Configurar botão de tema
-            configurarTemaToggle();
 
             // Marca página como carregada
             document.body.classList.add('loaded');
-
-            // Observador para mudanças de tema (atualiza logos automaticamente)
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.attributeName === 'data-tema') {
-                        atualizarLogosPorTema();
-                    }
-                });
-            });
-            observer.observe(document.documentElement, { attributes: true });
         });
+
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "https://ganhesocialtest.com";
+        }
     </script>
 </body>
 
