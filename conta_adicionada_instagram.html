@@ -7,33 +7,59 @@
     <title>Conta Adicionada Instagram - GanheSocial</title>
     <link rel="icon" href="https://i.imgur.com/Gs4s6If.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- HEAD: aplica tema do localStorage imediatamente (evita flash e melhora sensação de velocidade) -->
+    <script>
+        (function () {
+            try {
+                var temaLocal = localStorage.getItem('tema');
+                if (temaLocal) {
+                    document.documentElement.setAttribute('data-tema', temaLocal);
+                }
+            } catch (e) {
+                console.warn("Erro ao aplicar tema do localStorage:", e);
+            }
+        })();
+    </script>
     <style>
         :root {
             /* Tema claro - padrão */
             --bg-light: #f8f9fa;
-            --text-light: #212529;
+            --text-light: #000000;
             --container-light: #ffffff;
             --button-light: #1a73e8;
             --success-color: #28a745;
             --pending-color: #ffc107;
             --failed-color: #dc3545;
-            --border-light: #dee2e6;
+            --border-light: #e0e0e0;
             --hover-light: #f1f1f1;
-            --shadow-light: rgba(0, 0, 0, 0.1);
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --shadow-light: rgba(0, 0, 0, 0.08);
+            --logo-light: url('https://i.imgur.com/dioL5B7.png');
+            --logo-mobile-light: url('https://i.imgur.com/dioL5B7.png');
+            
+            /* Logos das redes sociais - tema claro */
+            --instagram-logo-light: url('https://i.imgur.com/iJLCWuJ.png');
+            --tiktok-logo-light: url('https://i.imgur.com/eOQsV5U.png');
 
             /* Tema escuro */
             --bg-dark: #121212;
             --text-dark: #e0e0e0;
             --container-dark: #1e1e1e;
-            --button-dark: #4285f4;
+            --button-dark: #ebebeb;
             --success-dark: #34a853;
             --pending-dark: #f9ab00;
             --failed-dark: #ea4335;
             --border-dark: #333333;
             --hover-dark: #2d2d2d;
             --shadow-dark: rgba(0, 0, 0, 0.3);
-            --primary-gradient-dark: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --logo-dark: url('https://i.imgur.com/h5jHD2L.png');
+            --logo-mobile-dark: url('https://i.imgur.com/h5jHD2L.png');
+            
+            /* Logos das redes sociais - tema escuro */
+            --instagram-logo-dark: url('https://i.imgur.com/7CoB7je.png');
+            --tiktok-logo-dark: url('https://i.imgur.com/6RxMIU9.png');
+
+            --ranking-color-light: #28a745;
+            --ranking-color-dark: #34a853;
 
             /* Variáveis comuns */
             --card-radius: 12px;
@@ -56,6 +82,11 @@
             --hover: var(--hover-light);
             --shadow: var(--shadow-light);
             --primary-gradient: var(--primary-gradient);
+            --ranking-color: var(--ranking-color-light);
+            --logo: var(--logo-light);
+            --logo-mobile: var(--logo-mobile-light);
+            --instagram-logo: var(--instagram-logo-light);
+            --tiktok-logo: var(--tiktok-logo-light);
         }
 
         html[data-tema="escuro"] {
@@ -72,8 +103,14 @@
             --primary-gradient: var(--primary-gradient-dark);
             --gray-dark: #8b949e;
             --label-color: #8b949e;
+            --ranking-color: var(--ranking-color-dark);
+            --logo: var(--logo-dark);
+            --logo-mobile: var(--logo-mobile-dark);
+            --instagram-logo: var(--instagram-logo-dark);
+            --tiktok-logo: var(--tiktok-logo-dark);
         }
 
+        /* Estilos base usando variáveis dinâmicas */
         body {
             background-color: var(--bg);
             color: var(--text);
@@ -85,11 +122,11 @@
             line-height: 1.6;
         }
 
+        /* Menu item ativo */
         .menu-item[href="adicionar_conta"] {
-            color: white !important;
+            color: var(--text) !important;
             font-weight: bold;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-left: 3px solid white;
+            background-color: rgba(146, 146, 146, 0.1);
         }
 
         /* Header Styles */
@@ -98,7 +135,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 15px 25px;
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white !important;
             box-shadow: 0 2px 10px var(--shadow);
             position: relative;
@@ -120,13 +157,83 @@
         .logo {
             height: 32px;
             margin-right: 10px;
+            transition: var(--transition);
+        }
+
+        /* Logo com imagem baseada em variável CSS */
+        .logo-desktop img {
+            transition: var(--transition);
+        }
+
+        .logo-mobile img {
+            transition: var(--transition);
+        }
+
+        /* Botão de alternar tema */
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            color: white !important;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: var(--transition);
+            backdrop-filter: blur(5px);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .theme-icon-sun {
+            display: none;
+        }
+
+        .theme-icon-moon {
+            display: inline-block;
+        }
+
+        html[data-tema="escuro"] .theme-icon-sun {
+            display: inline-block;
+        }
+
+        html[data-tema="escuro"] .theme-icon-moon {
+            display: none;
+        }
+
+        /* Balance Chip */
+        .balance-chip {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+            transition: var(--transition);
+            color: white !important;
+        }
+
+        .balance-chip:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .balance-amount {
+            font-weight: 700;
         }
 
         /* Main Container */
         .main-container {
-            padding: 30px;
-            max-width: 1200px;
-            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: calc(100vh - 70px);
+            padding: 20px;
         }
 
         .container {
@@ -135,29 +242,33 @@
             box-shadow: 0 4px 20px var(--shadow);
             overflow: hidden;
             transition: var(--transition);
-            margin-bottom: 300px;
             border: 1px solid var(--border);
+            text-align: center;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 600px;
         }
 
         .container-header {
             padding: 20px;
             border-bottom: 1px solid var(--border);
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white !important;
         }
 
         .container-header h2 {
             margin: 0;
-            font-size: 1.0rem;
+            font-size: 1.5rem;
             font-weight: 600;
+            color: white !important;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 10px;
-            color: white !important;
         }
 
         .container-body {
-            padding: 20px;
+            padding: 30px 20px;
             text-align: center;
         }
 
@@ -165,40 +276,51 @@
         .success-box {
             background-color: rgba(40, 167, 69, 0.1);
             border-left: 4px solid var(--success);
-            padding: 20px;
-            margin-bottom: 25px;
-            border-radius: 4px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-radius: 8px;
             text-align: center;
         }
 
         .success-box h3 {
             margin-top: 0;
             color: var(--success);
-            font-size: 18px;
+            font-size: 1.3rem;
             margin-bottom: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .success-icon {
-            font-size: 48px;
+            font-size: 64px;
             color: var(--success);
             margin-bottom: 20px;
         }
 
-        .account-details {
-            background: rgba(0, 0, 0, 0.05);
-            padding: 15px;
-            border-radius: 8px;
+        .instagram-account-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
             margin: 20px 0;
-            text-align: left;
+            padding: 15px;
+            background: var(--hover);
+            border-radius: 8px;
+            border: 1px solid var(--border);
         }
 
-        .account-details strong {
-            display: inline-block;
-            width: 120px;
+        .instagram-logo {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .account-username {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text);
         }
 
         /* Button Styles */
@@ -206,52 +328,52 @@
             background: var(--success);
             color: white;
             border: none;
-            padding: 12px 20px;
-            border-radius: 6px;
+            padding: 14px 24px;
+            border-radius: 8px;
             font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 10px;
             width: 100%;
-            margin-top: 10px;
+            font-size: 1rem;
         }
 
         .btn-secondary {
             background: var(--gray-dark);
             color: white;
             border: none;
-            padding: 12px 20px;
-            border-radius: 6px;
+            padding: 14px 24px;
+            border-radius: 8px;
             font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 10px;
             width: 100%;
-            margin-top: 10px;
+            font-size: 1rem;
         }
 
         .btn-primary:hover {
             background: #218838;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+            box-shadow: 0 6px 15px rgba(40, 167, 69, 0.3);
         }
 
         .btn-secondary:hover {
             background: #5a6268;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+            box-shadow: 0 6px 15px rgba(108, 117, 125, 0.3);
         }
 
         .button-group {
             display: flex;
             gap: 15px;
-            margin-top: 25px;
+            margin-top: 30px;
         }
 
         /* Menu Styles */
@@ -268,7 +390,7 @@
             display: block;
             height: 3px;
             width: 100%;
-            background-color: white;
+            background-color: var(--text);
             border-radius: 3px;
             transition: var(--transition);
         }
@@ -325,7 +447,7 @@
         .menu-item i {
             width: 24px;
             text-align: center;
-            color: var(--button);
+            color: var(--gray-dark);
         }
 
         .menu-item:hover {
@@ -356,73 +478,6 @@
 
         .menu-logout:hover {
             background-color: rgba(220, 53, 69, 0.1);
-        }
-
-        /* Responsive Styles */
-        @media (max-width: 768px) {
-            .main-container {
-                padding: 20px;
-            }
-
-            .container-header h2 {
-                font-size: 1.0rem;
-            }
-
-            .button-group {
-                flex-direction: column;
-                gap: 10px;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .main-container {
-                padding: 15px;
-            }
-
-            .container-header {
-                padding: 15px;
-            }
-
-            .container-body {
-                padding: 15px;
-            }
-        }
-
-        /* Animation */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes bounceIn {
-            0% {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-
-            50% {
-                transform: scale(1.05);
-                opacity: 1;
-            }
-
-            100% {
-                transform: scale(1);
-            }
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease forwards;
-        }
-
-        .bounce-in {
-            animation: bounceIn 0.6s ease forwards;
         }
 
         /* Desktop Menu */
@@ -462,12 +517,10 @@
                 display: block;
             }
 
-            /* Esconde o header quando o menu está aberto */
             body.menu-open .header {
                 display: none;
             }
 
-            /* Estilos para o botão de fechar no mobile */
             .menu-close-btn {
                 display: block;
                 position: absolute;
@@ -486,6 +539,121 @@
             }
         }
 
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 20px;
+                min-height: calc(100vh - 60px);
+            }
+
+            .container {
+                padding: 30px 20px;
+                width: calc(100% - 40px);
+            }
+
+            .button-group {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .success-box {
+                padding: 20px;
+            }
+
+            .success-icon {
+                font-size: 48px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .header {
+                padding: 12px 15px;
+            }
+
+            .main-container {
+                padding: 15px;
+                min-height: calc(100vh - 54px);
+            }
+
+            .container {
+                padding: 25px 15px;
+                width: calc(100% - 30px);
+            }
+
+            .theme-toggle {
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+
+            .container-header h2 {
+                font-size: 1.3rem;
+            }
+
+            .success-box h3 {
+                font-size: 1.1rem;
+            }
+
+            .instagram-account-info {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.05);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .bounce-in {
+            animation: bounceIn 0.6s ease forwards;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
         /* Initial Load */
         body {
             visibility: hidden;
@@ -498,20 +666,6 @@
 </head>
 
 <body>
-    <!-- Aplica tema imediatamente antes do paint para evitar flash -->
-    <script>
-        (function () {
-            try {
-                var temaLocal = localStorage.getItem('tema');
-                if (temaLocal) {
-                    document.documentElement.setAttribute('data-tema', temaLocal);
-                }
-            } catch (e) {
-                console.warn("Erro ao aplicar tema do localStorage:", e);
-            }
-        })();
-    </script>
-
     <!-- Menu Lateral para Desktop -->
     <div class="menu-content" id="menuContent">
         <!-- Botão de fechar (visível apenas no mobile) -->
@@ -519,7 +673,8 @@
 
         <div style="padding: 20px; text-align: left; margin-top: -20px;" class="logo-desktop">
             <a href="dashboard">
-                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;">
+                <!-- A imagem será trocada via CSS baseado no tema -->
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" style="max-width: 80%;" id="logoDesktop">
             </a>
         </div>
         <a class="menu-item" href="dashboard"><i class="fas fa-home"></i> Página Inicial</a>
@@ -550,8 +705,17 @@
             </div>
             <!-- Logo para mobile (no header) -->
             <a href="dashboard" class="logo-mobile">
-                <img src="https://i.imgur.com/sQeLEVh.png" alt="Logo GanheSocial" class="logo">
+                <!-- A imagem será trocada via CSS baseado no tema -->
+                <img src="https://i.imgur.com/dioL5B7.png" alt="Logo GanheSocial" class="logo" id="logoMobile">
             </a>
+        </div>
+        <div class="right-header">
+            <!-- Botão de alternar tema -->
+            <button class="theme-toggle" id="themeToggle">
+                <i class="fas fa-moon theme-icon-moon"></i>
+                <i class="fas fa-sun theme-icon-sun"></i>
+                <span>Escuro</span>
+            </button>
         </div>
     </div>
 
@@ -563,11 +727,21 @@
             </div>
             <div class="container-body">
                 <div class="success-box bounce-in">
-                    <div class="success-icon">
+                    <div class="success-icon pulse">
                         <i class="fas fa-check-circle"></i>
                     </div>
                     <h3 id="successMessage">Sua conta do Instagram foi adicionada com sucesso!</h3>
+                    
+                    <div class="instagram-account-info" id="accountInfo">
+                        <img src="https://i.imgur.com/iJLCWuJ.png" alt="Instagram" class="instagram-logo" id="instagramLogo">
+                        <div class="account-username" id="accountUsername">@usuario_instagram</div>
+                    </div>
+                    
+                    <p style="color: var(--gray-dark); margin-top: 15px; font-size: 0.95rem;">
+                        Agora você pode começar a realizar ações e ganhar dinheiro com esta conta!
+                    </p>
                 </div>
+                
                 <div class="button-group">
                     <button class="btn-primary" onclick="window.location.href='realizar_acoes'">
                         <i class="fas fa-tasks"></i> Realizar Ações
@@ -576,11 +750,17 @@
                         <i class="fas fa-cog"></i> Gerenciar Contas
                     </button>
                 </div>
+                
+                <p style="margin-top: 20px; color: var(--gray-dark); font-size: 0.9rem;">
+                    <i class="fas fa-info-circle"></i> Você pode gerenciar esta conta na seção "Gerenciar Contas"
+                </p>
             </div>
         </div>
     </div>
 
     <script>
+        /* === FUNÇÕES GERAIS === */
+        
         // Função para obter parâmetros da URL
         function getUrlParameter(name) {
             name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
@@ -589,32 +769,88 @@
             return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
         }
 
-        // Preencher dados da conta quando a página carregar
-        document.addEventListener('DOMContentLoaded', function () {
-            const token = localStorage.getItem("token");
+        /* === LOGOUT === */
+        function logout() {
+            localStorage.removeItem("token");
+            localStorage.removeItem('tema'); // Opcional: limpar também a preferência de tema
+            window.location.href = "https://ganhesocialtest.com";
+        }
 
-            if (!token) {
-                window.location.href = "https://ganhesocialtest.com/login";
-                return;
+        /* === ATUALIZAR LOGOS POR TEMA === */
+        function atualizarLogosPorTema() {
+            const tema = document.documentElement.getAttribute('data-tema');
+            const logoDesktop = document.getElementById('logoDesktop');
+            const logoMobile = document.getElementById('logoMobile');
+            const instagramLogo = document.getElementById('instagramLogo');
+            
+            // URLs das logos para cada tema
+            const logoClaro = 'https://i.imgur.com/dioL5B7.png';
+            const logoEscuro = 'https://i.imgur.com/h5jHD2L.png';
+            const instagramClaro = 'https://i.imgur.com/iJLCWuJ.png';
+            const instagramEscuro = 'https://i.imgur.com/7CoB7je.png';
+            
+            const logoURL = tema === 'escuro' ? logoEscuro : logoClaro;
+            const instagramURL = tema === 'escuro' ? instagramEscuro : instagramClaro;
+            
+            if (logoDesktop) logoDesktop.src = logoURL;
+            if (logoMobile) logoMobile.src = logoURL;
+            if (instagramLogo) instagramLogo.src = instagramURL;
+        }
+
+        /* === CONFIGURAR TOGGLE DE TEMA === */
+        function configurarTemaToggle() {
+            const themeToggle = document.getElementById('themeToggle');
+            if (!themeToggle) return;
+
+            const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
+            atualizarTextoBotaoTema(temaAtual);
+
+            themeToggle.addEventListener('click', function() {
+                const temaAtual = document.documentElement.getAttribute('data-tema') || 'claro';
+                const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
+                
+                // Atualiza o atributo data-tema
+                document.documentElement.setAttribute('data-tema', novoTema);
+                
+                // Salva no localStorage
+                try {
+                    localStorage.setItem('tema', novoTema);
+                } catch (e) {
+                    console.warn("Erro ao salvar tema no localStorage:", e);
+                }
+                
+                // Atualiza o texto do botão
+                atualizarTextoBotaoTema(novoTema);
+                // Atualiza as logos
+                atualizarLogosPorTema();
+            });
+        }
+
+        function atualizarTextoBotaoTema(tema) {
+            const themeToggle = document.getElementById('themeToggle');
+            if (!themeToggle) return;
+
+            const text = themeToggle.querySelector('span');
+            
+            if (tema === 'escuro') {
+                text.textContent = 'Claro';
+            } else {
+                text.textContent = 'Escuro';
             }
+        }
 
-            const username = getUrlParameter('username');
-            if (username) {
-                // Atualiza a mensagem de sucesso com o nome de usuário
-                const successMessage = document.getElementById('successMessage');
-                successMessage.textContent = `Sua conta do Instagram (@${username}) foi adicionada com sucesso!`;
-            }
-
-            // Configura o menu
+        /* === CONTROLE DO MENU HAMBURGUER === */
+        function configurarMenu() {
             const menuToggle = document.getElementById('menuToggle');
             const menuOverlay = document.getElementById('menuOverlay');
             const menuContent = document.getElementById('menuContent');
             const menuCloseBtn = document.getElementById('menuCloseBtn');
 
+            if (!menuToggle || !menuOverlay || !menuContent) return;
+
             function toggleMenu() {
                 menuContent.classList.toggle('active');
                 menuOverlay.classList.toggle('active');
-
                 const spans = menuToggle.querySelectorAll('span');
                 if (menuContent.classList.contains('active')) {
                     spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
@@ -639,15 +875,55 @@
             menuToggle.addEventListener('click', toggleMenu);
             menuCloseBtn.addEventListener('click', closeMenu);
             menuOverlay.addEventListener('click', closeMenu);
+        }
+
+        /* === INICIALIZAÇÃO UNIFICADA === */
+        document.addEventListener("DOMContentLoaded", async function () {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                window.location.href = "https://ganhesocialtest.com/login";
+                return;
+            }
+
+            // Preencher dados da conta a partir dos parâmetros da URL
+            const username = getUrlParameter('username');
+            if (username) {
+                // Atualiza a mensagem de sucesso com o nome de usuário
+                const successMessage = document.getElementById('successMessage');
+                const accountUsername = document.getElementById('accountUsername');
+                
+                if (successMessage) {
+                    successMessage.textContent = `Sua conta do Instagram (@${username}) foi adicionada com sucesso!`;
+                }
+                
+                if (accountUsername) {
+                    accountUsername.textContent = `@${username}`;
+                }
+            }
+
+            // Configura o menu
+            configurarMenu();
+
+            // Atualiza as logos baseado no tema atual
+            atualizarLogosPorTema();
+
+            // Configurar botão de tema
+            configurarTemaToggle();
 
             // Marca página como carregada
             document.body.classList.add('loaded');
-        });
 
-        function logout() {
-            localStorage.removeItem("token");
-            window.location.href = "https://ganhesocialtest.com";
-        }
+            // Observador para mudanças de tema (atualiza logos automaticamente)
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.attributeName === 'data-tema') {
+                        atualizarLogosPorTema();
+                    }
+                });
+            });
+            observer.observe(document.documentElement, { attributes: true });
+        });
     </script>
 </body>
 
