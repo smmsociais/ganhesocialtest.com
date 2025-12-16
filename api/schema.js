@@ -1,5 +1,4 @@
 //schema.js
-
 import mongoose from "mongoose";
 
 // 🔹 Schema para Contas Vinculadas
@@ -40,48 +39,74 @@ const WithdrawSchema = new mongoose.Schema({
 });
 
 // 🔹 Schema do Usuário
-const UserSchema = new mongoose.Schema({
-  nome: { type: String, required: false },
-  email: { type: String, required: true, unique: true },
-  // senha obrigatória apenas para cadastro tradicional
-  senha: { 
-    type: String,
-    required: function () {
-      return this.provider === "local";
-    }
-  },
-  // NÃO deixe token obrigatório no schema — o JWT não deve ser salvo no DB
-  token: { type: String, required: false },
-  // para saber como o usuário foi criado
-  provider: { 
-    type: String, 
-    enum: ["local", "google"],
-    default: "local"
-  },
-  resetPasswordToken: String,
-  resetPasswordExpires: Date,
-  saldo: { type: Number, default: 0 },
-  // PIX
-  pix_key: { type: String, default: null },
-  pix_key_type: { type: String, default: null },
-  // contas conectadas
-  contas: [ContaSchema],
-  historico_acoes: [
-    { type: mongoose.Schema.Types.ObjectId, ref: "ActionHistory" }
-  ],
-  saques: [WithdrawSchema],
-  // afiliados
-  codigo_afiliado: { type: String, default: null },
-  indicado_por: { type: String, default: null },
-  status: { type: String, default: "ativo" },
-  ativo_ate: { type: Date, default: null },
-});
+const UserSchema = new mongoose.Schema(
+  {
+    nome: { type: String, required: false },
 
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true
+    },
 
-// índice parcial — enforce uniqueness only when codigo_afiliado is a string
+    // senha obrigatória apenas para cadastro tradicional
+    senha: {
+      type: String,
+      required: function () {
+        return this.provider === "local";
+      }
+    },
+
+    token: { type: String, default: null },
+
+    // provedor de autenticação
+    provider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local"
+    },
+
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null },
+
+    saldo: { type: Number, default: 0 },
+
+    // contas conectadas
+    contas: [ContaSchema],
+    
+historico_acoes: {
+  type: [{ type: mongoose.Schema.Types.ObjectId, ref: "ActionHistory" }],
+  default: [],
+  set: v => {
+    if (!Array.isArray(v)) return [];
+    return v.filter(id => mongoose.Types.ObjectId.isValid(id));
+  }
+},
+    saques: [WithdrawSchema],
+
+    // afiliados
+    codigo_afiliado: { type: String, default: null },
+    indicado_por: { type: String, default: null },
+
+    status: { type: String, default: "ativo" },
+    ativo_ate: { type: Date, default: null }
+  },
+  {
+    timestamps: true
+  }
+);
+
+// 🔹 Índice parcial — só força unique se for string
 UserSchema.index(
   { codigo_afiliado: 1 },
-  { unique: true, partialFilterExpression: { codigo_afiliado: { $type: "string" } }, name: "codigo_afiliado_1" }
+  {
+    unique: true,
+    partialFilterExpression: {
+      codigo_afiliado: { $type: "string" }
+    },
+    name: "codigo_afiliado_1"
+  }
 );
 
 const PedidoSchema = new mongoose.Schema({
@@ -148,9 +173,22 @@ const DailyRankingSchema = new mongoose.Schema({
 // índice único por data para garantir máximo 1 documento por dia
 DailyRankingSchema.index({ data: 1 }, { unique: true });
 
-// 🔹 Modelos
-const User = mongoose.models.User || mongoose.model("User", UserSchema);
-const ActionHistory = mongoose.models.ActionHistory || mongoose.model("ActionHistory", ActionHistorySchema);
+// 🔥 LIMPA MODELS ANTIGOS (Vercel / Hot Reload)
+if (mongoose.models.User) {
+  try {
+    mongoose.deleteModel("User");
+  } catch (_) {}
+}
+
+if (mongoose.models.ActionHistory) {
+  try {
+    mongoose.deleteModel("ActionHistory");
+  } catch (_) {}
+}
+
+// 🔹 Modelos (recriados com schema correto)
+const User = mongoose.model("User", UserSchema);
+const ActionHistory = mongoose.model("ActionHistory", ActionHistorySchema);
 const Pedido = mongoose.models.Pedido || mongoose.model("Pedido", PedidoSchema);
 const DailyEarning = mongoose.models.DailyEarning || mongoose.model("DailyEarning", DailyEarningSchema);
 const DailyRanking = mongoose.models.DailyRanking || mongoose.model("DailyRanking", DailyRankingSchema);
