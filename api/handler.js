@@ -2909,14 +2909,188 @@ router.post("/ranking_diario", async (req, res) => {
         ganhosPorUsuario = [];
       }
 
-      // (restante da lógica de fusão / projeção permanece igual) ...
-      // -> mantém seu código original a partir daqui sem alterações significativas
+      // mapa + projeção (mantive sua lógica) - MELHORIA: map keys T:, I:, U: (token, userId, username)
+      const mapa = new Map();
+      const ganhosPorPosicao = [10, 9, 8, 7, 6, 5.9, 5.8, 5.7, 5.6, 5.5];
+      const perMinuteGain = ganhosPorPosicao.map(g => g / 10);
+      const agoraMs = Date.now();
+      const baseHoraInicio = horaInicioRanking || agoraMs;
+      const intervalosDecorridos = Math.floor((agoraMs - baseHoraInicio) / (60 * 1000));
+      console.log("📊 intervalosDecorridos (min):", intervalosDecorridos, "horaInicioRanking:", new Date(baseHoraInicio).toISOString());
 
-      // montar listaComProjetado, ordenar e selecionar top10, como no código original
-      // (cópia direta da lógica original: mapa, findExistingKeyFor, ganhosPorUsuario.forEach, projeção, preenche com fillerNames quando necessário)
+      // popula mapa com chaves múltiplas quando possível para robustez
+      baseFromFixed.forEach((u, idx) => {
+        const keyToken = u.token ? `T:${String(u.token)}` : null;
+        const keyId = u.userId ? `I:${String(u.userId)}` : null;
+        const keyUname = `U:${norm(u.username)}`;
+        const baseObj = {
+          username: String(u.username || "Usuário"),
+          token: u.token || null,
+          real_total: Number(u.real_total || 0),
+          source: "fixed",
+          fixedPosition: idx,
+          is_current_user: !!u.is_current_user,
+          userId: u.userId || null
+        };
+        if (keyToken) mapa.set(keyToken, { ...baseObj });
+        if (keyId) mapa.set(keyId, { ...baseObj });
+        mapa.set(keyUname, { ...baseObj });
+      });
 
-      // --- para brevidade neste patch mantive o restante da lógica original sem modificação ---
+      function findExistingKeyFor(item) {
+        // procura por token -> userId -> username normalizado
+        if (item.token) {
+          const k = `T:${String(item.token)}`;
+          if (mapa.has(k)) return k;
+        }
+        if (item.userId) {
+          const k = `I:${String(item.userId)}`;
+          if (mapa.has(k)) return k;
+        }
+        const uname = norm(item.username || "");
+        const unameKey = `U:${uname}`;
+        if (mapa.has(unameKey)) return unameKey;
 
+        // fallback: tentar encontrar por username comparando valores armazenados
+        for (const existingKey of mapa.keys()) {
+          const ex = mapa.get(existingKey);
+          if (ex && norm(ex.username) === uname) return existingKey;
+        }
+        return null;
+      }
+
+      ganhosPorUsuario.forEach(g => {
+        const item = {
+          username: String(g.username || "Usuário"),
+          token: g.token || null,
+          real_total: Number(g.real_total || 0),
+          source: "earnings",
+          userId: g.userId ? String(g.userId) : null,
+          is_current_user: (g.token && g.token === effectiveToken) || false
+        };
+
+        const existingKey = findExistingKeyFor(item);
+        if (existingKey) {
+          const ex = mapa.get(existingKey);
+
+          // se existir e for fixed, comparar com projected e manter maior
+          if (ex && ex.source === "fixed") {
+            const pos = (typeof ex.fixedPosition === "number") ? ex.fixedPosition : null;
+            const incrementoPorMinuto = pos !== null ? (perMinuteGain[pos] || 0) : 0;
+            const projectedFixed = Number(ex.real_total || 0) + incrementoPorMinuto * intervalosDecorridos;
+
+            if (Number(item.real_total) >= projectedFixed) {
+              // earnings supera projected fixed -> substitui
+              mapa.set(existingKey, {
+                username: item.username || ex.username,
+                token: item.token || ex.token,
+                real_total: Number(item.real_total),
+                source: "earnings",
+                userId: item.userId || ex.userId || null,
+                is_current_user: ex.is_current_user || item.is_current_user
+              });
+            } else {
+              // mantém fixed (com campo earnings_total para debug)
+              ex.earnings_total = Number(item.real_total);
+              mapa.set(existingKey, ex);
+            }
+          } else {
+            // substitui/atualiza com dados de earnings
+            mapa.set(existingKey, {
+              username: item.username,
+              token: item.token || (ex && ex.token) || null,
+              real_total: Number(item.real_total),
+              source: item.source,
+              userId: item.userId || (ex && ex.userId) || null,
+              is_current_user: (ex && ex.is_current_user) || item.is_current_user
+            });
+          }
+        } else {
+          // cria nova chave por token ou username normalizado
+          const key = item.token ? `T:${String(item.token)}` : `U:${norm(item.username)}`;
+          mapa.set(key, { ...item });
+        }
+      });
+
+      // monta array projetado
+      const listaComProjetado = Array.from(new Map(
+        // garantir unicidade por username/token/userId: reduce para map por chave definitiva (token>id>username)
+        Array.from(mapa.values()).map(e => {
+          // chave definitiva
+          const definitiveKey = e.token ? `T:${e.token}` : (e.userId ? `I:${e.userId}` : `U:${norm(e.username)}`);
+          return [definitiveKey, e];
+        })
+      ).values()).map(entry => {
+        const e = { ...entry };
+        if (e.source === "fixed") {
+          const pos = (typeof e.fixedPosition === "number") ? e.fixedPosition : null;
+          const incrementoPorMinuto = pos !== null ? (perMinuteGain[pos] || 0) : 0;
+          const projected = Number(e.real_total || 0) + incrementoPorMinuto * intervalosDecorridos;
+          e.current_total = Number(projected);
+        } else {
+          e.current_total = Number(e.real_total || 0);
+        }
+        return e;
+      });
+
+      // preencher apenas com entradas salvas em DailyRanking (embaralhadas) quando faltar
+if (listaComProjetado.length < 10) {
+  const need = 10 - listaComProjetado.length;
+  const used = new Set(listaComProjetado.map(x => norm(x.username)));
+  for (const nm of fillerNames) {
+    if (listaComProjetado.length >= 10) break;
+    if (!used.has(norm(nm))) {
+      const idxForBaseline = listaComProjetado.length;
+      listaComProjetado.push({
+        username: nm,
+        token: null,
+        real_total: Number(baselineValores[idxForBaseline] ?? 0),
+        current_total: Number(baselineValores[idxForBaseline] ?? 0),
+        source: "fixed",
+        is_current_user: false,
+        userId: null
+      });
+      used.add(norm(nm));
+    }
+  }
+        // se ainda faltar, completar com fillerNames (não duplicar)
+        if (listaComProjetado.length < 10) {
+          const need = 10 - listaComProjetado.length;
+          const used = new Set(listaComProjetado.map(x => norm(x.username)));
+          for (const nm of fillerNames) {
+            if (listaComProjetado.length >= 10) break;
+            if (!used.has(norm(nm))) {
+              listaComProjetado.push({
+                username: nm,
+                token: null,
+                real_total: 0,
+                current_total: 0,
+                source: "filler",
+                is_current_user: false,
+                userId: null
+              });
+              used.add(norm(nm));
+            }
+          }
+        }
+      }
+
+      // Ordena pelo valor projetado (current_total) DECRESCENTE e só então pega top10
+      listaComProjetado.sort((a, b) => Number(b.current_total || b.real_total || 0) - Number(a.current_total || a.real_total || 0));
+
+      console.log("DEBUG: top 12 after projection:", listaComProjetado.slice(0, 12).map((x, i) => `${i+1}=${x.username}:${(Number(x.current_total||x.real_total)||0).toFixed(2)}(src=${x.source})`));
+
+      const top10 = listaComProjetado.slice(0, 10);
+
+      function round2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+
+      baseRankingRaw = top10.map((item) => ({
+        username: item.username,
+        token: item.token || null,
+        real_total: round2(Number(item.current_total || item.real_total || 0)),
+        source: item.source || "unknown",
+        is_current_user: !!item.is_current_user
+      }));
     } else {
       // fallback original: gera a partir do DB (sem fixed) - mantém comportamento
       const ganhosPorUsuario = await DailyEarning.aggregate([
