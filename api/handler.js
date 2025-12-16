@@ -2752,7 +2752,7 @@ const PERIOD_MS = Number(process.env.RANKING_PERIOD_MS) || 60 * 1000;
         const placeholder = dailyFixedRanking.map((d, i) => ({
           position: i + 1,
           username: d.username,
-          total_balance: formatarValorRanking(d.real_total),
+          total_balance: (d.real_total),
           is_current_user: !!d.is_current_user
         }));
         return res.status(200).json({
@@ -2854,7 +2854,7 @@ const PERIOD_MS = Number(process.env.RANKING_PERIOD_MS) || 60 * 1000;
       const placeholder = dailyFixedRanking.map((d, i) => ({
         position: i + 1,
         username: d.username,
-        total_balance: formatarValorRanking(d.real_total),
+        total_balance: (d.real_total),
         is_current_user: !!d.is_current_user
       }));
 
