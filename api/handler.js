@@ -3,6 +3,7 @@ import axios from "axios";
 import https from 'https';
 import { v4 as uuidv4 } from 'uuid';
 import connectDB from "./db.js";
+import mongoose from "mongoose";
 import nodemailer from 'nodemailer';
 import { sendRecoveryEmail } from "./mailer.js";
 import crypto from "crypto";
@@ -132,6 +133,109 @@ export function getValorAcao(pedidoOuTipo, rede = "TikTok") {
 
 }
 
+// helpers
+export async function getUserDocByToken(token) {
+  if (!token) return null;
+
+  // garante conexão
+  const conn = await mongoose.connection.asPromise?.() ?? mongoose.connection;
+  const client = mongoose.connection.getClient();
+
+  if (!client) {
+    throw new Error("MongoDB client não inicializado");
+  }
+
+  const db = client.db(); // <-- SEMPRE existe
+  const usersColl = db.collection("users");
+
+  return await usersColl.findOne({ token });
+}
+
+
+async function reactivateConta(userId, nomeLower, updates) {
+  const usersColl = mongoose.connection.db.collection("users");
+  // arrayFilters para atualizar o elemento correto (case-insensitive comparações feitas no app)
+  return await usersColl.updateOne(
+    { _id: userId, "contas": { $elemMatch: { $or: [{ nome_usuario: { $exists: true } }, { nomeConta: { $exists: true } }] } } },
+    { $set: updates },
+    { arrayFilters: [ { "elem.nome_usuario": { $exists: true } } ] } // not used directly but kept for template
+  );
+}
+
+async function pushConta(userId, conta) {
+  const client = mongoose.connection.getClient();
+  if (!client) {
+    throw new Error("MongoDB client não inicializado");
+  }
+
+  const db = client.db();
+  const usersColl = db.collection("users");
+
+  return await usersColl.updateOne(
+    { _id: userId },
+    { $push: { contas: conta } }
+  );
+}
+
+// get raw user doc (token or userId)
+async function getUserDocRaw({ userId, token }) {
+  const client = mongoose.connection.getClient();
+  if (!client) throw new Error("MongoDB client não inicializado");
+  const db = client.db();
+  const usersColl = db.collection("users");
+
+  if (userId) {
+    // se veio do JWT
+    const _id = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId;
+    return await usersColl.findOne({ _id });
+  }
+  return await usersColl.findOne({ token });
+}
+
+// atomic create saque: push + dec saldo
+async function createSaqueAtomic(userId, novoSaque, amount) {
+  const client = mongoose.connection.getClient();
+  const db = client.db();
+  const usersColl = db.collection("users");
+
+  const res = await usersColl.updateOne(
+    { _id: userId },
+    {
+      $push: { saques: novoSaque },
+      $inc: { saldo: -Number(amount) }
+    }
+  );
+  return res;
+}
+
+// update saque by externalReference
+async function updateSaqueByExternalRef(userId, externalReference, setObj) {
+  const client = mongoose.connection.getClient();
+  const db = client.db();
+  const usersColl = db.collection("users");
+
+  const res = await usersColl.updateOne(
+    { _id: userId, "saques.externalReference": externalReference },
+    { $set: Object.fromEntries(Object.entries(setObj).map(([k,v]) => [`saques.$.${k}`, v])) }
+  );
+  return res;
+}
+
+// rollback (restore saldo and mark failed)
+async function markSaqueFailedAndRefund(userId, externalReference, refundAmount, errorInfo) {
+  const client = mongoose.connection.getClient();
+  const db = client.db();
+  const usersColl = db.collection("users");
+
+  await usersColl.updateOne(
+    { _id: userId, "saques.externalReference": externalReference },
+    {
+      $set: { "saques.$.status": "FAILED", "saques.$.error": errorInfo || null },
+      $inc: { saldo: Number(refundAmount) }
+    }
+  );
+}
+
 // 📌 ROTA PARA CONSULTAR VALORES DAS AÇÕES
 router.get("/valor_acao", (req, res) => {
   const { tipo = "seguir", rede = "TikTok" } = req.query;
@@ -159,87 +263,97 @@ function escapeRegExp(string) {
 
 router.route("/contas_tiktok")
 
-  // POST -> adicionar / reativar conta TikTok (aceita nome_usuario ou nomeConta)
-  .post(async (req, res) => {
-    try {
-      await connectDB();
+// POST -> adicionar / reativar conta TikTok (aceita nome_usuario ou nomeConta)
+.post(async (req, res) => {
+  try {
+    await connectDB();
 
-      const token = getTokenFromHeader(req);
-      if (!token) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
+    const token = getTokenFromHeader(req);
+    if (!token) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
 
-      const user = await User.findOne({ token });
-      if (!user) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
+    // usa leitura RAW para evitar casting/validation
+    const userDoc = await getUserDocByToken(token);
+    if (!userDoc) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
 
-      // aceita nome_usuario (novo) ou nomeConta (frontend antigo)
-      const rawName = req.body?.nome_usuario ?? req.body?.nomeConta ?? req.body?.username;
-      if (!rawName || String(rawName).trim() === "") {
-        return res.status(400).json({ error: "Nome da conta é obrigatório." });
-      }
-
-      const nomeNormalized = String(rawName).trim();
-      const nomeLower = nomeNormalized.toLowerCase();
-
-// 🔍 Verificar se já existe conta TikTok com o mesmo nome
-const contaExistenteIndex = (user.contas || []).findIndex(
-  c =>
-    String((c.nome_usuario ?? c.nomeConta ?? "")).toLowerCase() === nomeLower &&
-    String(c.rede ?? "").toLowerCase() === "tiktok"
-);
-
-      if (contaExistenteIndex !== -1) {
-        const contaExistente = user.contas[contaExistenteIndex];
-
-        if (String(contaExistente.status ?? "").toLowerCase() === "ativa") {
-          return res.status(400).json({ error: "Esta conta já está ativa." });
-        }
-
-        // Reativar conta existente e garantir ambos os campos preenchidos
-        contaExistente.status = "ativa";
-        contaExistente.rede = "TikTok";
-        contaExistente.dataDesativacao = undefined;
-
-        // garantir nome_usuario e nomeConta
-        contaExistente.nome_usuario = nomeNormalized;
-
-        await user.save();
-        return res.status(200).json({ message: "Conta reativada com sucesso!", nomeConta: nomeNormalized });
-      }
-
-      // Verifica se outro usuário já possui essa mesma conta (case-insensitive) — checa ambos campos
-      const regex = new RegExp(`^${escapeRegExp(nomeNormalized)}$`, "i");
-      const contaDeOutroUsuario = await User.findOne({
-        _id: { $ne: user._id },
-        $or: [
-          { "contas.nome_usuario": regex }
-        ]
-      });
-
-      if (contaDeOutroUsuario) {
-        return res.status(400).json({ error: "Já existe uma conta com este nome de usuário." });
-      }
-
-      // Adicionar nova conta — preencher nome_usuario (canônico) E nomeConta (compat)
-      user.contas = user.contas || [];
-      user.contas.push({
-        nome_usuario: nomeNormalized,
-        rede: "TikTok",
-        status: "ativa",
-        dataCriacao: new Date()
-      });
-
-      await user.save();
-
-      return res.status(201).json({
-        message: "Conta TikTok adicionada com sucesso!",
-        nomeConta: nomeNormalized
-      });
-    } catch (err) {
-      console.error("❌ Erro em POST /contas_tiktok", err);
-      return res.status(500).json({ error: "Erro interno no servidor." });
+    const rawName = req.body?.nome_usuario ?? req.body?.nomeConta ?? req.body?.username;
+    if (!rawName || String(rawName).trim() === "") {
+      return res.status(400).json({ error: "Nome da conta é obrigatório." });
     }
-  })
 
-  // GET -> listar contas Instagram ativas do usuário
+    const nomeNormalized = String(rawName).trim();
+    const nomeLower = nomeNormalized.toLowerCase();
+
+    // garante que contas exista como array no objeto em memória (não altera DB)
+    const contasLocal = Array.isArray(userDoc.contas) ? userDoc.contas : [];
+
+    // procurar conta existente no próprio documento (case-insensitive)
+    const contaExistenteIndex = contasLocal.findIndex(c =>
+      String((c?.nome_usuario ?? c?.nomeConta ?? "")).toLowerCase() === nomeLower &&
+      String((c?.rede ?? "")).toLowerCase() === "tiktok"
+    );
+
+    if (contaExistenteIndex !== -1) {
+      const contaExistente = contasLocal[contaExistenteIndex];
+      if (String((contaExistente.status ?? "")).toLowerCase() === "ativa") {
+        return res.status(400).json({ error: "Esta conta já está ativa." });
+      }
+
+      // reativar via update atômico com filtro no array (usa $[elem] e arrayFilters)
+      const usersColl = mongoose.connection.db.collection("users");
+      const updateRes = await usersColl.updateOne(
+        { _id: userDoc._id, "contas.nome_usuario": contaExistente.nome_usuario },
+        {
+          $set: {
+            "contas.$.status": "ativa",
+            "contas.$.rede": "TikTok",
+            "contas.$.dataDesativacao": null,
+            "contas.$.nome_usuario": nomeNormalized,
+            "contas.$.nomeConta": nomeNormalized
+          }
+        }
+      );
+
+      return res.status(200).json({ message: "Conta reativada com sucesso!", nomeConta: nomeNormalized });
+    }
+
+    // Verifica se outro usuário já possui essa conta — usa consulta ao driver (raw) para evitar instanciar docs corrompidos
+    const regex = new RegExp(`^${escapeRegExp(nomeNormalized)}$`, "i");
+    const usersColl = mongoose.connection.db.collection("users");
+    const contaDeOutro = await usersColl.findOne({
+      _id: { $ne: userDoc._id },
+      $or: [
+        { "contas.nome_usuario": regex },
+        { "contas.nomeConta": regex }
+      ]
+    });
+
+    if (contaDeOutro) {
+      return res.status(400).json({ error: "Já existe uma conta com este nome de usuário." });
+    }
+
+    // Adicionar nova conta com defaults explícitos (evita inserir undefined)
+    const novoConta = {
+      nome_usuario: nomeNormalized,
+      nomeConta: nomeNormalized,
+      rede: "TikTok",
+      status: "ativa",
+      dataCriacao: new Date()
+    };
+
+    await pushConta(userDoc._id, novoConta);
+
+    return res.status(201).json({
+      message: "Conta Instagram adicionada com sucesso!",
+      nomeConta: nomeNormalized
+    });
+
+  } catch (err) {
+    console.error("❌ Erro em POST /contas_instagram:", err);
+    return res.status(500).json({ error: "Erro interno no servidor." });
+  }
+})
+
+  // GET -> listar contas TikTok ativas do usuário
   .get(async (req, res) => {
     try {
       await connectDB();
@@ -277,202 +391,63 @@ const contaExistenteIndex = (user.contas || []).findIndex(
     }
   })
 
-// DELETE -> desativar conta Instagram (accept nome_usuario OR nomeConta)
+// DELETE -> desativar conta TikTok (RAW-safe)
 .delete(async (req, res) => {
   try {
     await connectDB();
 
     const token = getTokenFromHeader(req);
-    if (!token) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
+    if (!token) {
+      return res.status(401).json({ error: "Acesso negado, token não encontrado." });
+    }
 
-    const user = await User.findOne({ token });
-    if (!user) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
+    const nomeRaw =
+      req.query.nome_usuario ??
+      req.query.nomeConta ??
+      req.body?.nome_usuario ??
+      req.body?.nomeConta;
 
-    // aceita nome_usuario (DB atual) OU nomeConta (rotas antigas)
-    const nomeRaw = req.query.nome_usuario ?? req.body?.nome_usuario;
-    if (!nomeRaw) return res.status(400).json({ error: "Nome da conta não fornecido." });
+    if (!nomeRaw || String(nomeRaw).trim() === "") {
+      return res.status(400).json({ error: "Nome da conta não fornecido." });
+    }
 
-    const nomeLower = String(nomeRaw).trim().toLowerCase();
+    const nomeNormalized = String(nomeRaw).trim();
+    const nomeLower = nomeNormalized.toLowerCase();
 
-// 🔍 Encontrar conta específica DO TIKTOK
-const contaIndex = (user.contas || []).findIndex(c =>
-  String((c.nome_usuario ?? c.nomeConta ?? "")).toLowerCase() === nomeLower &&
-  String(c.rede ?? "").toLowerCase() === "tiktok"
-);
+    const usersColl = mongoose.connection.db.collection("users");
 
-    if (contaIndex === -1) return res.status(404).json({ error: "Conta não encontrada." });
-
-    user.contas[contaIndex].status = "inativa";
-    user.contas[contaIndex].dataDesativacao = new Date();
-
-    await user.save();
-
-    return res.status(200).json({ message: `Conta ${user.contas[contaIndex].nome_usuario || user.contas[contaIndex].nomeConta} desativada com sucesso.` });
-
-  } catch (err) {
-    console.error("❌ Erro em DELETE /contas_tiktok:", err);
-    return res.status(500).json({ error: "Erro interno no servidor." });
-  }
-});
-
-router.route("/contas_instagram")
-
-  // POST -> adicionar / reativar conta Instagram (aceita nome_usuario ou nomeConta)
-  .post(async (req, res) => {
-    try {
-      await connectDB();
-
-      const token = getTokenFromHeader(req);
-      if (!token) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
-
-      const user = await User.findOne({ token });
-      if (!user) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
-
-      // aceita nome_usuario (novo) ou nomeConta (frontend antigo)
-      const rawName = req.body?.nome_usuario ?? req.body?.nomeConta ?? req.body?.username;
-      if (!rawName || String(rawName).trim() === "") {
-        return res.status(400).json({ error: "Nome da conta é obrigatório." });
-      }
-
-      const nomeNormalized = String(rawName).trim();
-      const nomeLower = nomeNormalized.toLowerCase();
-
-// 🔍 Verificar se já existe conta TikTok com o mesmo nome
-const contaExistenteIndex = (user.contas || []).findIndex(
-  c =>
-    String((c.nome_usuario ?? c.nomeConta ?? "")).toLowerCase() === nomeLower &&
-    String(c.rede ?? "").toLowerCase() === "instagram"
-);
-      if (contaExistenteIndex !== -1) {
-        const contaExistente = user.contas[contaExistenteIndex];
-
-        if (String(contaExistente.status ?? "").toLowerCase() === "ativa") {
-          return res.status(400).json({ error: "Esta conta já está ativa." });
+    const result = await usersColl.updateOne(
+      { token },
+      {
+        $set: {
+          "contas.$[c].status": "inativa",
+          "contas.$[c].dataDesativacao": new Date()
         }
-
-        // Reativar conta existente e garantir ambos os campos preenchidos
-        contaExistente.status = "ativa";
-        contaExistente.rede = "Instagram";
-        contaExistente.id_conta = req.body.id_conta ?? contaExistente.id_conta;
-        contaExistente.id_instagram = req.body.id_instagram ?? contaExistente.id_instagram;
-        contaExistente.dataDesativacao = undefined;
-
-        // garantir nome_usuario e nomeConta
-        contaExistente.nome_usuario = nomeNormalized;
-        contaExistente.nomeConta = nomeNormalized;
-
-        await user.save();
-        return res.status(200).json({ message: "Conta reativada com sucesso!", nomeConta: nomeNormalized });
-      }
-
-      // Verifica se outro usuário já possui essa mesma conta (case-insensitive) — checa ambos campos
-      const regex = new RegExp(`^${escapeRegExp(nomeNormalized)}$`, "i");
-      const contaDeOutroUsuario = await User.findOne({
-        _id: { $ne: user._id },
-        $or: [
-          { "contas.nome_usuario": regex },
-          { "contas.nomeConta": regex }
+      },
+      {
+        arrayFilters: [
+          {
+            $and: [
+              { "c.rede": { $regex: /^tiktok$/i } },
+              {
+                $or: [
+                  { "c.nome_usuario": { $regex: `^${escapeRegExp(nomeLower)}$`, $options: "i" } },
+                  { "c.nomeConta": { $regex: `^${escapeRegExp(nomeLower)}$`, $options: "i" } }
+                ]
+              }
+            ]
+          }
         ]
-      });
-
-      if (contaDeOutroUsuario) {
-        return res.status(400).json({ error: "Já existe uma conta com este nome de usuário." });
       }
+    );
 
-      // Adicionar nova conta — preencher nome_usuario (canônico) E nomeConta (compat)
-      user.contas = user.contas || [];
-      user.contas.push({
-        nome_usuario: nomeNormalized,
-        nomeConta: nomeNormalized,
-        id_conta: req.body.id_conta,
-        id_instagram: req.body.id_instagram,
-        rede: "Instagram",
-        status: "ativa",
-        dataCriacao: new Date()
-      });
-
-      await user.save();
-
-      return res.status(201).json({
-        message: "Conta Instagram adicionada com sucesso!",
-        nomeConta: nomeNormalized
-      });
-    } catch (err) {
-      console.error("❌ Erro em POST /contas_instagram:", err);
-      return res.status(500).json({ error: "Erro interno no servidor." });
+    if (result.matchedCount === 0 || result.modifiedCount === 0) {
+      return res.status(404).json({ error: "Conta não encontrada ou já inativa." });
     }
-  })
 
-  // GET -> listar contas Instagram ativas do usuário
-  .get(async (req, res) => {
-    try {
-      await connectDB();
-
-      const token = getTokenFromHeader(req);
-      if (!token) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
-
-      const user = await User.findOne({ token });
-      if (!user) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
-
-      const contasInstagram = (user.contas || [])
-        .filter(conta => {
-          const rede = String(conta.rede ?? "").trim().toLowerCase();
-          const status = String(conta.status ?? "").trim().toLowerCase();
-          return rede === "instagram" && status === "ativa";
-        })
-        .map(conta => {
-          const contaObj = conta && typeof conta.toObject === "function"
-            ? conta.toObject()
-            : JSON.parse(JSON.stringify(conta));
-
-          return {
-            ...contaObj,
-            usuario: {
-              _id: user._id,
-              nome: user.nome || ""
-            }
-          };
-        });
-
-      return res.status(200).json(contasInstagram);
-    } catch (err) {
-      console.error("❌ Erro em GET /contas_instagram:", err);
-      return res.status(500).json({ error: "Erro interno no servidor." });
-    }
-  })
-
-// DELETE -> desativar conta Instagram (accept nome_usuario OR nomeConta)
-.delete(async (req, res) => {
-  try {
-    await connectDB();
-
-    const token = getTokenFromHeader(req);
-    if (!token) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
-
-    const user = await User.findOne({ token });
-    if (!user) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
-
-    // aceita nome_usuario (DB atual) OU nomeConta (rotas antigas)
-    const nomeRaw = req.query.nome_usuario ?? req.query.nomeConta ?? req.body?.nome_usuario ?? req.body?.nomeConta;
-    if (!nomeRaw) return res.status(400).json({ error: "Nome da conta não fornecido." });
-
-    const nomeLower = String(nomeRaw).trim().toLowerCase();
-
-// 🔍 Encontrar conta específica DO TIKTOK
-const contaIndex = (user.contas || []).findIndex(c =>
-  String((c.nome_usuario ?? c.nomeConta ?? "")).toLowerCase() === nomeLower &&
-  String(c.rede ?? "").toLowerCase() === "instagram"
-);
-
-
-    if (contaIndex === -1) return res.status(404).json({ error: "Conta não encontrada." });
-
-    user.contas[contaIndex].status = "inativa";
-    user.contas[contaIndex].dataDesativacao = new Date();
-
-    await user.save();
-
-    return res.status(200).json({ message: `Conta ${user.contas[contaIndex].nome_usuario || user.contas[contaIndex].nomeConta} desativada com sucesso.` });
+    return res.status(200).json({
+      message: `Conta ${nomeNormalized} desativada com sucesso.`
+    });
 
   } catch (err) {
     console.error("❌ Erro em DELETE /contas_instagram:", err);
@@ -480,12 +455,200 @@ const contaIndex = (user.contas || []).findIndex(c =>
   }
 });
 
-// ===============================
-// ROTA: /api/profile
-// GET → retorna dados do usuário
-// PUT → atualiza dados do usuário
-// ===============================
+// Rota: /api/contas_instagram (POST, GET, DELETE)
+router.route("/contas_instagram")
 
+// POST -> adicionar / reativar conta Instagram (versão segura)
+.post(async (req, res) => {
+  try {
+    await connectDB();
+
+    const token = getTokenFromHeader(req);
+    if (!token) return res.status(401).json({ error: "Acesso negado, token não encontrado." });
+
+    // usa leitura RAW para evitar casting/validation
+    const userDoc = await getUserDocByToken(token);
+    if (!userDoc) return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
+
+    const rawName = req.body?.nome_usuario ?? req.body?.nomeConta ?? req.body?.username;
+    if (!rawName || String(rawName).trim() === "") {
+      return res.status(400).json({ error: "Nome da conta é obrigatório." });
+    }
+
+    const nomeNormalized = String(rawName).trim();
+    const nomeLower = nomeNormalized.toLowerCase();
+
+    // garante que contas exista como array no objeto em memória (não altera DB)
+    const contasLocal = Array.isArray(userDoc.contas) ? userDoc.contas : [];
+
+    // procurar conta existente no próprio documento (case-insensitive)
+    const contaExistenteIndex = contasLocal.findIndex(c =>
+      String((c?.nome_usuario ?? c?.nomeConta ?? "")).toLowerCase() === nomeLower &&
+      String((c?.rede ?? "")).toLowerCase() === "instagram"
+    );
+
+    if (contaExistenteIndex !== -1) {
+      const contaExistente = contasLocal[contaExistenteIndex];
+      if (String((contaExistente.status ?? "")).toLowerCase() === "ativa") {
+        return res.status(400).json({ error: "Esta conta já está ativa." });
+      }
+
+      // reativar via update atômico com filtro no array (usa $[elem] e arrayFilters)
+      const usersColl = mongoose.connection.db.collection("users");
+      const updateRes = await usersColl.updateOne(
+        { _id: userDoc._id, "contas.nome_usuario": contaExistente.nome_usuario },
+        {
+          $set: {
+            "contas.$.status": "ativa",
+            "contas.$.rede": "Instagram",
+            "contas.$.dataDesativacao": null,
+            "contas.$.nome_usuario": nomeNormalized,
+            "contas.$.nomeConta": nomeNormalized
+          }
+        }
+      );
+
+      return res.status(200).json({ message: "Conta reativada com sucesso!", nomeConta: nomeNormalized });
+    }
+
+    // Verifica se outro usuário já possui essa conta — usa consulta ao driver (raw) para evitar instanciar docs corrompidos
+    const regex = new RegExp(`^${escapeRegExp(nomeNormalized)}$`, "i");
+    const usersColl = mongoose.connection.db.collection("users");
+    const contaDeOutro = await usersColl.findOne({
+      _id: { $ne: userDoc._id },
+      $or: [
+        { "contas.nome_usuario": regex },
+        { "contas.nomeConta": regex }
+      ]
+    });
+
+    if (contaDeOutro) {
+      return res.status(400).json({ error: "Já existe uma conta com este nome de usuário." });
+    }
+
+    // Adicionar nova conta com defaults explícitos (evita inserir undefined)
+    const novoConta = {
+      nome_usuario: nomeNormalized,
+      nomeConta: nomeNormalized,
+      rede: "Instagram",
+      status: "ativa",
+      dataCriacao: new Date()
+    };
+
+    await pushConta(userDoc._id, novoConta);
+
+    return res.status(201).json({
+      message: "Conta Instagram adicionada com sucesso!",
+      nomeConta: nomeNormalized
+    });
+
+  } catch (err) {
+    console.error("❌ Erro em POST /contas_instagram:", err);
+    return res.status(500).json({ error: "Erro interno no servidor." });
+  }
+})
+
+// GET -> listar contas Instagram ativas (RAW-safe)
+.get(async (req, res) => {
+  try {
+    await connectDB();
+
+    const token = getTokenFromHeader(req);
+    if (!token) {
+      return res.status(401).json({ error: "Acesso negado, token não encontrado." });
+    }
+
+    const userDoc = await getUserDocByToken(token);
+    if (!userDoc) {
+      return res.status(404).json({ error: "Usuário não encontrado ou token inválido." });
+    }
+
+    const contasInstagram = (Array.isArray(userDoc.contas) ? userDoc.contas : [])
+      .filter(c =>
+        String(c?.rede ?? "").toLowerCase() === "instagram" &&
+        String(c?.status ?? "").toLowerCase() === "ativa"
+      )
+      .map(c => ({
+        ...c,
+        usuario: {
+          _id: userDoc._id,
+          nome: userDoc.nome || ""
+        }
+      }));
+
+    return res.status(200).json(contasInstagram);
+
+  } catch (err) {
+    console.error("❌ Erro em GET /contas_instagram:", err);
+    return res.status(500).json({ error: "Erro interno no servidor." });
+  }
+})
+
+// DELETE -> desativar conta Instagram (RAW-safe)
+.delete(async (req, res) => {
+  try {
+    await connectDB();
+
+    const token = getTokenFromHeader(req);
+    if (!token) {
+      return res.status(401).json({ error: "Acesso negado, token não encontrado." });
+    }
+
+    const nomeRaw =
+      req.query.nome_usuario ??
+      req.query.nomeConta ??
+      req.body?.nome_usuario ??
+      req.body?.nomeConta;
+
+    if (!nomeRaw || String(nomeRaw).trim() === "") {
+      return res.status(400).json({ error: "Nome da conta não fornecido." });
+    }
+
+    const nomeNormalized = String(nomeRaw).trim();
+    const nomeLower = nomeNormalized.toLowerCase();
+
+    const usersColl = mongoose.connection.db.collection("users");
+
+    const result = await usersColl.updateOne(
+      { token },
+      {
+        $set: {
+          "contas.$[c].status": "inativa",
+          "contas.$[c].dataDesativacao": new Date()
+        }
+      },
+      {
+        arrayFilters: [
+          {
+            $and: [
+              { "c.rede": { $regex: /^instagram$/i } },
+              {
+                $or: [
+                  { "c.nome_usuario": { $regex: `^${escapeRegExp(nomeLower)}$`, $options: "i" } },
+                  { "c.nomeConta": { $regex: `^${escapeRegExp(nomeLower)}$`, $options: "i" } }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    );
+
+    if (result.matchedCount === 0 || result.modifiedCount === 0) {
+      return res.status(404).json({ error: "Conta não encontrada ou já inativa." });
+    }
+
+    return res.status(200).json({
+      message: `Conta ${nomeNormalized} desativada com sucesso.`
+    });
+
+  } catch (err) {
+    console.error("❌ Erro em DELETE /contas_instagram:", err);
+    return res.status(500).json({ error: "Erro interno no servidor." });
+  }
+});
+
+// ROTA: /api/profile
 router.get("/profile", async (req, res) => {
   await connectDB();
 
@@ -582,7 +745,12 @@ router.post("/login", async (req, res) => {
         try {
             await connectDB();
     
-            const { email, senha } = req.body;
+const { email, senha } = req.body;
+
+console.log("📥 BODY RECEBIDO:", req.body);
+console.log("📧 email:", email);
+console.log("🔑 senha:", senha);
+
     
             if (!email || !senha) {
                 return res.status(400).json({ error: "E-mail e senha são obrigatórios!" });
@@ -853,68 +1021,104 @@ router.get("/validate-reset-token", async (req, res) => {
   }
 });
 
-// api/withdraw.js
+// ROTA: /withdraw (substitua todo o handler antigo por este)
 router.all("/withdraw", async (req, res) => {
-  const method = req.method;
-
-  if (method !== "GET" && method !== "POST") {
-    console.log("[DEBUG] Método não permitido:", method);
-    return res.status(405).json({ error: "Método não permitido." });
-  }
-
   try {
+    const method = req.method;
+    if (method !== "GET" && method !== "POST") {
+      return res.status(405).json({ error: "Método não permitido." });
+    }
+
     await connectDB();
 
-    // ===== Autenticação =====
+    // ---------- autenticação (Bearer JWT ou token cru) ----------
     const authHeader = (req.headers.authorization || "").toString();
     let token = null;
-
     if (authHeader.startsWith("Bearer ")) {
       token = authHeader.split(" ")[1].trim();
     } else if (authHeader.length > 0) {
       token = authHeader.trim();
     }
 
-    if (!token) {
-      console.log("[DEBUG] Token ausente no header Authorization:", authHeader);
-      return res.status(401).json({ error: "Token ausente ou inválido." });
-    }
+    if (!token) return res.status(401).json({ error: "Token ausente ou inválido." });
 
-    console.log("[DEBUG] withdraw - token recebido (primeiros 12 chars):", token.slice(0,12));
-
-    let user = null;
-
+    // tenta JWT primeiro, extrai userId se possível
+    let userIdFromJwt = null;
     if (process.env.JWT_SECRET) {
       try {
         const payload = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = payload?.id || payload?.sub;
-        if (userId) {
-          user = await User.findById(userId);
-          console.log("[DEBUG] withdraw - token JWT válido, userId:", userId, "user found:", !!user);
+        userIdFromJwt = payload?.id || payload?.sub || null;
+      } catch (e) {
+        // não é JWT — será tratado como token cru
+      }
+    }
+
+    // ---------- helpers raw DB (usa mongoose.client) ----------
+    function getClientDb() {
+      const client = mongoose.connection.getClient();
+      if (!client) throw new Error("MongoDB client não inicializado (mongoose.connection.getClient())");
+      return client.db();
+    }
+
+    async function getUserDocRaw({ userId, token }) {
+      const db = getClientDb();
+      const usersColl = db.collection("users");
+      if (userId) {
+        const _id = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId;
+        return await usersColl.findOne({ _id });
+      }
+      return await usersColl.findOne({ token });
+    }
+
+    async function createSaqueAtomic(userId, novoSaque, amount) {
+      const db = getClientDb();
+      const usersColl = db.collection("users");
+      const res = await usersColl.updateOne(
+        { _id: userId },
+        {
+          $push: { saques: novoSaque },
+          $inc: { saldo: -Number(amount) }
         }
-      } catch (errJwt) {
-        console.log("[DEBUG] withdraw - jwt.verify falhou (provavelmente não é JWT):", errJwt.message);
-      }
+      );
+      return res;
     }
 
-    if (!user) {
-      try {
-        user = await User.findOne({ token }).select("+token +saldo +pix_key +pix_key_type +saques");
-        console.log("[DEBUG] withdraw - busca por token cru no DB result:", !!user);
-      } catch (errFind) {
-        console.error("[ERROR] withdraw - erro ao buscar user por token no DB:", errFind);
-        return res.status(500).json({ error: "Erro interno na autenticação." });
-      }
+    async function updateSaqueByExternalRef(userId, externalReference, setObj) {
+      const db = getClientDb();
+      const usersColl = db.collection("users");
+      // transforma setObj para campos dentro do array
+      const setFields = {};
+      Object.entries(setObj).forEach(([k, v]) => {
+        setFields[`saques.$.${k}`] = v;
+      });
+      const res = await usersColl.updateOne(
+        { _id: userId, "saques.externalReference": externalReference },
+        { $set: setFields }
+      );
+      return res;
     }
 
-    if (!user) {
-      console.log("[DEBUG] Usuário não encontrado por token/jwt:", token.slice(0,12));
+    async function markSaqueFailedAndRefund(userId, externalReference, refundAmount, errorInfo) {
+      const db = getClientDb();
+      const usersColl = db.collection("users");
+      await usersColl.updateOne(
+        { _id: userId, "saques.externalReference": externalReference },
+        {
+          $set: { "saques.$.status": "FAILED", "saques.$.error": errorInfo || null },
+          $inc: { saldo: Number(refundAmount) }
+        }
+      );
+    }
+
+    // ---------- obter userDoc (raw) ----------
+    const userDoc = await getUserDocRaw({ userId: userIdFromJwt, token });
+    if (!userDoc) {
       return res.status(401).json({ error: "Usuário não autenticado." });
     }
 
-    // ===== GET: retornar histórico de saques =====
+    // ---------- GET: retornar histórico de saques ----------
     if (method === "GET") {
-      const saquesFormatados = (user.saques || []).map(s => ({
+      const saquesFormatados = (Array.isArray(userDoc.saques) ? userDoc.saques : []).map(s => ({
         amount: s.valor ?? s.amount ?? null,
         pixKey: s.chave_pix ?? s.pixKey ?? null,
         keyType: s.tipo_chave ?? s.keyType ?? null,
@@ -923,18 +1127,15 @@ router.all("/withdraw", async (req, res) => {
         externalReference: s.externalReference || null,
         providerId: s.providerId || s.wooviId || s.openpixId || null,
       }));
-      console.log("[DEBUG] Histórico de saques retornado:", saquesFormatados.length, "itens");
       return res.status(200).json(saquesFormatados);
     }
 
-    // ===== POST: criar saque =====
+    // ---------- POST: criar saque (fluxo create -> approve) ----------
     let body = req.body;
     if (typeof body === "string") {
       try { body = JSON.parse(body); } catch (e) { /* keep as-is */ }
     }
-
     const { amount, payment_method, payment_data } = body || {};
-    console.log("[DEBUG] Dados recebidos para saque:", { amount, payment_method });
 
     if (amount == null || (typeof amount !== "number" && typeof amount !== "string")) {
       return res.status(400).json({ error: "Valor de saque inválido (mínimo R$0,01)." });
@@ -944,417 +1145,277 @@ router.all("/withdraw", async (req, res) => {
       return res.status(400).json({ error: "Valor de saque inválido." });
     }
 
+    // simple payment_data checks
     if (!payment_method || !payment_data?.pix_key || !payment_data?.pix_key_type) {
       return res.status(400).json({ error: "Dados de pagamento incompletos." });
     }
 
-    if ((user.saldo ?? 0) < amountNum) {
+    if ((userDoc.saldo ?? 0) < amountNum) {
       return res.status(400).json({ error: "Saldo insuficiente." });
     }
 
-// === VALIDAÇÃO: remover checagens por quantidade de dígitos ===
-const rawType = String((payment_data.pix_key_type || "")).trim().toLowerCase();
-    
-// normaliza tipos conhecidos do frontend
-const typeMap = {
-  "cpf": "CPF",
-  "cnpj": "CNPJ",
-  "phone": "PHONE",
-  "telefone": "PHONE",
-  "celular": "PHONE",
-  "mobile": "PHONE",
-  "email": "EMAIL",
-  "e-mail": "EMAIL",
-  "mail": "EMAIL",
-  "random": "RANDOM",
-  "aleatoria": "RANDOM",
-  "aleatória": "RANDOM",
-  "uuid": "RANDOM",
-  "evp": "RANDOM"
-};
-let keyTypeNormalized = typeMap[rawType] || null;
-let pixRaw = String(payment_data.pix_key || "").trim();
+    // ---------- normalização da chave PIX (seu código adaptado) ----------
+    const rawType = String((payment_data.pix_key_type || "")).trim().toLowerCase();
+    const typeMap = {
+      "cpf": "CPF","cnpj":"CNPJ",
+      "phone":"PHONE","telefone":"PHONE","celular":"PHONE","mobile":"PHONE",
+      "email":"EMAIL","e-mail":"EMAIL","mail":"EMAIL",
+      "random":"RANDOM","aleatoria":"RANDOM","aleatória":"RANDOM","uuid":"RANDOM","evp":"RANDOM"
+    };
+    let keyTypeNormalized = typeMap[rawType] || null;
+    let pixRaw = String(payment_data.pix_key || "").trim();
 
-// Se frontend não enviou tipo, detecta apenas email ou uuid; caso contrário usa PHONE como fallback
-if (!keyTypeNormalized) {
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixRaw)) {
-    keyTypeNormalized = "EMAIL";
-  } else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pixRaw)) {
-    keyTypeNormalized = "RANDOM";
-  } else {
-    // NÃO deduzir CPF/CNPJ por quantidade de dígitos — evita erro do provedor.
-    // Usamos PHONE como fallback (mais comum para chaves que são números).
-    keyTypeNormalized = "PHONE";
-  }
-}
+    if (!keyTypeNormalized) {
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixRaw)) keyTypeNormalized = "EMAIL";
+      else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pixRaw)) keyTypeNormalized = "RANDOM";
+      else keyTypeNormalized = "PHONE";
+    }
 
-// validação mínima: apenas garante chave não vazia; e valida email caso type seja EMAIL
-if (!pixRaw) {
-  return res.status(400).json({ error: "Chave PIX inválida (vazia)." });
-}
+    if (!pixRaw) return res.status(400).json({ error: "Chave PIX inválida (vazia)." });
 
-let pixKey = pixRaw;
-if (keyTypeNormalized === "EMAIL") {
-  pixKey = pixRaw.toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixKey)) {
-    return res.status(400).json({ error: "E-mail inválido para chave PIX." });
-  }
-} else {
-  // para PHONE / RANDOM / CPF / CNPJ etc. NÃO aplicar checagens por quantidade
-  pixKey = pixRaw;
-}
+    let pixKey = pixRaw;
+    if (keyTypeNormalized === "EMAIL") {
+      pixKey = pixRaw.toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixKey)) return res.status(400).json({ error: "E-mail inválido para chave PIX." });
+    }
 
-// mapear para o provedor (ajuste se o provedor exigir rótulos específicos)
-const providerTypeMap = {
-  "CPF": "CPF",
-  "CNPJ": "CNPJ",
-  "PHONE": "PHONE",
-  "EMAIL": "EMAIL",
-  "RANDOM": "RANDOM"
-};
-const providerKeyType = providerTypeMap[keyTypeNormalized] || keyTypeNormalized;
+    const providerTypeMap = { "CPF":"CPF","CNPJ":"CNPJ","PHONE":"PHONE","EMAIL":"EMAIL","RANDOM":"RANDOM" };
+    const providerKeyType = providerTypeMap[keyTypeNormalized] || keyTypeNormalized;
 
-console.log("[DEBUG] withdraw - pixKey final:", pixKey, "tipo:", keyTypeNormalized, "providerType:", providerKeyType);
+    console.log("[DEBUG] withdraw - pixKey final:", pixKey, "tipo:", keyTypeNormalized, "providerType:", providerKeyType);
 
-    const externalReference = `saque_${user._id}_${Date.now()}`;
+    const externalReference = `saque_${userDoc._id}_${Date.now()}`;
 
     const novoSaque = {
       valor: amountNum,
       chave_pix: pixKey,
-      tipo_chave: keyTypeNormalized,  
+      tipo_chave: keyTypeNormalized,
       status: "PENDING",
       data: new Date(),
       providerId: null,
       externalReference,
-      ownerName: user.name || user.nome || "Usuário",
+      ownerName: userDoc.nome || userDoc.name || "Usuário",
     };
 
-    user.saldo = (user.saldo ?? 0) - amountNum;
-    user.saques = user.saques || [];
-    user.saques.push(novoSaque);
-    await user.save();
+    // ---------- criação atômica do saque (push + decrement saldo) ----------
+    const createRes = await createSaqueAtomic(userDoc._id, novoSaque, amountNum);
+    if (!createRes.acknowledged || createRes.matchedCount === 0) {
+      return res.status(500).json({ error: "Erro ao registrar saque." });
+    }
 
-    // ===== Comunica com provedor OpenPix =====
+    // ---------- preparar aliasForType e ordem de tentativa ----------
+    const explicitTypeProvided = Boolean(payment_data.pix_key_type && String(payment_data.pix_key_type).trim());
+    const onlyDigits = (pixKey || "").replace(/\D/g, "");
+    const cpfDigits = onlyDigits.length >= 11 ? onlyDigits.slice(-11) : onlyDigits;
+    const cnpjDigits = onlyDigits.length >= 14 ? onlyDigits.slice(-14) : onlyDigits;
+
+    const aliasForType = {
+      "CPF": cpfDigits || pixKey,
+      "CNPJ": cnpjDigits || pixKey,
+      "EMAIL": (pixKey || "").toLowerCase(),
+      "RANDOM": pixKey,
+      "PHONE": (() => {
+        let phone = (pixKey || "").replace(/\D/g, "");
+        if (!phone) return phone;
+        phone = phone.replace(/^0+/, "");
+        if (!/^55/.test(phone)) phone = `55${phone}`;
+        return phone;
+      })()
+    };
+
+    const prioritizedTypes = (() => {
+      const initial = providerKeyType || keyTypeNormalized || "RANDOM";
+      const tries = [initial];
+      if (!explicitTypeProvided && initial === "CPF") tries.unshift("PHONE");
+      const possible = ["PHONE","CPF","CNPJ","EMAIL","RANDOM"];
+      possible.forEach(t => { if (!tries.includes(t)) tries.push(t); });
+      return tries;
+    })();
+
+    // ---------- função de tentativa de createPayment ----------
     const OPENPIX_API_KEY = process.env.OPENPIX_API_KEY;
     const OPENPIX_API_URL = process.env.OPENPIX_API_URL || "https://api.openpix.com.br";
-
     if (!OPENPIX_API_KEY) {
-      const idxErr0 = user.saques.findIndex(s => s.externalReference === externalReference);
-      if (idxErr0 >= 0) {
-        user.saques[idxErr0].status = "FAILED";
-        user.saques[idxErr0].error = { msg: "OPENPIX_API_KEY não configurada" };
-        user.saldo += amountNum;
-        await user.save();
-      }
+      // rollback: marcar failed + restaurar saldo
+      await markSaqueFailedAndRefund(userDoc._id, externalReference, amountNum, { msg: "OPENPIX_API_KEY não configurada" });
       return res.status(500).json({ error: "Configuração do provedor ausente." });
     }
 
-    const createHeaders = {
-      "Content-Type": "application/json",
-      "Authorization": OPENPIX_API_KEY,
-      "Idempotency-Key": externalReference
-    };
-
-    const valueInCents = Math.round(amountNum * 100);
-    const createPayload = {
-      value: valueInCents,
-      destinationAlias: pixKey,
-      destinationAliasType: providerKeyType,
-      correlationID: externalReference,
-      comment: `Saque para ${user._id}`
-    };
-
-    console.log("[DEBUG] Enviando createPayment para OpenPix:", createPayload);
-
-// --- Antes do aliasForType: detecta se o frontend forneceu explicitamente o tipo ---
-const explicitTypeProvided = Boolean(payment_data.pix_key_type && String(payment_data.pix_key_type).trim());
-
-// normaliza só-dígitos para CPF/CNPJ (útil para enviar ao provedor)
-const onlyDigits = (pixKey || "").replace(/\D/g, "");
-const cpfDigits = onlyDigits.length >= 11 ? onlyDigits.slice(-11) : onlyDigits; // garante pelo menos os 11 finais se houver lixo
-const cnpjDigits = onlyDigits.length >= 14 ? onlyDigits.slice(-14) : onlyDigits;
-
-// aliasForType contém a chave que será enviada para cada destinationAliasType
-const aliasForType = {
-  "CPF": cpfDigits || pixKey,    // preferir dígitos puros
-  "CNPJ": cnpjDigits || pixKey,
-  "EMAIL": (pixKey || "").toLowerCase(),
-  "RANDOM": pixKey,
-  // PHONE: normaliza para formato internacional sem '+' — ex: 55 + DDD + número
-  "PHONE": (() => {
-    let phone = (pixKey || "").replace(/\D/g, "");
-    if (!phone) return phone;
-    // remove zeros à esquerda se houver
-    phone = phone.replace(/^0+/, "");
-    // se já tem DDI 55, mantém; senão prefixa 55
-    if (!/^55/.test(phone)) phone = `55${phone}`;
-    return phone;
-  })()
-};
-
-console.log("[DEBUG] aliasForType:", aliasForType, "explicitTypeProvided:", explicitTypeProvided);
-
-// ======== createPayment com retries automáticos em caso de "Chave Pix inválida para tipo X" ========
-async function createPaymentAttempt(key, aliasType, idempSuffix) {
-  // key aqui já será aliasForType[aliasType] passado na chamada
-  const hdrs = {
-    "Content-Type": "application/json",
-    "Authorization": OPENPIX_API_KEY,
-    "Idempotency-Key": `${externalReference}_${String(idempSuffix || aliasType)}`
-  };
-  const payload = {
-    value: valueInCents,
-    destinationAlias: key,
-    destinationAliasType: aliasType,
-    correlationID: externalReference,
-    comment: `Saque para ${user._id}`
-  };
-  console.log("[DEBUG] createPaymentAttempt payload:", payload, "Idempotency-Key:", hdrs["Idempotency-Key"]);
-  let res;
-  try {
-    res = await fetch(`${OPENPIX_API_URL}/api/v1/payment`, {
-      method: "POST",
-      headers: hdrs,
-      body: JSON.stringify(payload)
-    });
-  } catch (err) {
-    // falha de rede — retorna objeto com erro
-    return { ok: false, error: err, http: null, text: null, data: null };
-  }
-
-  const text = await res.text();
-  let data = null;
-  try { data = JSON.parse(text); } catch (e) { data = null; }
-  return { ok: res.ok, http: res, text, data };
-}
-
-// ===== define ordem de tentativas =====
-// se o frontend passou explicitTypeProvided, respeitamos a ordem (não forçamos PHONE antes de CPF)
-const prioritizedTypes = (() => {
-  const initial = providerKeyType || keyTypeNormalized || "RANDOM";
-  const tries = [initial];
-
-  if (!explicitTypeProvided && initial === "CPF") {
-    // somente se o tipo veio de inferência do backend, tentar PHONE primeiro
-    tries.unshift("PHONE");
-  }
-
-  // garantir unicidade e ordem prática
-  const possible = ["PHONE", "CPF", "CNPJ", "EMAIL", "RANDOM"];
-  possible.forEach(t => { if (!tries.includes(t)) tries.push(t); });
-  return tries;
-})();
-
-let createResult = null;
-let lastCreateData = null;
-for (let i = 0; i < prioritizedTypes.length; i++) {
-  const tryType = prioritizedTypes[i];
-const attempt = await createPaymentAttempt(aliasForType[tryType] || pixKey, tryType, tryType);
-  lastCreateData = attempt.data ?? { raw: attempt.text ?? null, error: attempt.error?.message ?? null };
-  if (attempt.ok) {
-    createResult = { success: true, data: attempt.data, http: attempt.http, usedType: tryType };
-    break;
-  } else {
-    // se a resposta do provedor indicar explicitamente "Chave Pix inválida para tipo" — tentar próximo tipo
-    const msg = JSON.stringify(attempt.data || attempt.text || "");
-    const indicatesInvalidType = /chave\s*pix.*inv[aá]lida.*tipo/i.test(msg) || /invalid.*for.*type/i.test(msg);
-    console.log("[DEBUG] createPayment attempt failed:", { tryType, indicatesInvalidType, data: attempt.data, text: attempt.text });
-    if (!indicatesInvalidType) {
-      // se o erro não parece ser "tipo inválido", abortamos e retornamos este erro ao cliente (após marcação/rollback)
-      createResult = { success: false, data: attempt.data, http: attempt.http, error: attempt.error || attempt.text || "Erro ao criar pagamento" };
-      break;
-    }
-    // caso contrário, continua o loop tentando o próximo tipo
-  }
-}
-
-if (!createResult) {
-  // nenhuma tentativa obteve resposta ok; marcar failed e restaurar saldo
-  console.error("[DEBUG] createPayment todas as tentativas falharam. último retorno:", lastCreateData);
-  const idxErr = user.saques.findIndex(s => s.externalReference === externalReference);
-  if (idxErr >= 0) {
-    user.saques[idxErr].status = "FAILED";
-    user.saques[idxErr].error = { msg: "Todas as tentativas de createPayment falharam", last: lastCreateData };
-    user.saldo += amountNum;
-    await user.save();
-  }
-  return res.status(400).json({ error: lastCreateData?.error || lastCreateData?.message || "Erro ao criar pagamento no provedor." });
-}
-
-if (!createResult.success) {
-  // createResult foi definido com um erro não relacionado a tipo — já tratado acima mas por segurança:
-  const idxErr = user.saques.findIndex(s => s.externalReference === externalReference);
-  if (idxErr >= 0) {
-    user.saques[idxErr].status = "FAILED";
-    user.saques[idxErr].error = createResult.data || createResult.error || lastCreateData;
-    user.saldo += amountNum;
-    await user.save();
-  }
-  return res.status(400).json({ error: (createResult.data && (createResult.data.message || createResult.data.error)) || createResult.error || "Erro ao criar pagamento no provedor." });
-}
-
-// Se chegou aqui, createResult tem sucesso
-const createData = createResult.data;
-const createHttp = createResult.http;
-console.log("[DEBUG] createPayment succeed with type:", createResult.usedType, "response:", createData);
-// continua fluxo normal (approve) com createData
-
-   // ======= EXTRAÇÃO ROBUSTA DO IDENTIFICADOR (paymentId) =======
-    const paymentId =
-      createData.id ||
-      createData.paymentId ||
-      createData.payment_id ||
-      createData.transaction?.id ||
-      createData.payment?.id ||
-      createData.payment?.paymentId ||
-      createData.transactionId ||
-      null;
-
-    const returnedCorrelation = createData.correlationID || createData.correlationId || createData.correlation || null;
-
-    const createdIndex = user.saques.findIndex(s => s.externalReference === externalReference);
-    if (createdIndex >= 0) {
-      if (paymentId) user.saques[createdIndex].providerId = paymentId;
-      user.saques[createdIndex].status = "PENDING";
-      await user.save();
-    }
-
-    // Decide identificador para aprovação: prefira paymentId (mais confiável)
-    const toApproveIdentifier = paymentId || returnedCorrelation || externalReference;
-    if (!toApproveIdentifier) {
-      console.warn("[WARN] createPayment não retornou identificador usável — saque permanece PENDING.");
-      return res.status(200).json({
-        message: "Saque criado, aguardando aprovação manual (identificador não retornado).",
-        create: createData
-      });
-    }
-
-    // monta payload de approve (prefira paymentId quando disponível)
-    const approveHeaders = {
-      "Content-Type": "application/json",
-      "Authorization": OPENPIX_API_KEY,
-      "Idempotency-Key": `approve_${toApproveIdentifier}`
-    };
-
-    const approvePayload = paymentId ? { paymentId } : { correlationID: toApproveIdentifier };
-
-    // chama endpoint de approve
-    let approveRes;
-    try {
-      approveRes = await fetch(`${OPENPIX_API_URL}/api/v1/payment/approve`, {
-        method: "POST",
-        headers: approveHeaders,
-        body: JSON.stringify(approvePayload)
-      });
-    } catch (err) {
-      console.error("[ERROR] Falha approvePayment (network):", err);
-      if (createdIndex >= 0) {
-        user.saques[createdIndex].status = "PENDING_APPROVAL";
-        user.saques[createdIndex].error = { msg: "Falha na requisição de aprovação (network)", detail: err.message };
-        await user.save();
+    async function createPaymentAttempt(key, aliasType, idempSuffix) {
+      const hdrs = {
+        "Content-Type": "application/json",
+        "Authorization": OPENPIX_API_KEY,
+        "Idempotency-Key": `${externalReference}_${String(idempSuffix || aliasType)}`
+      };
+      const payload = {
+        value: Math.round(amountNum * 100),
+        destinationAlias: key,
+        destinationAliasType: aliasType,
+        correlationID: externalReference,
+        comment: `Saque para ${userDoc._id}`
+      };
+      console.log("[DEBUG] createPaymentAttempt payload:", payload, "Idempotency-Key:", hdrs["Idempotency-Key"]);
+      let response;
+      try {
+        response = await fetch(`${OPENPIX_API_URL}/api/v1/payment`, {
+          method: "POST",
+          headers: hdrs,
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        return { ok: false, error: err, text: null, data: null, http: null };
       }
-      return res.status(500).json({ error: "Erro ao aprovar pagamento (comunicação com provedor)." });
+      const text = await response.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch (e) { data = null; }
+      return { ok: response.ok, http: response, text, data, error: null };
     }
 
-    const approveText = await approveRes.text();
-    let approveData;
-    try { approveData = JSON.parse(approveText); } catch (err) { approveData = null; }
+    // ---------- loop de tentativas createPayment ----------
+    let createResult = null;
+    let lastCreateData = null;
 
-    if (!approveRes.ok) {
-      // log completo para debugging
-      console.error("[DEBUG] Erro approvePayment:", { status: approveRes.status, body: approveData ?? approveText });
+    for (let i = 0; i < prioritizedTypes.length; i++) {
+      const tryType = prioritizedTypes[i];
+      const attempt = await createPaymentAttempt(aliasForType[tryType] || pixKey, tryType, tryType);
+      lastCreateData = attempt.data ?? { raw: attempt.text ?? null, error: attempt.error?.message ?? null };
 
-      // Mensagens do provedor que indicam "chave não encontrada" ou similar
-      const bodyMsg = JSON.stringify(approveData || approveText || "");
-      const notFoundKey = /chave\s*pix.*n[aã]o encontrada/i.test(bodyMsg) || /not.*found.*pix/i.test(bodyMsg) || /chave.*nao.*encontrada/i.test(bodyMsg);
-
-      if (createdIndex >= 0) {
-        // marcar como FAILED ou PENDING_APPROVAL dependendo do erro
-        if (notFoundKey) {
-          user.saques[createdIndex].status = "FAILED";
-          user.saques[createdIndex].error = approveData || { raw: approveText };
-          // restaura saldo
-          user.saldo = (user.saldo ?? 0) + amountNum;
-          await user.save();
-          return res.status(400).json({ error: approveData?.error || approveData?.message || "Chave Pix não encontrada (proveedor)." });
-        } else {
-          // erro genérico de aprovação -> marcar PENDING_APPROVAL para investigação manual
-          user.saques[createdIndex].status = "PENDING_APPROVAL";
-          user.saques[createdIndex].error = approveData || { raw: approveText };
-          await user.save();
-          return res.status(400).json({ error: approveData?.error || approveData?.message || "Erro ao aprovar pagamento (pendente)." });
-        }
+      if (attempt.ok) {
+        createResult = { success: true, data: attempt.data, http: attempt.http, usedType: tryType };
+        break;
       } else {
-        return res.status(400).json({ error: approveData?.error || approveData?.message || "Erro ao aprovar pagamento." });
+        const msg = JSON.stringify(attempt.data || attempt.text || "");
+        const indicatesInvalidType = /chave\s*pix.*inv[aá]lida.*tipo/i.test(msg) || /invalid.*for.*type/i.test(msg);
+        console.log("[DEBUG] createPayment attempt failed:", { tryType, indicatesInvalidType, data: attempt.data, text: attempt.text });
+        if (!indicatesInvalidType) {
+          createResult = { success: false, data: attempt.data, http: attempt.http, error: attempt.error || attempt.text || "Erro ao criar pagamento" };
+          break;
+        }
       }
     }
 
-    // approve ok -> parse e atualiza status do saque
-    let realApproveData = approveData;
-    if (!realApproveData) {
-      try { realApproveData = JSON.parse(approveText); } catch (e) { realApproveData = { raw: approveText }; }
+    if (!createResult) {
+      // todas tentativas falharam
+      await markSaqueFailedAndRefund(userDoc._id, externalReference, amountNum, { msg: "Todas as tentativas de createPayment falharam", last: lastCreateData });
+      return res.status(400).json({ error: lastCreateData?.error || "Erro ao criar pagamento no provedor." });
+    }
+    if (!createResult.success) {
+      await markSaqueFailedAndRefund(userDoc._id, externalReference, amountNum, createResult.data || createResult.error);
+      return res.status(400).json({ error: (createResult.data && (createResult.data.message || createResult.data.error)) || createResult.error || "Erro ao criar pagamento no provedor." });
     }
 
-    const approveStatus = realApproveData.status || realApproveData.transaction?.status || "COMPLETED";
-    if (createdIndex >= 0) {
-      user.saques[createdIndex].status = (approveStatus === "COMPLETED" || approveStatus === "EXECUTED") ? "COMPLETED" : approveStatus;
-      user.saques[createdIndex].providerId = user.saques[createdIndex].providerId || paymentId || realApproveData.id || null;
-      await user.save();
+    // create ok
+    const createData = createResult.data;
+    const paymentId = createData.id || createData.paymentId || createData.payment_id || createData.transaction?.id || null;
+
+    // atualiza saque com providerId (se retornou) — raw
+    try {
+      await updateSaqueByExternalRef(userDoc._id, externalReference, { providerId: paymentId, status: "PENDING" });
+    } catch (err) {
+      console.error("[WARN] não foi possível atualizar saque com providerId:", err);
     }
 
-    // processa comissão
+    // ---------- approve (se aplicável) ----------
+    // extrair identificadores do createData
+    const returnedCorrelation = createData.correlationID || createData.correlationId || createData.correlation || null;
+    const toApproveIdentifier = paymentId || returnedCorrelation || externalReference;
+    let approveStatus = null;
+    let approveData = null;
+
+    if (toApproveIdentifier) {
+      const approveHeaders = {
+        "Content-Type": "application/json",
+        "Authorization": OPENPIX_API_KEY,
+        "Idempotency-Key": `approve_${toApproveIdentifier}`
+      };
+      const approvePayload = paymentId ? { paymentId } : { correlationID: toApproveIdentifier };
+
+      try {
+        const approveRes = await fetch(`${OPENPIX_API_URL}/api/v1/payment/approve`, {
+          method: "POST",
+          headers: approveHeaders,
+          body: JSON.stringify(approvePayload)
+        });
+        const approveText = await approveRes.text();
+        try { approveData = JSON.parse(approveText); } catch (e) { approveData = null; }
+
+        if (!approveRes.ok) {
+          const bodyMsg = JSON.stringify(approveData || approveText || "");
+          const notFoundKey = /chave\s*pix.*n[aã]o encontrada/i.test(bodyMsg) || /not.*found.*pix/i.test(bodyMsg) || /chave.*nao.*encontrada/i.test(bodyMsg);
+          if (notFoundKey) {
+            await markSaqueFailedAndRefund(userDoc._id, externalReference, amountNum, approveData || { raw: approveText });
+            return res.status(400).json({ error: approveData?.error || approveData?.message || "Chave Pix não encontrada (provedor)." });
+          } else {
+            // marca pending approval e retorna erro
+            await updateSaqueByExternalRef(userDoc._id, externalReference, { status: "PENDING_APPROVAL", error: approveData || { raw: approveText } });
+            return res.status(400).json({ error: approveData?.error || approveData?.message || "Erro ao aprovar pagamento (pendente)." });
+          }
+        }
+
+        // approve ok
+        const realApproveData = approveData ?? (approveText ? JSON.parse(approveText) : null);
+        approveStatus = realApproveData?.status || realApproveData?.transaction?.status || "COMPLETED";
+        const finalStatus = (approveStatus === "COMPLETED" || approveStatus === "EXECUTED") ? "COMPLETED" : approveStatus;
+        await updateSaqueByExternalRef(userDoc._id, externalReference, { status: finalStatus, providerId: paymentId || (realApproveData?.id || null) });
+
+      } catch (err) {
+        console.error("[ERROR] Falha approvePayment:", err);
+        // marca PENDING_APPROVAL e retorna erro
+        await updateSaqueByExternalRef(userDoc._id, externalReference, { status: "PENDING_APPROVAL", error: { msg: "Falha na requisição de aprovação", detail: err.message } });
+        return res.status(500).json({ error: "Erro ao aprovar pagamento (comunicação com provedor)." });
+      }
+    } else {
+      // sem identifier usável -> deixa PENDING
+      await updateSaqueByExternalRef(userDoc._id, externalReference, { status: "PENDING" });
+    }
+
+    // ---------- processamento de comissão (raw-safe) ----------
     try {
       const COMMISSION_RATE = 0.05;
-      const isCompleted = approveStatus === "COMPLETED" || approveStatus === "EXECUTED";
-      if (isCompleted) {
-        const saqueRecord = (user.saques || []).find(s => s.externalReference === externalReference || s.providerId === (paymentId || null));
-        const saqueValor = saqueRecord ? (saqueRecord.valor ?? amountNum) : amountNum;
+      const wasCompleted = (approveStatus === "COMPLETED" || approveStatus === "EXECUTED");
+      if (wasCompleted && userDoc.indicado_por) {
+        // busca afiliado via Mongoose ou raw
+        const db = getClientDb();
+        const usersColl = db.collection("users");
+        const afiliadoDoc = await usersColl.findOne({ codigo_afiliado: userDoc.indicado_por });
+        if (afiliadoDoc) {
+          const comissaoValor = Number((amountNum * COMMISSION_RATE).toFixed(2));
+          // cria ActionHistory via Mongoose (ok)
+          const acaoComissao = new ActionHistory({
+            user: afiliadoDoc._id,
+            token: afiliadoDoc.token || null,
+            nome_usuario: afiliadoDoc.nome || afiliadoDoc.email || null,
+            id_action: externalReference,
+            id_pedido: `comissao_${externalReference}`,
+            id_conta: userDoc._id.toString(),
+            acao_validada: "valida",
+            valor_confirmacao: comissaoValor,
+            quantidade_pontos: 0,
+            tipo_acao: "comissao",
+            rede_social: "Sistema",
+            tipo: "comissao",
+            afiliado: afiliadoDoc.codigo_afiliado,
+            valor: comissaoValor,
+            data: new Date()
+          });
+          await acaoComissao.save();
 
-        if (user.indicado_por) {
-          const existente = await ActionHistory.findOne({ id_action: externalReference, tipo: "comissao" });
-          if (!existente) {
-            const agora = new Date();
-            if (user.ativo_ate && new Date(user.ativo_ate) > agora) {
-              const afiliado = await User.findOne({ codigo_afiliado: user.indicado_por });
-              if (afiliado) {
-                const comissaoValor = Number((saqueValor * COMMISSION_RATE).toFixed(2));
-                const acaoComissao = new ActionHistory({
-                  user: afiliado._id,
-                  token: afiliado.token || null,
-                  nome_usuario: afiliado.nome || afiliado.email || null,
-                  id_action: externalReference,
-                  id_pedido: `comissao_${externalReference}`,
-                  id_conta: user._id.toString(),
-                  unique_id: null,
-                  url_dir: `/saques/${externalReference}`,
-                  acao_validada: "valida",
-                  valor_confirmacao: comissaoValor,
-                  quantidade_pontos: 0,
-                  tipo_acao: "comissao",
-                  rede_social: "Sistema",
-                  tipo: "comissao",
-                  afiliado: afiliado.codigo_afiliado,
-                  valor: comissaoValor,
-                  data: new Date(),
-                });
-                await acaoComissao.save();
-                afiliado.saldo = (afiliado.saldo ?? 0) + comissaoValor;
-                afiliado.historico_acoes = afiliado.historico_acoes || [];
-                afiliado.historico_acoes.push(acaoComissao._id);
-                await afiliado.save();
-              }
-            }
-          }
+          // atualiza afiliado raw: inc saldo + push historico_acoes
+          await usersColl.updateOne(
+            { _id: afiliadoDoc._id },
+            { $inc: { saldo: comissaoValor }, $push: { historico_acoes: acaoComissao._id } }
+          );
         }
       }
     } catch (errCom) {
-      console.error("[ERROR] Falha ao processar comissão de afiliado:", errCom);
+      console.error("[ERROR] Falha ao processar comissão de afiliado (raw-safe):", errCom);
     }
 
+    // ---------- resposta final ----------
     return res.status(200).json({
-      message: "Saque processado (create → approve).",
+      message: "Saque processado (create -> approve flow concluído ou pendente).",
       create: createData,
-      approve: approveData
+      approve: approveData || null
     });
 
   } catch (error) {
