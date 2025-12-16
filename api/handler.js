@@ -236,6 +236,9 @@ async function markSaqueFailedAndRefund(userId, externalReference, refundAmount,
   );
 }
 
+// período do ranking (24 horas)
+const PERIOD_MS = Number(process.env.RANKING_PERIOD_MS) || 24 * 60 * 60 * 1000;
+
 // 📌 ROTA PARA CONSULTAR VALORES DAS AÇÕES
 router.get("/valor_acao", (req, res) => {
   const { tipo = "seguir", rede = "TikTok" } = req.query;
