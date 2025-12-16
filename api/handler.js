@@ -236,9 +236,6 @@ async function markSaqueFailedAndRefund(userId, externalReference, refundAmount,
   );
 }
 
-// período do ranking (24 horas)
-const PERIOD_MS = Number(process.env.RANKING_PERIOD_MS) || 24 * 60 * 60 * 1000;
-
 // 📌 ROTA PARA CONSULTAR VALORES DAS AÇÕES
 router.get("/valor_acao", (req, res) => {
   const { tipo = "seguir", rede = "TikTok" } = req.query;
@@ -2552,7 +2549,7 @@ router.post("/ranking_diario", async (req, res) => {
     await connectDB();
 
     // período do ranking (24 horas) — configurável via env para testes
-    const PERIOD_MS = Number(process.env.RANKING_PERIOD_MS) || 24 * 60 * 60 * 1000;
+const PERIOD_MS = Number(process.env.RANKING_PERIOD_MS) || 60 * 1000;
 
     // tempo / dia (cache curto)
     const agora = Date.now();
