@@ -2595,7 +2595,7 @@ router.post("/ranking_diario", async (req, res) => {
         const saved = await DailyRanking.findOne({ data: hoje }).lean();
         if (saved && Array.isArray(saved.ranking) && saved.ranking.length) {
           dailyFixedRanking = saved.ranking.map((entry) => ({
-            username: entry.username ?? entry.nome ?? "Usuário",
+            username: entry.username ?? entry.nome ?? "-",
             token: entry.token ?? null,
             real_total: Number(entry.real_total ?? 0),
             is_current_user: !!entry.is_current_user,
@@ -2623,7 +2623,7 @@ router.post("/ranking_diario", async (req, res) => {
 
           // atribui baseline aos primeiros 10 (garante non-zero para top10) e marca como fixed
           const seededFull = pool.map((nm, idx) => ({
-            username: nm || "Usuário",
+            username: nm || "-",
             token: null,
             real_total: Number(baselineValores[idx] ?? 1),
             userId: null,
@@ -2877,7 +2877,7 @@ router.post("/ranking_diario", async (req, res) => {
     if (dailyFixedRanking && horaInicioRanking && (Date.now() - horaInicioRanking) < PERIOD_MS) {
       // Clone do ranking fixo do período (marca como source: 'fixed')
       const baseFromFixed = dailyFixedRanking.map((u) => ({
-        username: (u.username || "Usuário").toString(),
+        username: (u.username || "-").toString(),
         token: u.token || null,
         real_total: Number(u.real_total || 0),
         is_current_user: !!u.is_current_user,
@@ -2895,7 +2895,7 @@ router.post("/ranking_diario", async (req, res) => {
           {
             $project: {
               userId: "$_id",
-              username: { $ifNull: ["$usuario.nome", "Usuário"] },
+              username: { $ifNull: ["$usuario.nome", "-"] },
               token: { $ifNull: ["$usuario.token", null] },
               real_total: "$totalGanhos"
             }
@@ -2921,7 +2921,7 @@ router.post("/ranking_diario", async (req, res) => {
         const keyId = u.userId ? `I:${String(u.userId)}` : null;
         const keyUname = `U:${norm(u.username)}`;
         const baseObj = {
-          username: String(u.username || "Usuário"),
+          username: String(u.username || "-"),
           token: u.token || null,
           real_total: Number(u.real_total || 0),
           source: "fixed",
@@ -2958,7 +2958,7 @@ router.post("/ranking_diario", async (req, res) => {
 
       ganhosPorUsuario.forEach(g => {
         const item = {
-          username: String(g.username || "Usuário"),
+          username: String(g.username || "-"),
           token: g.token || null,
           real_total: Number(g.real_total || 0),
           source: "earnings",
@@ -3094,7 +3094,7 @@ if (listaComProjetado.length < 10) {
         { $group: { _id: "$userId", totalGanhos: { $sum: "$valor" } } },
         { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "usuario" } },
         { $unwind: { path: "$usuario", preserveNullAndEmptyArrays: true } },
-        { $project: { userId: "$_id", username: { $ifNull: ["$usuario.nome", "Usuário"] }, total_balance: "$totalGanhos", token: { $ifNull: ["$usuario.token", null] } } },
+        { $project: { userId: "$_id", username: { $ifNull: ["$usuario.nome", "-"] }, total_balance: "$totalGanhos", token: { $ifNull: ["$usuario.token", null] } } },
         { $sort: { total_balance: -1 } },
         { $limit: 10 }
       ]);
@@ -3102,7 +3102,7 @@ if (listaComProjetado.length < 10) {
       baseRankingRaw = (ganhosPorUsuario || [])
         .filter((item) => (item.total_balance ?? 0) > 0)
         .map((item) => ({
-          username: item.username || "Usuário",
+          username: item.username || "-",
           token: item.token || null,
           real_total: Number(item.total_balance || 0),
           is_current_user: item.token === effectiveToken,
@@ -3116,10 +3116,10 @@ if (listaComProjetado.length < 10) {
           const extrasShuffled = shuffleArray((saved.ranking || []).slice());
           for (const r of extrasShuffled) {
             if (baseRankingRaw.length >= 10) break;
-            const uname = norm(r.username || r.nome || "Usuário");
+            const uname = norm(r.username || r.nome || "-");
             if (!baseRankingRaw.some(x => norm(x.username) === uname)) {
               baseRankingRaw.push({
-                username: r.username || r.nome || "Usuário",
+                username: r.username || r.nome || "-",
                 token: r.token || null,
                 real_total: Number(r.real_total || 0),
                 is_current_user: false,
