@@ -2535,12 +2535,7 @@ router.post("/confirmar_acao", async (req, res) => {
   }
 });
 
-// Arquivo: rota /api/test/ranking_diario (versão atualizada — reset por período de 24h)
-// Observações:
-// - Define PERIOD_MS (padrão 24h) e passa a usar horaInicioRanking como referência.
-// - Substitui checagens que antes comparavam `diaTop3 === hoje` por verificações temporais.
-// - Mantém sua lógica existente (fillerNames, fetchTopFromDailyEarning, baselineValores etc.).
-
+//rota /api/test/ranking_diario
 router.post("/ranking_diario", async (req, res) => {
   const rankingQuery = req.query || {};
   const { token: bodyToken } = req.body || {};
@@ -2549,7 +2544,7 @@ router.post("/ranking_diario", async (req, res) => {
     await connectDB();
 
     // período do ranking (24 horas) — configurável via env para testes
-    const PERIOD_MS = Number(process.env.RANKING_PERIOD_MS) || 24 * 60 * 60 * 1000;
+    const PERIOD_MS = Number(process.env.RANKING_PERIOD_MS) || 60 * 1000;
 
     // tempo / dia (cache curto)
     const agora = Date.now();
