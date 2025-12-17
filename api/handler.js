@@ -2592,7 +2592,8 @@ router.post("/ranking_diario", async (req, res) => {
     //  Agora: recarrega se não existe ranking em memória ou se o período (PERIOD_MS) expirou
     if (!dailyFixedRanking || !horaInicioRanking || (Date.now() - horaInicioRanking) >= PERIOD_MS) {
       try {
-        const saved = await DailyRanking.findOne({ data: hoje }).lean();
+        // garante que sempre lemos o único documento de referência
+const saved = await DailyRanking.findById("daily_ranking").lean();
         if (saved && Array.isArray(saved.ranking) && saved.ranking.length) {
           dailyFixedRanking = saved.ranking.map((entry) => ({
             username: entry.username ?? entry.nome ?? "-",
@@ -2632,11 +2633,19 @@ router.post("/ranking_diario", async (req, res) => {
 
           // salva um pool (por exemplo os primeiros 30) para usar como fallback
           const toSave = seededFull.slice(0, Math.min(30, seededFull.length));
-          await DailyRanking.findOneAndUpdate(
-            { data: hoje },
-            { ranking: toSave, startAt: new Date(), criadoEm: new Date() },
-            { upsert: true, new: true, setDefaultsOnInsert: true }
-          );
+await DailyRanking.findOneAndUpdate(
+  { _id: "daily_ranking" },
+  {
+    $set: {
+      data: hoje,
+      ranking: toSave,
+      startAt: new Date(),
+      expiresAt: new Date(Date.now() + PERIOD_MS),
+      criadoEm: new Date()
+    }
+  },
+  { upsert: true, new: true, setDefaultsOnInsert: true }
+);
 
           // atribui dailyFixedRanking com os 10 primeiros (já embaralhados)
           dailyFixedRanking = toSave.slice(0, 10).map((x, i) => ({
@@ -2727,16 +2736,19 @@ router.post("/ranking_diario", async (req, res) => {
       const startAtDate = new Date(Date.now());
       const expiresAt = new Date(Date.now() + PERIOD_MS);
 
-      await DailyRanking.findOneAndUpdate(
-        { data: hoje },
-        {
-          ranking: dailyFixedRanking,
-          startAt: startAtDate,
-          expiresAt: expiresAt,
-          criadoEm: new Date()
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+await DailyRanking.findOneAndUpdate(
+  { _id: "daily_ranking" },
+  {
+    $set: {
+      data: hoje,
+      ranking: dailyFixedRanking,
+      startAt: startAtDate,
+      expiresAt: expiresAt,
+      criadoEm: new Date()
+    }
+  },
+  { upsert: true, new: true, setDefaultsOnInsert: true }
+);
 
       // agora horaInicioRanking usa startAtDate
       horaInicioRanking = startAtDate.getTime();
