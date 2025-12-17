@@ -2836,16 +2836,11 @@ await DailyRanking.findOneAndUpdate(
         const startAtDate2 = new Date(Date.now());
         const expiresAt2 = new Date(Date.now() + PERIOD_MS);
 
-        await DailyRanking.findOneAndUpdate(
-          { data: `period-${startAtDate2.getTime()}` },
-          {
-            ranking: dailyFixedRanking,
-            startAt: startAtDate2,
-            expiresAt: expiresAt2,
-            criadoEm: new Date()
-          },
-          { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
+await DailyRanking.findOneAndUpdate(
+  { _id: "daily_ranking" },
+  { $set: { data: hoje, ranking: dailyFixedRanking, startAt: startAtDate, expiresAt: expiresAt, criadoEm: new Date() } },
+  { upsert: true, new: true, setDefaultsOnInsert: true }
+);
 
         console.log("💾 dailyFixedRanking salvo no DB (period reset) — somente dailyearnings/dailyrankings");
       } catch (e) {
@@ -3118,7 +3113,7 @@ if (listaComProjetado.length < 10) {
 
       // completar apenas com DailyRanking salvo se necessário (embaralhado)
       if (baseRankingRaw.length < 10) {
-        const saved = await DailyRanking.findOne({}).lean().catch(() => null);
+        const saved = await DailyRanking.findById("daily_ranking").lean();
         if (saved && Array.isArray(saved.ranking)) {
           const extrasShuffled = shuffleArray((saved.ranking || []).slice());
           for (const r of extrasShuffled) {
