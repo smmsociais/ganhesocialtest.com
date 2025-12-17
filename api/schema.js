@@ -152,26 +152,21 @@ const DailyRankingItemSchema = new mongoose.Schema({
   is_current_user: { type: Boolean, default: false }
 }, { _id: false });
 
+// 🔹 Schema para Ranking Diário (atualizado para usar _id string único)
 const DailyRankingSchema = new mongoose.Schema({
+  _id: { type: String, default: "daily_ranking" }, // <-- usa string fixa como id
   data: {
-    type: String, // ex: "11/11/2025"
-    required: true,
-    unique: true
+    type: String,
+    required: true
   },
   ranking: {
     type: [DailyRankingItemSchema],
     default: []
   },
-  startAt: { type: Date, default: null },      // momento em que o ranking começou a progredir
-  expiresAt: { type: Date, default: null },    // quando esse ranking expira (meia-noite)
-  criadoEm: {
-    type: Date,
-    default: Date.now
-  }
+  startAt: { type: Date, default: null },
+  expiresAt: { type: Date, default: null },
+  criadoEm: { type: Date, default: Date.now }
 });
-
-// índice único por data para garantir máximo 1 documento por dia
-DailyRankingSchema.index({ data: 1 }, { unique: true });
 
 // 🔥 LIMPA MODELS ANTIGOS (Vercel / Hot Reload)
 if (mongoose.models.User) {
